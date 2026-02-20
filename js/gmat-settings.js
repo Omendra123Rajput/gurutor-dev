@@ -100,6 +100,20 @@
                 return { msg: 'Desired Score must be between 205 and 805.', field: '#gmat-s-desired-score' };
             }
 
+            // Test Date — must be today or in the future
+            var testDateVal = $.trim($('#gmat-s-test-date').val());
+            if (testDateVal) {
+                var today = new Date();
+                today.setHours(0, 0, 0, 0);
+                var selected = new Date(testDateVal + 'T00:00:00');
+                if (isNaN(selected.getTime())) {
+                    return { msg: 'Please enter a valid test date.', field: '#gmat-s-test-date' };
+                }
+                if (selected < today) {
+                    return { msg: 'Test date must be today or in the future.', field: '#gmat-s-test-date' };
+                }
+            }
+
             // --- GMAT Scores section (only validate if any score field is filled) ---
             var hasAnyScore = overallVal || quantVal || verbalVal || diVal;
 

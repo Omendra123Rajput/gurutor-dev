@@ -124,7 +124,7 @@ function gmat_settings_endpoint_content() {
                 </div>
                 <div class="gmat-settings-field">
                     <label for="gmat-s-test-date">Test Date</label>
-                    <input type="date" id="gmat-s-test-date" class="gmat-settings-input" value="<?php echo esc_attr($test_date_display); ?>">
+                    <input type="date" id="gmat-s-test-date" class="gmat-settings-input" min="<?php echo esc_attr(date('Y-m-d')); ?>" value="<?php echo esc_attr($test_date_display); ?>">
                 </div>
             </div>
 

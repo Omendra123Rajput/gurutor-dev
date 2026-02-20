@@ -77,7 +77,7 @@ function gmat_sp_override_course_content($content) {
     gmat_sp_render($plan, $preference, $user_id, $lesson_ids);
     return ob_get_clean();
 }
-add_filter('the_content', 'gmat_sp_override_course_content', 999);
+// add_filter('the_content', 'gmat_sp_override_course_content', 999);
 
 // Also remove the default LearnDash course content (lesson list) below
 function gmat_sp_remove_ld_content($content, $post) {
@@ -86,7 +86,7 @@ function gmat_sp_remove_ld_content($content, $post) {
     if (!function_exists('gurutor_user_has_active_paid_access') || !gurutor_user_has_active_paid_access()) return $content;
     return '';
 }
-add_filter('learndash_content', 'gmat_sp_remove_ld_content', 999, 2);
+// add_filter('learndash_content', 'gmat_sp_remove_ld_content', 999, 2);
 
 
 // ============================================================================
@@ -1355,7 +1355,7 @@ function gmat_sp_debug_xapi_mapping($content) {
 
     return ob_get_clean() . $content;
 }
-add_filter('the_content', 'gmat_sp_debug_xapi_mapping', 1);
+// add_filter('the_content', 'gmat_sp_debug_xapi_mapping', 1);
 
 
 // ============================================================================
@@ -1386,4 +1386,4 @@ function gmat_sp_ajax_refresh() {
 
     wp_send_json_success(array('html' => $html));
 }
-add_action('wp_ajax_gmat_sp_refresh', 'gmat_sp_ajax_refresh');
+// add_action('wp_ajax_gmat_sp_refresh', 'gmat_sp_ajax_refresh');

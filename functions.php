@@ -24,9 +24,9 @@ $custom_includes = array(
     'inc/gmat-intake-form.php',                     // GMAT Intake onboarding wizard
     'inc/gmat-settings-account.php',                // GMAT Settings in My Account
     'inc/gmat-chatbox.php',                         // GMAT AI Chatbox — Floating assistant widget
-    // 'inc/gmat-study-plan-admin.php',                // GMAT Study Plan — Admin lesson ID config
-    // 'inc/gmat-study-plan.php',                      // GMAT Study Plan — Dynamic course page
-    // 'inc/gmat-dashboard.php',                       // GMAT Dashboard — Paid user home page
+    'inc/gmat-study-plan-admin.php',                // GMAT Study Plan — Admin lesson ID config
+    'inc/gmat-study-plan.php',                      // GMAT Study Plan — Dynamic course page
+    'inc/gmat-dashboard.php',                       // GMAT Dashboard — Paid user home page
 );
 
 foreach ($custom_includes as $file) {

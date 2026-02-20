@@ -413,6 +413,7 @@
     display: flex;
     gap: 8px;
     max-width: 85%;
+    min-width: 0;
     animation: gmat-cb-msg-in 0.22s ease-out;
     animation-fill-mode: both;
 }
@@ -496,6 +497,8 @@
     line-height: 1.6;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
     position: relative;
 }
 

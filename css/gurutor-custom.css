@@ -1,0 +1,145 @@
+/* ============================================================================
+   Testimonials Styles
+   ============================================================================ */
+.testimonial-swiper .swiper-wrapper {
+    display: flex;
+}
+.testimonial-swiper .swiper-slide {
+    display: flex;
+    height: auto;
+}
+.testimonial-swiper {
+    padding-bottom: 45px;
+}
+.testimonial-swiper .swiper-button-prev, .testimonial-swiper .swiper-button-next {
+    width: 30px;
+    height: 30px;
+    background: #fff;
+    border-radius: 100px;
+    top: auto;
+    bottom: 0px;
+}
+.testimonial-swiper .swiper-button-prev:after, .testimonial-swiper .swiper-button-next:after {
+    font-size: 13px;
+    font-weight: 800;
+    color: #00409e;
+}
+.testimonial-swiper .swiper-button-prev {
+    left: auto;
+    right: 48px;
+}
+.testimonail_box {
+    padding: 30px;
+    border-radius: 30px;
+    background: #fff;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+.testimonail_box .rating {
+    text-align: center;
+}
+.testimonail_box .rating i {
+    color: #f0ad4e;
+    font-size: 14px;
+}
+.testimonail_box .tt_content {
+    position: relative;
+    color: #00409e;
+    line-height: 24px;
+    font-weight: 400;
+    font-size: 14px;
+    font-family: "Nunito Sans", sans-serif;
+    margin-top: 10px;
+}
+.testimonail_box img {
+    width: 50px;
+    height: 50px;
+    border-radius: 100%;
+    border: 1px solid #ddd;
+}
+.testimonail_box .name {
+    font-family: Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 21px;
+    font-weight: 600;
+    text-align: center;
+}
+.tt_content .full-content {
+    display: none;
+}
+.tt_content button {
+    padding: 0;
+    background: none;
+    color: #0073aa;
+    font-size: 15px;
+    border: none;
+    cursor: pointer;
+}
+@media(max-width:991px){
+    .testimonial-swiper {
+        margin-bottom: 23px;
+    }
+    .testimonial-swiper .swiper-button-prev {
+        left: 0px;
+        right: auto;
+    }
+}
+
+/* ============================================================================
+   FAQ Schema Styles
+   ============================================================================ */
+.faq_box {
+    margin-bottom: 13px;
+    border-radius: 15px;
+    overflow: hidden;
+    border: 1px solid #ddd !important;
+}
+.page_content .post-content .faq_box .faq__title {
+    margin: 0 !important;
+    padding: 20px 55px 20px 19px;
+    background: #eee;
+    font-size: 18px !important;
+    position: relative;
+    line-height: 18px !important;
+    cursor: pointer;
+    color: #00409e !important;
+}
+.faq_box .faq__title i {
+    position: absolute;
+    top: 41%;
+    right: 0;
+    transform: translateY(-50%);
+    font-size: 20px;
+}
+.faq_box .faq_content {
+        padding: 20px;
+        display: none;
+        border-top: 1px solid #ddd;
+}
+    .faq_box.active .faq_content {
+        display: block;
+}
+    .mb_25 {
+        margin-bottom: 25px;
+}
+.faq_box .faq__title i.ti-angle-down:before {
+    content: '';
+    width: 12px;
+    height: 12px;
+    display: inline-block;
+    border-right: 1px solid #000000b8;
+    border-bottom: 1px solid #000000b8;
+    transform: rotate(45deg) translateY(-50%);
+    position: absolute;
+    top: 35%;
+    right: 27px;   
+}
+
+/*Solid Security Captcha*/
+
+.itsec-recaptcha-opt-in__agree{
+
+    display: flex;
+    gap:7px;
+}

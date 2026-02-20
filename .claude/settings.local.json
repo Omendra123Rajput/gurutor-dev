@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(python3:*)",
+      "Bash(where:*)",
+      "Bash(node:*)",
+      "Bash(ls:*)",
+      "Bash(dir:*)",
+      "Bash(powershell -Command \"Get-ChildItem -Recurse | Where-Object { $_PSIsContainer } | Select-Object FullName\")",
+      "Bash(coderabbit --version:*)",
+      "Bash(python -c \"\nimport zipfile, sys, io\nimport xml.etree.ElementTree as ET\n\nsys.stdout = io.TextIOWrapper\\(sys.stdout.buffer, encoding=''utf-8''\\)\n\nwith zipfile.ZipFile\\(''Gurutor.ai.docx'', ''r''\\) as z:\n    with z.open\\(''word/document.xml''\\) as f:\n        tree = ET.parse\\(f\\)\n        root = tree.getroot\\(\\)\n        for p in root.iter\\(''{http://schemas.openxmlformats.org/wordprocessingml/2006/main}p''\\):\n            texts = []\n            for t in p.iter\\(''{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t''\\):\n                if t.text:\n                    texts.append\\(t.text\\)\n            line = ''''.join\\(texts\\).strip\\(\\)\n            if line:\n                print\\(line\\)\n\")"
+    ]
+  }
+}

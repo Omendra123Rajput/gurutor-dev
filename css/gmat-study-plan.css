@@ -1,0 +1,713 @@
+/* ============================================================================
+   GMAT Study Plan — v4
+   3 main sections (Verbal / Quant / DI) stacked vertically.
+   Overall progress bar + breakdown cards at top.
+   Accordion units within each section card.
+   Lessons: numbered circles, left colored border, topic subtitle, pill buttons.
+   xAPI-based 3-state tracking: not-started / in-progress / completed.
+   ============================================================================ */
+
+#gmat-study-plan *,
+#gmat-study-plan *::before,
+#gmat-study-plan *::after {
+    box-sizing: border-box;
+}
+
+#gmat-study-plan {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 10px 0 60px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: #1e293b;
+}
+
+
+/* ============================================================================
+   Overall Progress Bar
+   ============================================================================ */
+
+.gmat-sp-overall {
+    margin-bottom: 28px;
+}
+
+.gmat-sp-overall__label {
+    font-size: 15px;
+    font-weight: 600;
+    color: #00409E;
+    margin-bottom: 10px;
+}
+
+.gmat-sp-overall__bar-wrap {
+    width: 100%;
+    height: 10px;
+    background: #e2e8f0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.gmat-sp-overall__bar {
+    height: 100%;
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+    border-radius: 6px;
+    transition: width 0.6s ease;
+    min-width: 2px;
+}
+
+.gmat-sp-overall__pct {
+    text-align: right;
+    font-size: 13px;
+    font-weight: 600;
+    color: #00409E;
+    margin-top: 6px;
+}
+
+
+/* ============================================================================
+   Course Progress Breakdown — 3 cards
+   ============================================================================ */
+
+.gmat-sp-breakdown {
+    margin-bottom: 40px;
+}
+
+.gmat-sp-breakdown__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #00409E;
+    margin: 0 0 14px;
+}
+
+.gmat-sp-breakdown__cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.gmat-sp-breakdown__card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 18px;
+}
+
+.gmat-sp-breakdown__card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.gmat-sp-breakdown__card-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    line-height: 1.3;
+}
+
+.gmat-sp-breakdown__card-count {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    white-space: nowrap;
+    margin-left: 8px;
+}
+
+.gmat-sp-breakdown__card-bar-wrap {
+    width: 100%;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.gmat-sp-breakdown__card-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+    min-width: 2px;
+}
+
+.gmat-sp-breakdown__card-pct {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+
+/* ============================================================================
+   Section — "Verbal Modules" / "Quant Modules" / "Data Insights Modules"
+   ============================================================================ */
+
+.gmat-sp-section {
+    margin-bottom: 40px;
+}
+
+.gmat-sp-section__title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin: 0 0 16px;
+    font-style: italic;
+}
+
+.gmat-sp-section__card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px;
+}
+
+
+/* ============================================================================
+   Unit Accordion
+   ============================================================================ */
+
+.gmat-sp-unit {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+}
+
+.gmat-sp-unit:last-child {
+    margin-bottom: 0;
+}
+
+.gmat-sp-unit:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Unit open state — subtle highlight */
+.gmat-sp-unit.open {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+
+/* ── Unit Header (always visible, clickable) ── */
+
+.gmat-sp-unit__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+    background: #f8fafc;
+    transition: background 0.15s ease;
+}
+
+.gmat-sp-unit__header:hover {
+    background: #f1f5f9;
+}
+
+.gmat-sp-unit.open .gmat-sp-unit__header {
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.gmat-sp-unit__header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.gmat-sp-unit__state-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.gmat-sp-unit__title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.gmat-sp-unit__progress-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: #94a3b8;
+    white-space: nowrap;
+}
+
+.gmat-sp-unit__header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.gmat-sp-unit__pct {
+    font-size: 13px;
+    font-weight: 700;
+    color: #00409E;
+}
+
+.gmat-sp-unit__chevron {
+    display: flex;
+    align-items: center;
+    transition: transform 0.25s ease;
+}
+
+.gmat-sp-unit.open .gmat-sp-unit__chevron {
+    transform: rotate(180deg);
+}
+
+
+/* ── Unit Body (collapsible) ── */
+
+.gmat-sp-unit__body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease, padding 0.35s ease;
+    padding: 0 18px;
+}
+
+.gmat-sp-unit.open .gmat-sp-unit__body {
+    max-height: 5000px; /* Large enough for any content */
+    padding: 18px;
+}
+
+
+/* ── Completed unit visual hint ── */
+
+.gmat-sp-unit--completed .gmat-sp-unit__header {
+    background: #f0fdf4;
+}
+
+.gmat-sp-unit--completed.open .gmat-sp-unit__header {
+    background: #f0fdf4;
+}
+
+.gmat-sp-unit--completed .gmat-sp-unit__title {
+    color: #166534;
+}
+
+/* ── In-progress unit visual hint ── */
+
+.gmat-sp-unit--in-progress .gmat-sp-unit__header {
+    background: #fff7ed;
+}
+
+.gmat-sp-unit--in-progress.open .gmat-sp-unit__header {
+    background: #fff7ed;
+}
+
+
+/* ============================================================================
+   Sub-section badges — "UNIT 1 - LEARN" / "UNIT 1 - PRACTICE" / "UNIT 1 - REVIEW"
+   ============================================================================ */
+
+.gmat-sp-subsection {
+    margin-bottom: 20px;
+}
+
+.gmat-sp-subsection:last-child {
+    margin-bottom: 0;
+}
+
+.gmat-sp-subsection__badge {
+    display: inline-block;
+    padding: 5px 16px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+}
+
+.gmat-sp-subsection__badge--learn {
+    background: #22c55e;
+    color: #fff;
+}
+
+.gmat-sp-subsection__badge--practice {
+    background: #f59e0b;
+    color: #fff;
+}
+
+.gmat-sp-subsection__badge--review {
+    background: #8b5cf6;
+    color: #fff;
+}
+
+
+/* ============================================================================
+   Lesson List — Numbered items with left colored border
+   ============================================================================ */
+
+.gmat-sp-lesson-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.gmat-sp-lesson {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    transition: background 0.15s ease;
+}
+
+.gmat-sp-lesson:hover {
+    background: #f1f5f9;
+}
+
+
+/* Number column with colored left border */
+.gmat-sp-lesson__number-col {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding-left: 14px;
+    flex-shrink: 0;
+}
+
+.gmat-sp-lesson__number-col::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 36px;
+    border-radius: 2px;
+    background: #5b6abf;
+    transition: background 0.2s ease;
+}
+
+.gmat-sp-lesson--completed .gmat-sp-lesson__number-col::before {
+    background: #22c55e;
+}
+
+.gmat-sp-lesson--in-progress .gmat-sp-lesson__number-col::before {
+    background: #f68525;
+}
+
+
+/* Number circle */
+.gmat-sp-lesson__number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.gmat-sp-lesson__number--not-started {
+    background: #5b6abf;
+    color: #fff;
+}
+
+.gmat-sp-lesson__number--in-progress {
+    background: #f68525;
+    color: #fff;
+}
+
+.gmat-sp-lesson__number--completed {
+    background: #22c55e;
+    color: #fff;
+}
+
+
+/* Lesson info: name + topic subtitle */
+.gmat-sp-lesson__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.gmat-sp-lesson__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.gmat-sp-lesson--completed .gmat-sp-lesson__name {
+    color: #64748b;
+}
+
+.gmat-sp-lesson__topic {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+
+/* Actions: status badge + button */
+.gmat-sp-lesson__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.gmat-sp-lesson__status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.gmat-sp-lesson__status-badge--completed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.gmat-sp-lesson__status-badge--progress {
+    background: #00409E;
+    color: #fff;
+}
+
+
+/* Buttons — Blue rounded pill matching screenshot */
+.gmat-sp-lesson__btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 22px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #5b6abf;
+    color: #fff;
+    border: none;
+    white-space: nowrap;
+}
+
+.gmat-sp-lesson__btn:hover {
+    background: #4a59ae;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(91, 106, 191, 0.35);
+    color: #fff;
+    text-decoration: none;
+}
+
+.gmat-sp-lesson__btn--continue {
+    background: #f68525;
+}
+
+.gmat-sp-lesson__btn--continue:hover {
+    background: #e5741a;
+    box-shadow: 0 4px 12px rgba(246, 133, 37, 0.35);
+}
+
+.gmat-sp-lesson__btn--review {
+    background: #22c55e;
+}
+
+.gmat-sp-lesson__btn--review:hover {
+    background: #16a34a;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.35);
+}
+
+.gmat-sp-lesson__btn--disabled {
+    background: #e2e8f0;
+    color: #94a3b8;
+    cursor: not-allowed;
+    pointer-events: none;
+    box-shadow: none;
+}
+
+.gmat-sp-lesson__btn--disabled:hover {
+    transform: none;
+}
+
+
+/* ============================================================================
+   Suggest Areas of Focus
+   ============================================================================ */
+
+.gmat-sp-suggest {
+    display: flex;
+    gap: 12px;
+    margin: 16px 0 0;
+    padding: 16px 20px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 12px;
+}
+
+.gmat-sp-suggest__icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.gmat-sp-suggest__content {
+    flex: 1;
+    font-size: 13px;
+    color: #78350f;
+}
+
+.gmat-sp-suggest__content strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 14px;
+    color: #92400e;
+}
+
+.gmat-sp-suggest__content p {
+    margin: 4px 0 0;
+}
+
+.gmat-sp-suggest__redo {
+    font-style: italic;
+}
+
+.gmat-sp-suggest__cross {
+    margin-top: 8px !important;
+    padding-top: 8px;
+    border-top: 1px dashed #fde68a;
+}
+
+/* Clickable lesson links inside suggestions */
+.gmat-sp-suggest__link {
+    color: #00409E;
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: rgba(0, 64, 158, 0.3);
+    text-underline-offset: 2px;
+    transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.gmat-sp-suggest__link:hover {
+    color: #1e3a5f;
+    text-decoration-color: #1e3a5f;
+}
+
+
+/* ============================================================================
+   Responsive
+   ============================================================================ */
+
+@media (max-width: 767px) {
+    #gmat-study-plan {
+        padding: 8px 10px 40px;
+    }
+
+    .gmat-sp-breakdown__cards {
+        grid-template-columns: 1fr;
+    }
+
+    .gmat-sp-section__title {
+        font-size: 20px;
+    }
+
+    .gmat-sp-section__card {
+        padding: 10px;
+    }
+
+    .gmat-sp-unit__header {
+        padding: 12px 14px;
+    }
+
+    .gmat-sp-unit__title {
+        font-size: 14px;
+    }
+
+    .gmat-sp-unit__progress-text {
+        font-size: 11px;
+    }
+
+    .gmat-sp-unit.open .gmat-sp-unit__body {
+        padding: 14px;
+    }
+
+    /* ── Fix: Lesson row stacking on mobile ── */
+    .gmat-sp-lesson {
+        flex-wrap: nowrap;
+        gap: 10px;
+        padding: 10px 12px;
+    }
+
+    /* Lesson info takes remaining space, truncates if needed */
+    .gmat-sp-lesson__info {
+        min-width: 0;
+    }
+
+    .gmat-sp-lesson__name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Actions stack vertically on mobile to prevent overflow */
+    .gmat-sp-lesson__actions {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+
+    .gmat-sp-lesson__status-badge {
+        font-size: 10px;
+        padding: 3px 8px;
+    }
+
+    .gmat-sp-lesson__btn {
+        font-size: 11px;
+        padding: 6px 14px;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .gmat-sp-lesson__name {
+        font-size: 13px;
+    }
+
+    .gmat-sp-lesson__btn {
+        font-size: 11px;
+        padding: 5px 12px;
+    }
+
+    .gmat-sp-lesson__number {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+
+    .gmat-sp-lesson__number-col {
+        padding-left: 10px;
+    }
+
+    .gmat-sp-lesson__number-col::before {
+        height: 28px;
+    }
+
+    .gmat-sp-lesson__topic {
+        display: none;
+    }
+
+    .gmat-sp-unit__header-left {
+        gap: 8px;
+    }
+
+    .gmat-sp-unit__progress-text {
+        display: none;
+    }
+
+    .gmat-sp-suggest {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+}

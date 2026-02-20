@@ -1,0 +1,1059 @@
+/* ============================================================================
+GMAT Intake Form - Multi-Step Wizard
+Matches Gurutor design system: Blue #00409E, Orange #f68525, Light BG #eef3fb
+============================================================================ */
+
+/* Reset box-sizing inside wizard */
+#gmat-intake-wizard *,
+#gmat-intake-wizard *::before,
+#gmat-intake-wizard *::after {
+	box-sizing: border-box;
+}
+
+#gmat-intake-wizard h2,
+#gmat-intake-wizard h3,
+#gmat-intake-wizard h4,
+#gmat-intake-wizard p {
+	margin-top: 0;
+}
+
+/* Page background - light blue like screenshots */
+.page-template-default .site-content,
+.page-template-default #page {
+	background: #eef3fb;
+}
+
+
+/* ============================================================================
+Hide header, footer, and page title on intake page — clean full-screen wizard
+============================================================================ */
+
+.page-gmat-intake .site-header,
+.page-gmat-intake .site-footer,
+.page-gmat-intake .entry-header,
+.page-gmat-intake .page-header,
+.page-gmat-intake #secondary,
+.page-gmat-intake .footer-bar,
+.page-gmat-intake .elementor-location-header,
+.page-gmat-intake .elementor-location-footer,
+.page-gmat-intake header.elementor[data-elementor-type="header"],
+.page-gmat-intake footer.elementor[data-elementor-type="footer"],
+.page-gmat-intake .elementor-sticky__spacer {
+	display: none !important;
+}
+
+.page-gmat-intake .site-content,
+.page-gmat-intake .inside-article,
+.page-gmat-intake article > .entry-content {
+	padding: 0 !important;
+	margin: 0 !important;
+}
+
+.page-gmat-intake .container.grid-container {
+	max-width: 100%;
+	padding: 0;
+}
+
+.page-gmat-intake .content-area {
+	padding: 0 !important;
+}
+
+.page-gmat-intake .site-main {
+	width: 100% !important;
+	margin: 0 !important;
+}
+
+/* Minimal logo bar at top of intake page */
+.gmat-intake-logo-bar {
+	background: #fff;
+	padding: 16px 20px;
+	border-bottom: 1px solid #e8ecf1;
+}
+
+.gmat-intake-logo-bar img {
+	height: 36px;
+	width: auto;
+	display: block;
+}
+
+.gmat-intake-logo-bar a {
+	display: inline-block;
+	line-height: 0;
+}
+
+
+/* ============================================================================
+Wizard Container
+============================================================================ */
+
+#gmat-intake-wizard {
+	max-width: 1140px;
+	margin: 0 auto;
+	padding: 56px 0px 150px;
+	font-family: "Nunito Sans", Sans-serif;
+}
+@media (max-width:1160px) {
+	#gmat-intake-wizard {	
+		padding: 40px 20px;
+	}
+}
+
+/* ============================================================================
+Progress Bar — Horizontal stepper with labels beneath each circle
+============================================================================ */
+
+.gmat-intake-progress-bar {
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	margin-bottom: 35px;
+	padding: 0 10px;
+}
+
+/* Each step item: circle + label vertically stacked */
+.gmat-progress-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	flex-shrink: 0;
+	min-width: 118px;
+}
+
+/* Circle */
+.gmat-progress-step {
+	width: 56px;
+	height: 56px;
+	border-radius: 50%;
+	background: #D5D8DC;
+	color:#ffffff;
+	display: flex;
+	border: 1px solid #0000001A;
+	align-items: center;
+	justify-content: center;
+	font-family: "Nunito Sans", Sans-serif;
+	font-weight: 900;
+	font-size: 24px;
+	line-height: 100%;
+	flex-shrink: 0;
+	transition: all 0.4s ease;
+	position: relative;
+	z-index: 1;
+}
+@media (max-width:1024px) and (min-width:768px) {
+	.gmat-progress-item {
+		max-width: 100px;
+	}
+	.gmat-progress-step {
+		width: 40px;
+		height: 40px;
+		font-size:20px; 
+		font-weight:700;
+	}
+}
+/* Active step — Orange circle like the screenshots */
+.gmat-progress-step.active {
+	background:#F0F7FF;
+
+	/*     color: #fff; */
+	color: #00409E;
+	border: 1px solid #00409E;
+
+	/*     box-shadow: 0 3px 12px rgba(246, 133, 37, 0.35); */
+	/*     transform: scale(1.08); */
+}
+
+/* Completed step — Dark navy with checkmark */
+.gmat-progress-step.completed {
+	background: #002b6b;
+	color: #fff;
+
+}
+
+.gmat-progress-step.completed .gmat-progress-number {
+	display: none;
+}
+
+.gmat-progress-step.completed .gmat-progress-check {
+	display: flex;
+}
+
+.gmat-progress-check {
+	display: none;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Label beneath each circle */
+.gmat-progress-label {
+	font-size: 14px;
+	color: #222222;
+	text-align: center;
+	margin-top: 12px;
+	white-space: nowrap;
+	font-weight: 400;
+	transition: color 0.3s;
+	line-height: 1.3;
+}
+
+.gmat-progress-item:has(.gmat-progress-step.active) .gmat-progress-label {
+	color: #00409E;
+	font-weight: 600;
+}
+
+.gmat-progress-item:has(.gmat-progress-step.completed) .gmat-progress-label {
+	color: #00409E;
+}
+
+/* Connecting line between circles */
+.gmat-progress-line {
+	flex: 1;
+	height: 3px;
+	background: #d0daea;
+	margin-top: 28px; /* vertically center with circles (42px / 2) */
+	min-width: 40px;
+	max-width: 100px;
+	transition: background 0.4s ease;
+	border-radius: 2px;
+}
+.gmat-progress-check svg {
+	width: 24px;
+	height: 24px;
+	filter: invert(42%) sepia(96%) saturate(749%) hue-rotate(359deg) brightness(103%) contrast(105%);
+}
+
+.gmat-progress-line.completed {
+	background: #002b6b;
+}
+@media (max-width:1024px) and (min-width:768px)
+{
+.gmat-progress-line { 	
+	margin-top: 19px;
+	}
+}
+
+/* ============================================================================
+Step Panels
+============================================================================ */
+
+.gmat-step {
+	background: #fff;
+	border-radius: 20px;
+	padding: 45px 40px 35px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+	animation: gmat-fadeSlideIn 0.4s ease;
+}
+
+.gmat-step--hidden {
+	display: none !important;
+}
+
+@keyframes gmat-fadeSlideIn {
+	from {
+		opacity: 0;
+		transform: translateY(12px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.gmat-step__content {
+	margin-bottom: 25px;
+}
+
+.gmat-step__title {
+	font-size: 28px;
+	font-weight: 800;
+	color: #00409E;
+	text-align: center;
+	margin: 0 0 10px;
+	line-height: 1.35;
+}
+
+.gmat-step__subtitle {
+	font-size: 16px;
+	color: #222222;
+	text-align: center;
+	margin: 0 0 35px;
+	line-height: 1.5;
+}
+
+.gmat-step5-description p{
+	padding-bottom:16px;
+	width:100%;
+	max-width:700px;
+	margin:0 auto;
+}
+
+/* ============================================================================
+Step Action Bar (Previous / Save / Skip / Finish)
+============================================================================ */
+
+.gmat-step__actions {
+	display: flex;
+	justify-content: center;
+	gap: 16px;
+	margin-top: 0px;
+	padding-top: 25px;
+	border-top: 1px solid #eff1f5;
+}
+
+/* Push buttons to the right on step 1 */
+.gmat-step__actions--end {
+	justify-content: center;
+}
+
+
+/* ============================================================================
+Buttons
+============================================================================ */
+
+.gmat-btn {
+	padding: 13px 40px;
+	border-radius: 30px;
+	font-size: 15px;
+	font-weight: 600;
+	cursor: pointer;
+	border: none;
+	transition: all 0.25s ease;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 150px;
+	text-decoration: none;
+	line-height: 1.4;
+	letter-spacing: 0.01em;
+	-webkit-font-smoothing: antialiased;
+}
+
+.gmat-btn:active {
+	transform: scale(0.97);
+}
+
+/* Orange primary button */
+.gmat-btn-primary {
+	background: #FBB03B;
+	color: #ffffff;
+	/* 	box-shadow: 0 3px 10px rgba(246, 133, 37, 0.25); */
+}
+.gmat-btn-primary::active {
+	background: #FBB03B;
+	color: #ffffff;
+}
+.gmat-btn-skip:focus { 
+	background: #FBB03B;
+	color: #ffffff;
+}
+
+.gmat-btn-primary:hover {
+	background: #4F80FF;
+	/* 	box-shadow: 0 5px 16px rgba(246, 133, 37, 0.35); */
+	/* 	transform: translateY(-1px); */
+}
+.gmat-btn-prev:hover {
+	/* 	color: #1E73BE; */
+	color:#ffffff;
+	background: #4f80ff !important;
+	border: 2px solid #4f80ff;
+}
+.gmat-btn-prev:focus {
+	color:#ffffff;
+	background: #4f80ff !important;
+	border: 2px solid #4f80ff;
+}
+
+/* Blue outlined button — Previous */
+.gmat-btn-outline {
+	background: #ffffff;
+	color: #1E73BE;
+	border: 2px solid #1E73BE;
+}
+
+.gmat-btn-outline:hover {
+	background: #f0f5ff;
+}
+
+/* Blue filled buttons — Skip / Finish */
+.gmat-btn-skip,
+.gmat-btn-finish {
+	background: #4F80FF;
+	color: #ffffff;
+	/* 	box-shadow: 0 3px 10px rgba(74, 123, 247, 0.25); */
+}
+
+.gmat-btn-skip:hover,
+.gmat-btn-finish:hover {
+	background: #FBB03B;
+	color: #ffffff;
+	/* 	box-shadow: 0 5px 16px rgba(74, 123, 247, 0.35);
+	transform: translateY(-1px); */
+}
+
+/* Save button uses primary orange */
+.gmat-btn-save {
+	/* inherits .gmat-btn-primary styles */
+}
+
+.gmat-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	transform: none !important;
+	box-shadow: none !important;
+}
+
+/* Loading spinner */
+.gmat-btn.loading {
+	pointer-events: none;
+	opacity: 0.7;
+}
+
+.gmat-btn.loading::after {
+	content: '';
+	width: 16px;
+	height: 16px;
+	border: 2px solid transparent;
+	border-top-color: currentColor;
+	border-radius: 50%;
+	animation: gmat-spin 0.6s linear infinite;
+	margin-left: 8px;
+	flex-shrink: 0;
+}
+
+@keyframes gmat-spin {
+	to { transform: rotate(360deg); }
+}
+
+
+/* ============================================================================
+Score Cards (Step 1) — Side by side matching screenshots
+============================================================================ */
+
+
+
+.gmat-score-cards .col-md-6 {
+	margin-bottom: 16px;
+	width:100%;
+}
+.gmat-score-cards  {
+	display: flex;
+	justify-content: center;
+	width: 100%;
+	max-width: 800px;
+	margin: 0 auto;
+	gap: 20px;
+	padding-bottom: 20px;
+}
+
+.gmat-score-card {
+	background: #fff;
+	border: 2px dashed #d0d5dd;
+	border-radius: 16px;
+	padding: 32px 24px;
+	text-align: center;
+	transition: all 0.3s ease;
+	height: 100%;
+
+}
+
+.gmat-score-card:hover {
+	border-color: #f68525;
+}
+
+.gmat-score-card__title {
+	font-size: 18px !important;
+	font-weight: 700 !important;
+	color: #00409E !important;
+	margin: 0 0 8px;
+}
+
+.gmat-score-card__desc {
+	font-size: 17px;
+	color: #54595F;
+	margin: 0 0 22px;
+	line-height: 1.5;
+}
+@media (max-width:810px) and (min-width:768px) {
+	.gmat-score-card__desc {
+		height:44px;
+	}
+	
+}
+.gmat-score-card .gmat-btn {
+	width: 100%;
+	border-radius: 30px;
+}
+
+
+/* ============================================================================
+Score Entry Form — Inline row of fields matching screenshot
+============================================================================ */
+
+.gmat-score-form-wrapper {
+	margin-top: 24px;
+}
+
+.gmat-score-form {
+	background: #f8f9fc;
+	border-radius: 16px;
+	padding: 28px;
+	border: 1px solid #e4e8ee;
+}
+
+.gmat-score-form__title {
+	font-size: 18px !important;
+	font-weight: 700 !important;
+	color: #00409E !important;
+	margin: 0 0 16px;
+}
+
+.gmat-score-form__fields {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin-bottom: 20px;
+}
+
+.gmat-score-form__fields > div {
+	flex: 1;
+	min-width: 130px;
+}
+
+.gmat-score-form__fields label {
+	display: block;
+	font-weight: 600;
+	font-size: 14px;
+	color: #222222;
+	margin-bottom: 6px;
+}
+
+.gmat-score-form__fields input {
+	width: 100%;
+	padding: 10px 12px;
+	border: 1px solid #d0d5dd;
+	border-radius: 8px;
+	font-size: 14px;
+	color: #333;
+	background: #fff;
+	box-sizing: border-box;
+	transition: all 0.25s ease;
+}
+
+.gmat-score-form__fields input:focus {
+	border-color: #00409E;
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(0, 64, 158, 0.1);
+}
+
+.gmat-score-form__fields input::placeholder {
+	color: #aaa;
+}
+
+.gmat-score-form__note {
+	font-size: 13px;
+	color: #888;
+	margin: 18px 0 0;
+	line-height: 1.4;
+}
+
+.gmat-score-form__actions {
+	display: flex;
+	gap: 10px;
+}
+
+.gmat-score-form__actions .gmat-btn {
+	min-width: auto;
+	padding: 10px 28px;
+	font-size: 14px;
+}
+
+
+/* ============================================================================
+Saved Score Lists
+============================================================================ */
+
+.gmat-saved-scores {
+	margin-top: 24px;
+}
+
+.gmat-saved-scores h4 {
+	font-size: 15px;
+	font-weight: 700;
+	color: #00409E;
+	margin: 0 0 10px;
+}
+
+.gmat-score-list-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	background: #fff;
+	border: 1px solid #e4e8ee;
+	border-radius: 10px;
+	padding: 14px 18px;
+	margin-bottom: 8px;
+	font-size: 14px;
+	transition: box-shadow 0.2s;
+}
+
+.gmat-score-list-item:hover {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.gmat-score-list-item__info {
+	display: flex;
+	gap: 18px;
+	flex-wrap: wrap;
+}
+
+.gmat-score-list-item__info span {
+	color: #555;
+}
+
+.gmat-score-list-item__info strong {
+	color: #333;
+}
+
+.gmat-score-remove {
+	background: none;
+	border: none;
+	color: red;
+	cursor: pointer;
+	font-size: 20px;
+	padding: 2px 6px;
+	line-height: 1;
+	border-radius: 4px;
+	transition: all 0.2s;
+}
+
+.gmat-score-remove:hover {
+	color: red;
+	background: transparent;
+}
+
+
+/* ============================================================================
+Goal Score Card (Step 2)
+============================================================================ */
+
+.gmat-goal-card {
+	background: #ffffff;
+	border: 1px solid #D5D8DC;
+	border-radius: 16px;
+	padding: 28px;
+	margin-bottom: 30px;
+}
+
+.gmat-goal-card__title {
+	font-size: 18px !important;
+	font-weight: 700 !important;
+	color: #00409E !important;
+	margin: 0 0 4px;
+}
+
+.gmat-goal-card__note {
+	font-size: 13px;
+	color: #999;
+	margin: 14px 0 0;
+	line-height: 1.4;
+}
+
+
+/* ============================================================================
+Percentile Table (Step 2)
+============================================================================ */
+
+.gmat-percentile-card {
+	background: #fff;
+	border: 1px solid #e4e8ee;
+	border-radius: 16px;
+	overflow: hidden;
+	max-height: 420px;
+	overflow-y: auto;
+	/* Smooth scroll */
+	scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for the table */
+.gmat-percentile-card::-webkit-scrollbar {
+	width: 6px;
+}
+
+.gmat-percentile-card::-webkit-scrollbar-track {
+	background: #f0f0f0;
+	border-radius: 3px;
+}
+
+.gmat-percentile-card::-webkit-scrollbar-thumb {
+	background: #c0c8d4;
+	border-radius: 3px;
+}
+
+.gmat-percentile-card::-webkit-scrollbar-thumb:hover {
+	background: #a0aab4;
+}
+
+.gmat-percentile-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.gmat-percentile-table thead {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+}
+
+.gmat-percentile-table th {
+	background: #00409E;
+	color: #fff;
+	padding: 14px 20px;
+	text-align: center;
+	font-size: 14px;
+	font-weight: 700;
+}
+
+.gmat-percentile-table td {
+	padding: 10px 20px;
+	text-align: center;
+	font-size: 14px;
+	color: #444;
+	border-bottom: 1px solid #f0f0f0;
+}
+
+.gmat-percentile-table tbody tr:nth-child(even) {
+	background: #fafbfd;
+}
+
+.gmat-percentile-table tbody tr:hover {
+	background: #eef3fb;
+}
+
+.gmat-percentile-scroll-note {
+	font-size: 12px;
+	color: #bbb;
+	text-align: center;
+	padding: 8px;
+	margin: 0;
+	display: none;
+}
+
+
+/* ============================================================================
+Shared Form Inputs
+============================================================================ */
+
+.gmat-field-label {
+	display: block;
+	font-weight: 600;
+	font-size: 14px;
+	color: #222222;
+	margin-bottom: 8px;
+}
+
+.gmat-input {
+	width: 100%;
+	padding: 12px 14px !important;
+	border: 1px solid #d0d5dd !important;
+	border-radius: 10px !important;
+	font-size: 15px;
+	color: #333;
+	background: #fff;
+	box-sizing: border-box;
+	transition: all 0.25s ease;
+	margin-bottom:10px;
+}
+
+.gmat-input:focus {
+	border-color: #00409E;
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(0, 64, 158, 0.1);
+}
+
+.gmat-input::placeholder {
+	color: #aaa;
+}
+
+
+/* .gmat-select {
+appearance: auto;
+cursor: pointer;
+} */
+.gmat-select {
+	appearance: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+
+	padding-right: 40px; /* space for arrow */
+	background-image: url("data:image/svg+xml;utf8,<svg fill='black' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+	background-repeat: no-repeat;
+	background-position: right 15px center; /* 🔥 Move arrow right here */
+	background-size: 18px;
+}
+
+/* ============================================================================
+Hours Card (Step 3) & Date Card (Step 4)
+============================================================================ */
+
+.gmat-hours-card,
+.gmat-date-card {
+	max-width: 500px;
+	margin: 0 auto;
+	background: #f8f9fc;
+	border: 1px solid #e4e8ee;
+	border-radius: 16px;
+	padding: 32px 28px;
+}
+
+.gmat-hours-card__title,
+.gmat-date-card__title {
+	font-size: 18px !important;
+	font-weight: 700 !important;
+	color: #00409E !important;
+	margin: 0 0 4px;
+}
+
+.gmat-hours-card__note,
+.gmat-date-card__note {
+	font-size: 13px;
+	color: #999;
+	margin: 14px 0 0;
+	line-height: 1.4;
+}
+
+
+/* ============================================================================
+Preference Cards (Step 5)
+============================================================================ */
+
+.gmat-preference-cards {
+	max-width: 700px;
+	margin: 0 auto;
+	display: flex;
+	justify-content: center;
+	gap: 20px;
+	width: 100%;
+
+}
+
+.gmat-preference-cards .col-md-6 {
+	margin-bottom: 16px;
+	width:100%;
+}
+
+.gmat-preference-card {
+	background: #fff;
+	border: 2px solid #e4e8ee;
+	border-radius: 18px;
+	padding: 36px 24px;
+	text-align: center;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	height: 100%;
+}
+
+.gmat-preference-card:hover {
+	border-color: #00409E;
+	box-shadow: 0 6px 20px rgba(0, 64, 158, 0.1);
+	transform: translateY(-2px);
+}
+
+.gmat-preference-card.selected {
+	border-color: #f68525;
+	background: linear-gradient(135deg, #fffaf5 0%, #fff5ec 100%);
+	box-shadow: 0 4px 20px rgba(246, 133, 37, 0.15);
+	transform: translateY(-2px);
+}
+
+.gmat-preference-card__icon {
+	margin-bottom: 18px;
+}
+
+.gmat-preference-card__title {
+	font-size: 20px !important;
+	font-weight: 700 !important;
+	color: #00409E !important;
+	margin: 0 0 4px;
+}
+
+.gmat-preference-card__desc {
+	font-size: 14px;
+	color:  #54595F; 
+	margin: 0;
+	line-height: 1.5;
+}
+
+
+/* ============================================================================
+Error Messages
+============================================================================ */
+
+.gmat-step__error {
+	color: #dc3545;
+	font-size: 14px;
+	text-align: center;
+	margin-top: 14px;
+	min-height: 20px;
+	font-weight: 500;
+	transition: opacity 0.3s;
+}
+
+
+/* ============================================================================
+Completed / Login Messages
+============================================================================ */
+
+.gmat-intake-completed-msg {
+	text-align: center;
+	padding: 80px 20px;
+}
+
+.gmat-intake-completed-msg h2 {
+	color: #00409E;
+	font-size: 24px;
+	margin-bottom: 24px;
+}
+
+.gmat-intake-login-msg {
+	text-align: center;
+	padding: 80px 20px;
+	font-size: 16px;
+}
+
+.gmat-intake-login-msg a {
+	color: #00409E;
+	font-weight: 600;
+}
+
+
+/* ============================================================================
+Responsive — Mobile
+============================================================================ */
+
+@media (max-width: 767px) {
+	#gmat-intake-wizard {
+		padding: 20px 12px 40px;
+	}
+
+	.gmat-step {
+		padding: 28px 18px 24px;
+		border-radius: 14px;
+	}
+
+	.gmat-step__title {
+		font-size: 22px;
+	}
+
+	.gmat-step__subtitle {
+		font-size: 16px;
+		margin-bottom: 24px;
+	}
+
+	/* Progress bar: compact for mobile */
+	.gmat-intake-progress-bar {
+		padding: 0 5px;
+		margin-bottom: 24px;
+	}
+
+	.gmat-progress-item {
+		min-width: auto;
+		flex-shrink: 0;
+	}
+
+	.gmat-progress-label {
+		display: none;
+	}
+
+	.gmat-progress-step {
+		width: 36px;
+		height: 36px;
+		font-size: 14px;
+		font-weight: 700;
+	}
+
+	.gmat-progress-line {
+		min-width: 20px;
+		max-width: 60px;
+		margin-top: 18px;
+	}
+
+	.gmat-progress-check svg {
+		width: 18px;
+		height: 18px;
+	}
+
+	/* Score form fields stack on mobile */
+	.gmat-score-form__fields {
+		flex-direction: column;
+	}
+
+	.gmat-score-form__fields > div {
+		min-width: 100%;
+	}
+
+	.gmat-score-list-item {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 8px;
+	}
+
+	.gmat-score-list-item__info {
+		gap: 10px;
+	}
+
+	/* Buttons stack on mobile */
+	.gmat-step__actions {
+		flex-direction: column-reverse;
+		align-items: stretch;
+	}
+
+	.gmat-btn {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.gmat-percentile-card {
+		max-height: 280px;
+	}
+}
+
+/* Tablet & Desktop: show labels */
+@media (min-width: 768px) {
+	.gmat-progress-label {
+		display: block;
+	}
+}
+.multiz-step-form .gmat-step .gmat-step__title {
+	font-size: 36px !important;
+	line-height: 42px !important;
+}
+@media (max-width:767px) {
+	.multiz-step-form .gmat-step .gmat-step__title {
+		font-size: 26px !important;
+		line-height: 36px !important;
+	} 
+/* 	.gmat-intake-progress-bar {
+		display:none; 
+	} */
+	.gmat-score-cards {
+		flex-direction:column; 
+	}
+	.gmat-preference-cards {
+		flex-direction:column; 	
+	}
+	.gmat-step[data-step="5"] .gmat-step__content {
+		margin-bottom:unset;
+	}
+	.gmat-step[data-step="5"] .gmat-preference-cards {
+		gap:unset;
+	}
+}
+
+
+
+.gmat-intake-logo-bar a {
+  width:100%;
+  max-width:1140px;
+  margin:0 auto;
+  display:block;
+}

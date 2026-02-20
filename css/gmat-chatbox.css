@@ -1,0 +1,1039 @@
+/* ============================================================================
+   GMAT AI Chatbox — Premium Floating Assistant Widget
+   BEM naming: .gmat-cb__*
+   Brand: Navy #002b6b, Blue #00409E, Accent #4F80FF, White #fff, Off-white #f8fafc
+   Typography: Inter / system fallback — sharp, confident, academic
+   ============================================================================ */
+
+/* ---------- Google Font ---------- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ---------- Scoped Reset ---------- */
+.gmat-cb *,
+.gmat-cb *::before,
+.gmat-cb *::after,
+.gmat-cb__fab,
+.gmat-cb__fab *,
+.gmat-cb__overlay {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+
+/* ============================================================================
+   FAB — Floating Action Button (bottom-right trigger)
+   60px circle, navy-to-blue gradient, blue-tinted shadow, single pulse on load
+   ============================================================================ */
+
+.gmat-cb__fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00409E 0%, #002b6b 100%);
+    border: none;
+    cursor: pointer;
+    box-shadow:
+        0 4px 16px rgba(0, 64, 158, 0.30),
+        0 1px 4px rgba(0, 43, 107, 0.20);
+    z-index: 99998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    padding: 0;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.gmat-cb__fab:hover {
+    transform: scale(1.08);
+    box-shadow:
+        0 6px 24px rgba(0, 64, 158, 0.40),
+        0 2px 6px rgba(0, 43, 107, 0.20);
+}
+
+.gmat-cb__fab:focus-visible {
+    outline: 2px solid #4F80FF;
+    outline-offset: 3px;
+}
+
+.gmat-cb__fab:active {
+    transform: scale(0.95);
+    transition-duration: 0.1s;
+}
+
+/* FAB — single pulse ring on first load (one loop only) */
+.gmat-cb__fab::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 64, 158, 0.35);
+    animation: gmat-cb-fab-pulse 2s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes gmat-cb-fab-pulse {
+    0%   { transform: scale(1); opacity: 1; }
+    70%  { transform: scale(1.35); opacity: 0; }
+    100% { transform: scale(1.35); opacity: 0; }
+}
+
+/* Icons inside FAB */
+.gmat-cb__fab-icon,
+.gmat-cb__fab-close {
+    width: 26px;
+    height: 26px;
+    fill: #fff;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+    flex-shrink: 0;
+}
+
+.gmat-cb__fab-close {
+    display: none;
+}
+
+.gmat-cb__fab--open .gmat-cb__fab-icon {
+    display: none;
+}
+
+.gmat-cb__fab--open .gmat-cb__fab-close {
+    display: block;
+}
+
+/* Disable pulse ring once opened */
+.gmat-cb__fab--open::after {
+    display: none;
+}
+
+/* Unread badge — orange, top-right, with pop animation */
+.gmat-cb__fab-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background: #f68525;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+    padding: 0 5px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1;
+    animation: gmat-cb-badge-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes gmat-cb-badge-pop {
+    0%   { transform: scale(0); }
+    60%  { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+
+/* ============================================================================
+   Overlay — Semi-transparent backdrop (mobile)
+   ============================================================================ */
+
+.gmat-cb__overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.50);
+    z-index: 99997;
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+}
+
+.gmat-cb__overlay--visible {
+    display: block;
+    animation: gmat-cb-fade-in 0.25s ease-out;
+}
+
+@keyframes gmat-cb-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+
+/* ============================================================================
+   Chat Panel — Main Container
+   400px desktop, spring-eased slide-up, subtle shadow hierarchy
+   ============================================================================ */
+
+.gmat-cb {
+    position: fixed;
+    bottom: 96px;
+    right: 24px;
+    width: 400px;
+    max-height: 600px;
+    height: calc(100vh - 140px);
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow:
+        0 24px 48px -12px rgba(0, 43, 107, 0.18),
+        0 12px 24px -8px rgba(0, 0, 0, 0.08),
+        0 0 0 1px rgba(0, 43, 107, 0.06);
+    z-index: 99999;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+.gmat-cb--open {
+    display: flex;
+    animation: gmat-cb-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Spring easing — controlled momentum */
+@keyframes gmat-cb-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+
+/* ============================================================================
+   Header — Gradient, avatar with frosted ring, status dot, ghost actions
+   ============================================================================ */
+
+.gmat-cb__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #00409E 0%, #002b6b 100%);
+    color: #fff;
+    flex-shrink: 0;
+    position: relative;
+}
+
+/* Subtle bottom highlight for depth */
+.gmat-cb__header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.gmat-cb__header-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+/* Avatar — circle with frosted glass inner ring */
+.gmat-cb__avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+}
+
+.gmat-cb__avatar svg {
+    width: 20px;
+    height: 20px;
+    fill: #fff;
+    opacity: 0.95;
+}
+
+.gmat-cb__header-text {
+    min-width: 0;
+}
+
+.gmat-cb__title {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    margin: 0;
+    line-height: 1.3 !important;
+    white-space: nowrap;
+    letter-spacing: -0.01em !important;
+    color: white !important;
+}
+
+/* Status with breathing green dot */
+.gmat-cb__status {
+    font-size: 12px;
+    font-weight: 400;
+    opacity: 0.80;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.3;
+}
+
+.gmat-cb__status::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #34d399;
+    display: inline-block;
+    flex-shrink: 0;
+    animation: gmat-cb-breathe 2.5s ease-in-out infinite;
+}
+
+@keyframes gmat-cb-breathe {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* Header action buttons — ghost style */
+.gmat-cb__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.gmat-cb__btn-new,
+.gmat-cb__btn-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease;
+    padding: 0;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.gmat-cb__btn-new:hover,
+.gmat-cb__btn-close:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.gmat-cb__btn-new:focus-visible,
+.gmat-cb__btn-close:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.6);
+    outline-offset: 1px;
+}
+
+.gmat-cb__btn-new:active,
+.gmat-cb__btn-close:active {
+    background: rgba(255, 255, 255, 0.08);
+    transition-duration: 0.05s;
+}
+
+.gmat-cb__btn-new svg,
+.gmat-cb__btn-close svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+
+/* ============================================================================
+   Messages Area — Scrollable log with custom thin scrollbar
+   ============================================================================ */
+
+.gmat-cb__messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: #f8fafc;
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+}
+
+/* Custom 4px scrollbar */
+.gmat-cb__messages::-webkit-scrollbar {
+    width: 4px;
+}
+
+.gmat-cb__messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.gmat-cb__messages::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.gmat-cb__messages::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Firefox scrollbar */
+.gmat-cb__messages {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+
+/* ============================================================================
+   Message Bubbles — Precise radii, entrance animation, timestamps
+   ============================================================================ */
+
+.gmat-cb__msg {
+    display: flex;
+    gap: 8px;
+    max-width: 85%;
+    animation: gmat-cb-msg-in 0.22s ease-out;
+    animation-fill-mode: both;
+}
+
+@keyframes gmat-cb-msg-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* --- User message — right-aligned, blue bubble --- */
+.gmat-cb__msg--user {
+    margin-left: auto;
+    flex-direction: row-reverse;
+}
+
+.gmat-cb__msg--user .gmat-cb__msg-bubble {
+    background: linear-gradient(135deg, #00409E 0%, #003785 100%);
+    color: #fff;
+    border-radius: 16px 16px 4px 16px;
+    border: none;
+}
+
+.gmat-cb__msg--user .gmat-cb__msg-time {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+/* --- Assistant message — left-aligned, white bubble with border --- */
+.gmat-cb__msg--assistant {
+    margin-right: auto;
+}
+
+.gmat-cb__msg--assistant .gmat-cb__msg-bubble {
+    background: #ffffff;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px 16px 16px 4px;
+}
+
+/* --- Welcome message --- */
+.gmat-cb__msg--welcome {
+    margin-right: auto;
+}
+
+.gmat-cb__msg--welcome .gmat-cb__msg-bubble {
+    background: #ffffff;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px 16px 16px 4px;
+}
+
+/* --- Error message — centered, red tint --- */
+.gmat-cb__msg--error {
+    margin: 0 auto;
+    max-width: 92%;
+}
+
+.gmat-cb__msg--error .gmat-cb__msg-bubble {
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    font-size: 13px;
+    text-align: center;
+}
+
+.gmat-cb__msg-error-icon {
+    margin-right: 4px;
+    font-size: 14px;
+}
+
+/* --- Shared bubble base --- */
+.gmat-cb__msg-bubble {
+    padding: 10px 14px;
+    font-size: 14px;
+    line-height: 1.6;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    position: relative;
+}
+
+/* --- Formatted AI content --- */
+.gmat-cb__msg-bubble p {
+    margin: 0 0 8px;
+}
+
+.gmat-cb__msg-bubble p:last-of-type {
+    margin-bottom: 0;
+}
+
+.gmat-cb__msg-bubble ul,
+.gmat-cb__msg-bubble ol {
+    margin: 6px 0 8px 18px;
+    padding: 0;
+}
+
+.gmat-cb__msg-bubble li {
+    margin-bottom: 3px;
+    line-height: 1.5;
+}
+
+.gmat-cb__msg-bubble li::marker {
+    color: #64748b;
+}
+
+.gmat-cb__msg--user .gmat-cb__msg-bubble li::marker {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.gmat-cb__msg-bubble strong {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.gmat-cb__msg--user .gmat-cb__msg-bubble strong {
+    color: #fff;
+}
+
+.gmat-cb__msg-bubble em {
+    font-style: italic;
+}
+
+.gmat-cb__msg-bubble code {
+    background: #f1f5f9;
+    color: #334155;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.gmat-cb__msg--user .gmat-cb__msg-bubble code {
+    background: rgba(255, 255, 255, 0.15);
+    color: #e2e8f0;
+}
+
+.gmat-cb__msg-bubble a {
+    color: #4F80FF;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(79, 128, 255, 0.3);
+    transition: border-color 0.15s ease;
+}
+
+.gmat-cb__msg-bubble a:hover {
+    border-bottom-color: #4F80FF;
+}
+
+.gmat-cb__msg--user .gmat-cb__msg-bubble a {
+    color: #bfdbfe;
+    border-bottom-color: rgba(191, 219, 254, 0.3);
+}
+
+/* --- Welcome message topic tags --- */
+.gmat-cb__msg--welcome .gmat-cb__msg-bubble ul {
+    list-style: none;
+    margin: 8px 0 10px 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.gmat-cb__msg--welcome .gmat-cb__msg-bubble li {
+    margin: 0;
+    background: #f0f4ff;
+    color: #00409E;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid #dbe4ff;
+    line-height: 1.4;
+}
+
+/* --- Timestamp --- */
+.gmat-cb__msg-time {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 6px;
+    text-align: right;
+}
+
+/* --- Assistant avatar in messages --- */
+.gmat-cb__msg-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00409E, #002b6b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.gmat-cb__msg-avatar svg {
+    width: 15px;
+    height: 15px;
+    fill: #fff;
+}
+
+
+/* ============================================================================
+   Typing Indicator — 3 dots + "AI is thinking…" text, staggered animation
+   ============================================================================ */
+
+.gmat-cb__typing {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: #f8fafc;
+    flex-shrink: 0;
+    animation: gmat-cb-fade-in 0.18s ease-out;
+}
+
+.gmat-cb__typing-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00409E, #002b6b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.gmat-cb__typing-avatar svg {
+    width: 15px;
+    height: 15px;
+    fill: #fff;
+}
+
+.gmat-cb__typing-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gmat-cb__typing-dots {
+    display: flex;
+    gap: 3px;
+}
+
+.gmat-cb__typing-dots span {
+    width: 7px;
+    height: 7px;
+    background: #94a3b8;
+    border-radius: 50%;
+    animation: gmat-cb-dot 1.2s ease-in-out infinite;
+}
+
+.gmat-cb__typing-dots span:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.gmat-cb__typing-dots span:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+@keyframes gmat-cb-dot {
+    0%, 80%, 100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+    }
+    40% {
+        opacity: 1;
+        transform: scale(1.15);
+    }
+}
+
+.gmat-cb__typing-text {
+    font-size: 12px;
+    color: #64748b;
+    font-style: italic;
+}
+
+
+/* ============================================================================
+   Input Area — White footer, rounded input container, send button
+   ============================================================================ */
+
+.gmat-cb__input-area {
+    padding: 12px 16px 14px;
+    background: #fff;
+    border-top: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.gmat-cb__input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 10px 8px 14px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gmat-cb__input-wrap:focus-within {
+    border-color: #4F80FF;
+    box-shadow: 0 0 0 3px rgba(79, 128, 255, 0.10);
+    background: #fff;
+}
+
+.gmat-cb__input {
+    flex: 1;
+    border: none !important;
+    background: transparent !important;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1e293b;
+    resize: none;
+    line-height: 1.5;
+    max-height: 120px;
+    min-height: 36px;
+    height: 36px;
+    outline: none !important;
+    outline-offset: 0 !important;
+    padding: 6px 0;
+    -webkit-appearance: none;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+}
+
+.gmat-cb__input:focus,
+.gmat-cb__input:active {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+}
+
+.gmat-cb__input::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+/* Send button — 36px, blue, icon, states */
+.gmat-cb__send {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: #00409E;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+    padding: 0;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.gmat-cb__send:hover:not(:disabled) {
+    background: #002b6b;
+    transform: scale(1.05);
+}
+
+.gmat-cb__send:focus-visible:not(:disabled) {
+    outline: 2px solid #4F80FF;
+    outline-offset: 2px;
+}
+
+.gmat-cb__send:active:not(:disabled) {
+    transform: scale(0.95);
+    transition-duration: 0.05s;
+}
+
+.gmat-cb__send:disabled {
+    background: #cbd5e1;
+    color: #94a3b8;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.gmat-cb__send svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+/* Character count */
+.gmat-cb__char-count {
+    text-align: right;
+    font-size: 11px;
+    color: #94a3b8;
+    padding-top: 4px;
+    padding-right: 2px;
+    transition: color 0.15s ease;
+    font-variant-numeric: tabular-nums;
+}
+
+.gmat-cb__char-count--warn {
+    color: #f68525;
+}
+
+.gmat-cb__char-count--limit {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+
+/* ============================================================================
+   Responsive — Tablet & Mobile (max-width: 767px)
+   Full-width bottom drawer, 85vh, overlay, slide up from bottom
+   ============================================================================ */
+
+@media (max-width: 767px) {
+    .gmat-cb__fab {
+        bottom: 16px;
+        right: 16px;
+        width: 56px;
+        height: 56px;
+    }
+
+    .gmat-cb__fab-icon,
+    .gmat-cb__fab-close {
+        width: 24px;
+        height: 24px;
+    }
+
+    .gmat-cb {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        top: auto;
+        width: 100%;
+        max-height: 85vh;
+        height: 85vh;
+        border-radius: 16px 16px 0 0;
+        box-shadow:
+            0 -8px 32px rgba(0, 0, 0, 0.15),
+            0 0 0 1px rgba(0, 43, 107, 0.06);
+    }
+
+    .gmat-cb--open {
+        animation: gmat-cb-slide-up-mobile 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes gmat-cb-slide-up-mobile {
+        from {
+            transform: translateY(100%);
+        }
+        to {
+            transform: translateY(0);
+        }
+    }
+
+    /* Drag handle for bottom drawer feel */
+    .gmat-cb__header::before {
+        content: '';
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 36px;
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+    .gmat-cb__header {
+        padding: 16px 16px 14px;
+    }
+
+    .gmat-cb__messages {
+        padding: 16px 14px;
+        gap: 14px;
+    }
+
+    .gmat-cb__msg {
+        max-width: 90%;
+    }
+
+    .gmat-cb__input-area {
+        padding: 10px 12px;
+        /* Safe area for devices with home indicator */
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+}
+
+
+/* ============================================================================
+   Responsive — Small phones (max-width: 480px)
+   Larger touch targets, iOS zoom prevention
+   ============================================================================ */
+
+@media (max-width: 480px) {
+    .gmat-cb__fab {
+        bottom: 14px;
+        right: 14px;
+        width: 52px;
+        height: 52px;
+    }
+
+    .gmat-cb__fab-icon,
+    .gmat-cb__fab-close {
+        width: 22px;
+        height: 22px;
+    }
+
+    .gmat-cb {
+        max-height: 90vh;
+        height: 90vh;
+    }
+
+    .gmat-cb__msg {
+        max-width: 92%;
+    }
+
+    .gmat-cb__msg-bubble {
+        font-size: 14px;
+        padding: 10px 12px;
+    }
+
+    .gmat-cb__header {
+        padding: 18px 14px 12px;
+    }
+
+    .gmat-cb__title {
+        font-size: 14px;
+    }
+
+    .gmat-cb__messages {
+        padding: 14px 12px;
+        gap: 12px;
+    }
+
+    .gmat-cb__input-area {
+        padding: 8px 10px;
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+
+    .gmat-cb__input {
+        font-size: 16px !important; /* Prevent iOS zoom on focus */
+    }
+
+    .gmat-cb__input-wrap {
+        padding: 6px 8px 6px 12px;
+    }
+
+    .gmat-cb__send {
+        width: 38px;
+        height: 38px;
+    }
+
+    /* Welcome tags stack better on small screens */
+    .gmat-cb__msg--welcome .gmat-cb__msg-bubble li {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+}
+
+
+/* ============================================================================
+   Responsive — Very small phones (max-width: 360px)
+   ============================================================================ */
+
+@media (max-width: 360px) {
+    .gmat-cb {
+        max-height: 92vh;
+        height: 92vh;
+    }
+
+    .gmat-cb__avatar {
+        width: 34px;
+        height: 34px;
+    }
+
+    .gmat-cb__header-info {
+        gap: 8px;
+    }
+}
+
+
+/* ============================================================================
+   Reduced motion — Disable all animations for accessibility
+   ============================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    .gmat-cb--open,
+    .gmat-cb__msg,
+    .gmat-cb__typing,
+    .gmat-cb__typing-dots span,
+    .gmat-cb__fab::after,
+    .gmat-cb__fab-badge,
+    .gmat-cb__overlay--visible,
+    .gmat-cb__status::before {
+        animation: none !important;
+    }
+
+    .gmat-cb__fab,
+    .gmat-cb__send,
+    .gmat-cb__btn-new,
+    .gmat-cb__btn-close,
+    .gmat-cb__input-wrap,
+    .gmat-cb__msg-bubble a {
+        transition: none !important;
+    }
+
+    /* Still show panel immediately */
+    .gmat-cb--open {
+        opacity: 1;
+        transform: none;
+    }
+
+    .gmat-cb__status::before {
+        opacity: 1;
+        transform: none;
+    }
+}

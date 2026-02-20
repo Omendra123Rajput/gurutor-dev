@@ -34,7 +34,7 @@ function gmat_dash_enqueue_assets() {
     if (!is_user_logged_in()) return;
 
     $v = wp_get_theme()->get('Version');
-    // wp_enqueue_style('gmat-dashboard', get_stylesheet_directory_uri() . '/css/gmat-dashboard.css', array(), $v);
+    wp_enqueue_style('gmat-dashboard', get_stylesheet_directory_uri() . '/css/gmat-dashboard.css', array(), $v);
 }
 add_action('wp_enqueue_scripts', 'gmat_dash_enqueue_assets');
 

@@ -73,7 +73,7 @@ define('GMAT_API_AUTH', 'MTMtNjk0MmJiNGMzMDNlMTM3OmI1YjFmYjk4YjM5ZGZlY2VhYjg0YWI
 //   define( 'GMAT_CHATBOX_API_URL', 'https://api.gurutor-ai.com/ask' );
 // ----------------------------------------------------------------------------
 
-define( 'GMAT_CHATBOX_API_URL', 'https://bandoliered-gainly-rita.ngrok-free.dev/chat' );
+define( 'GMAT_CHATBOX_API_URL', 'https://gurutorsai.duckdns.org/chat' );
 
 
 // ----------------------------------------------------------------------------

@@ -82,11 +82,77 @@
             });
         },
 
+        // ==================================================================
+        // VALIDATION — Mirrors intake form validation rules
+        // ==================================================================
+
+        validate: function () {
+            var desiredVal   = $.trim($('#gmat-s-desired-score').val());
+            var overallVal   = $.trim($('#gmat-s-score-overall').val());
+            var quantVal     = $.trim($('#gmat-s-score-quant').val());
+            var verbalVal    = $.trim($('#gmat-s-score-verbal').val());
+            var diVal        = $.trim($('#gmat-s-score-di').val());
+
+            // --- GMAT Settings section ---
+            if (!desiredVal) return { msg: 'Please enter your Desired Score.', field: '#gmat-s-desired-score' };
+            var desired = parseInt(desiredVal, 10);
+            if (isNaN(desired) || desired < 205 || desired > 805) {
+                return { msg: 'Desired Score must be between 205 and 805.', field: '#gmat-s-desired-score' };
+            }
+
+            // --- GMAT Scores section (only validate if any score field is filled) ---
+            var hasAnyScore = overallVal || quantVal || verbalVal || diVal;
+
+            if (hasAnyScore) {
+                if (overallVal) {
+                    var overall = parseInt(overallVal, 10);
+                    if (isNaN(overall) || overall < 205 || overall > 805) {
+                        return { msg: 'Overall Score must be between 205 and 805.', field: '#gmat-s-score-overall' };
+                    }
+                }
+                if (quantVal) {
+                    var quant = parseInt(quantVal, 10);
+                    if (isNaN(quant) || quant < 60 || quant > 90) {
+                        return { msg: 'Quant Score must be between 60 and 90.', field: '#gmat-s-score-quant' };
+                    }
+                }
+                if (verbalVal) {
+                    var verbal = parseInt(verbalVal, 10);
+                    if (isNaN(verbal) || verbal < 60 || verbal > 90) {
+                        return { msg: 'Verbal Score must be between 60 and 90.', field: '#gmat-s-score-verbal' };
+                    }
+                }
+                if (diVal) {
+                    var di = parseInt(diVal, 10);
+                    if (isNaN(di) || di < 60 || di > 90) {
+                        return { msg: 'Data Insights Score must be between 60 and 90.', field: '#gmat-s-score-di' };
+                    }
+                }
+            }
+
+            return null; // All valid
+        },
+
+        // ==================================================================
+        // SAVE
+        // ==================================================================
+
         handleSave: function ($btn) {
             var self = this;
             if (self.isSaving) return;
 
             self.clearMessage();
+
+            // Client-side validation — block save if invalid
+            var error = self.validate();
+            if (error) {
+                self.showMessage(error.msg, 'error');
+                if (error.field) {
+                    $(error.field).trigger('focus');
+                }
+                return;
+            }
+
             self.isSaving = true;
             $btn.addClass('loading').prop('disabled', true);
 

@@ -22,6 +22,25 @@
         bindEvents: function () {
             var self = this;
 
+            // Block non-numeric characters (e, E, +, -) in number inputs
+            // HTML type="number" allows 'e' for scientific notation — we don't want that
+            $('#gmat-settings-page').on('keydown', 'input[type="number"]', function (e) {
+                if (e.key === 'e' || e.key === 'E' || e.key === '+' || e.key === '-') {
+                    e.preventDefault();
+                }
+            });
+
+            // Also sanitize on paste — strip non-numeric characters
+            $('#gmat-settings-page').on('paste', 'input[type="number"]', function (e) {
+                var input = this;
+                setTimeout(function () {
+                    var cleaned = input.value.replace(/[^\d]/g, '');
+                    if (input.value !== cleaned) {
+                        input.value = cleaned;
+                    }
+                }, 0);
+            });
+
             // Weekly hours: click on the readonly text input → show the hidden <select>
             $('#gmat-s-weekly-hours').on('click focus', function () {
                 $(this).hide();

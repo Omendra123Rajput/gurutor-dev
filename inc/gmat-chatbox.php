@@ -64,31 +64,89 @@ function gmat_chatbox_format_reply($text) {
     // Normalize line endings
     $text = str_replace(array("\r\n", "\r"), "\n", $text);
 
-    // Split into lines
+    // Split into lines (indexed for look-ahead)
     $lines = explode("\n", $text);
+    $total = count($lines);
     $html  = '';
-    $in_ul = false;
-    $in_ol = false;
+    $in_ol = false;      // Inside a top-level ordered list
+    $in_ul = false;      // Inside a top-level unordered list
+    $in_sub_ul = false;  // Inside a nested <ul> within an <li>
 
-    foreach ($lines as $line) {
-        $trimmed = trim($line);
+    // Helper: check if a line is indented (sub-content of a list item)
+    $is_indented = function ($raw_line) {
+        return preg_match('/^[ \t]{2,}/', $raw_line);
+    };
 
-        // Skip empty lines — close any open lists
+    // Helper: check if trimmed text is a bullet
+    $is_bullet_text = function ($str) {
+        return (preg_match('/^[•\-\*]\s+.+$/', $str) && !preg_match('/^\*\*/', $str));
+    };
+
+    // Helper: check if trimmed text is a numbered item
+    $is_numbered_text = function ($str) {
+        return preg_match('/^\d+[\.\)]\s+.+$/', $str);
+    };
+
+    // Helper: find the next non-empty line's trimmed content after index $i
+    $next_non_empty_info = function ($i) use ($lines, $total) {
+        for ($j = $i + 1; $j < $total; $j++) {
+            if (trim($lines[$j]) !== '') {
+                return array('trimmed' => trim($lines[$j]), 'raw' => $lines[$j]);
+            }
+        }
+        return null;
+    };
+
+    // Helper: close any open sub-list
+    $close_sub_ul = function () use (&$html, &$in_sub_ul) {
+        if ($in_sub_ul) {
+            $html .= '</ul></li>';
+            $in_sub_ul = false;
+        }
+    };
+
+    for ($i = 0; $i < $total; $i++) {
+        $raw     = $lines[$i];
+        $trimmed = trim($raw);
+        $indented = $is_indented($raw);
+
+        // --- Empty line handling ---
         if ($trimmed === '') {
-            if ($in_ul) { $html .= '</ul>'; $in_ul = false; }
-            if ($in_ol) { $html .= '</ol>'; $in_ol = false; }
+            // Look ahead: if we're in an <ol> and the next content is a numbered
+            // item OR an indented sub-item, keep the list open
+            if ($in_ol) {
+                $next = $next_non_empty_info($i);
+                if ($next) {
+                    $next_trimmed = $next['trimmed'];
+                    $next_indented = $is_indented($next['raw']);
+                    // Keep <ol> open if next line is numbered, indented, or a bullet (sub-item)
+                    if ($is_numbered_text($next_trimmed) || $next_indented || $is_bullet_text($next_trimmed)) {
+                        continue;
+                    }
+                }
+                // Close sub-list and ordered list
+                $close_sub_ul();
+                $html .= '</ol>'; $in_ol = false;
+            }
+            if ($in_ul && !$in_ol) {
+                $next = $next_non_empty_info($i);
+                if ($next && $is_bullet_text($next['trimmed'])) {
+                    continue;
+                }
+                $html .= '</ul>'; $in_ul = false;
+            }
             continue;
         }
 
-        // Check for bullet point: •, -, * (but not ** which is bold marker)
+        // --- Detect line types ---
         $is_bullet = false;
         $bullet_content = '';
-        if (preg_match('/^[•\-\*]\s+(.+)$/', $trimmed, $m) && !preg_match('/^\*\*/', $trimmed)) {
+        if ($is_bullet_text($trimmed)) {
+            preg_match('/^[•\-\*]\s+(.+)$/', $trimmed, $m);
             $is_bullet = true;
             $bullet_content = $m[1];
         }
 
-        // Check for numbered list: 1., 2., etc.
         $is_numbered = false;
         $numbered_content = '';
         if (preg_match('/^\d+[\.\)]\s+(.+)$/', $trimmed, $m)) {
@@ -96,22 +154,48 @@ function gmat_chatbox_format_reply($text) {
             $numbered_content = $m[1];
         }
 
-        if ($is_bullet) {
-            // Close ordered list if switching
-            if ($in_ol) { $html .= '</ol>'; $in_ol = false; }
+        // --- Bullet or indented text inside an ordered list = sub-content of current <li> ---
+        if ($in_ol && ($is_bullet || ($indented && !$is_numbered))) {
+            if ($is_bullet) {
+                if (!$in_sub_ul) {
+                    // Remove the closing </li> of the parent item to nest inside it
+                    $last_li_pos = strrpos($html, '</li>');
+                    if ($last_li_pos !== false) {
+                        $html = substr($html, 0, $last_li_pos);
+                    }
+                    $html .= '<ul>';
+                    $in_sub_ul = true;
+                }
+                $html .= '<li>' . gmat_chatbox_format_inline($bullet_content) . '</li>';
+            } else {
+                // Plain indented text — append to the last <li> as continuation
+                $last_li_pos = strrpos($html, '</li>');
+                if ($last_li_pos !== false) {
+                    $html = substr($html, 0, $last_li_pos);
+                    $html .= '<br>' . gmat_chatbox_format_inline($trimmed) . '</li>';
+                }
+            }
+            continue;
+        }
+
+        if ($is_bullet && !$in_ol) {
+            // Top-level bullet (not inside an ordered list)
+            $close_sub_ul();
             if (!$in_ul) { $html .= '<ul>'; $in_ul = true; }
             $html .= '<li>' . gmat_chatbox_format_inline($bullet_content) . '</li>';
         } elseif ($is_numbered) {
-            // Close unordered list if switching
+            // New numbered item — close any open sub-list first
+            $close_sub_ul();
             if ($in_ul) { $html .= '</ul>'; $in_ul = false; }
             if (!$in_ol) { $html .= '<ol>'; $in_ol = true; }
             $html .= '<li>' . gmat_chatbox_format_inline($numbered_content) . '</li>';
         } else {
-            // Close any open lists before paragraph text
+            // Plain text — close all lists
+            $close_sub_ul();
             if ($in_ul) { $html .= '</ul>'; $in_ul = false; }
             if ($in_ol) { $html .= '</ol>'; $in_ol = false; }
 
-            // Lines ending with ":" that look like section headers (e.g., "Explanation:", "Why Other Options Are Wrong:")
+            // Lines ending with ":" that look like section headers
             if (preg_match('/^(.+):$/', $trimmed, $m) && mb_strlen($trimmed) < 80) {
                 $html .= '<p><strong>' . esc_html($m[1]) . ':</strong></p>';
             } else {
@@ -120,7 +204,8 @@ function gmat_chatbox_format_reply($text) {
         }
     }
 
-    // Close any remaining open lists
+    // Close any remaining open tags
+    if ($in_sub_ul) $html .= '</ul></li>';
     if ($in_ul) $html .= '</ul>';
     if ($in_ol) $html .= '</ol>';
 

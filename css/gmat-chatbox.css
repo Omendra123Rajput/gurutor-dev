@@ -511,15 +511,34 @@
     margin-bottom: 0;
 }
 
-.gmat-cb__msg-bubble ul,
+.gmat-cb__msg-bubble ul {
+    margin: 6px 0 8px 0;
+    padding: 0 0 0 20px;
+    list-style-type: disc !important;
+}
+
 .gmat-cb__msg-bubble ol {
-    margin: 6px 0 8px 18px;
-    padding: 0;
+    margin: 6px 0 8px 0;
+    padding: 0 0 0 20px;
+    list-style-type: decimal !important;
+}
+
+/* Nested lists (e.g., bullet sub-items under numbered items) */
+.gmat-cb__msg-bubble li > ul {
+    margin: 4px 0 2px 0;
+    padding: 0 0 0 18px;
+    list-style-type: disc !important;
+}
+
+.gmat-cb__msg-bubble li > ol {
+    margin: 4px 0 2px 0;
+    padding: 0 0 0 18px;
 }
 
 .gmat-cb__msg-bubble li {
     margin-bottom: 3px;
     line-height: 1.5;
+    list-style: inherit !important;
 }
 
 .gmat-cb__msg-bubble li::marker {
@@ -575,7 +594,7 @@
 
 /* --- Welcome message topic tags --- */
 .gmat-cb__msg--welcome .gmat-cb__msg-bubble ul {
-    list-style: none;
+    list-style: none !important;
     margin: 8px 0 10px 0;
     padding: 0;
     display: flex;
@@ -584,6 +603,7 @@
 }
 
 .gmat-cb__msg--welcome .gmat-cb__msg-bubble li {
+    list-style: none !important;
     margin: 0;
     background: #f0f4ff;
     color: #00409E;

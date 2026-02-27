@@ -1,6 +1,6 @@
 # Gurutor GMAT Platform — AI Context File
 
-> **Last updated:** 2025-02-19
+> **Last updated:** 2026-02-27
 > **Purpose:** Share with any AI model to resume development without context loss.
 > **Project root:** `C:\Users\orajp\Desktop\G9\Gurutor Staging\Revamp\generatepress-child\`
 > **Staging URL:** `https://stg-gurutor-test.kinsta.cloud/`
@@ -191,9 +191,48 @@ estimated_readiness = today + total_weeks
 - `in-progress` — xAPI verb: attempted
 - `not-started` — no xAPI statements found
 
-**Performance:** Only 2 API calls per page load (batch fetch all completed + attempted), then static cache
+**Performance:** Only 2 API calls per page load (batch fetch all completed + attempted), then static cache via `gmat_sp_fetch_xapi_data()` which returns both `status_map` and `pass_fail` signals
 
-**Conditional content:** Units dynamically add review lessons and suggestions based on whether exercises are attempted but not completed
+**Pass/fail signal parsing (v5):**
+- xAPI completed statements may contain JSON-encoded pass/fail variables in the object name field
+- Format: `{"CR_Exercise_4_Pass_or_Fail": "Fail"}` in `$stmt['object']['definition']['name']['en-US']`
+- Parsed automatically during the completed statements fetch (no extra API calls)
+- `gmat_sp_get_pass_fail_map($user_id)` returns `variable_name => "Pass"|"Fail"` map
+- `gmat_sp_get_pass_fail_variable_map()` maps ~50 variable names to lesson keys (CR exercises, verbal reviews, quant lessons, granular QLE_* signals)
+- Granular quant exercise failures: `QLE_N_TOPIC_Pass_or_Fail` maps to specific lesson keys (e.g., `QLE_1_ALG1_Pass_or_Fail` → `algebra_1`)
+
+**Suggestion logic (v6 — no fallback heuristics, pass/fail signals only):**
+- `gmat_sp_get_exercise_result($user_id, $lesson_key)` — returns `'fail'` | `'pass'` | `'none'` (3-state, no fallback)
+- `gmat_sp_get_review_result($user_id, $review_key)` — returns `'fail'` (any variable failed) | `'pass'` (all passed) | `'none'` (no signals)
+- `gmat_sp_get_quant_exercise_failures($user_id, $exercise_num, $learn_keys, $ids)` — returns only explicit QLE_* failures, no fallback
+- **Rule:** Only explicit Pass/Fail xAPI signals trigger suggestions. "Attempted-not-complete" or "not-started" NEVER triggers suggestions.
+- **Removed:** `gmat_sp_should_suggest_review()`, `gmat_sp_is_review_failed_or_incomplete()`, `gmat_sp_is_attempted_not_complete()` — all had fallback heuristics
+- **Cross-suggest (3-state):** If review result is `'fail'` → show remediation links. If `'pass'` → show just review link. If `'none'` → no cross-suggest at all.
+- Each unit has a `'description'` field rendered as a brief text at the top of the expanded unit body
+
+**Smart/curly quotes sanitization (v7):**
+- xAPI content authoring tools (e.g., Articulate Storyline) embed curly/smart quotes (`"` U+201C, `"` U+201D) instead of straight quotes in JSON object names
+- `gmat_sp_fetch_xapi_data()` applies 4-layer sanitization before `json_decode()`: strip BOM, replace smart quotes → straight, `mb_convert_encoding()` fix, regex fallback extraction
+- Without this fix, `json_decode()` fails with `JSON_ERROR_UTF8` (error code 4)
+
+**Suggested lesson cards (v7):**
+- Units have a `'suggested_lessons'` field — associative array mapping `lesson_key => suggestion_text`
+- When an exercise fails (e.g., CR Exercise 4), the suggestion text moves to the NEXT unit's `suggested_lessons` (e.g., `cr_lesson_5` in Unit 4)
+- The old orange "Suggested areas of focus" box (`'suggest'` field) is set to `''` for affected units
+- Renderer checks `$unit['suggested_lessons'][$lk]` and applies:
+  - `.gmat-sp-lesson--suggested` class — amber background (`#fffbeb`), amber border, orange left bar + number badge
+  - "Suggested" orange pill badge (`.gmat-sp-lesson__suggested-badge`)
+  - Suggestion text replaces normal lesson description in accordion, prefixed with "Areas to focus on:"
+- CSS: amber/orange theme consistent with existing suggest box palette
+
+**Lesson-level accordion (v5):**
+- Each lesson card is expandable (click to expand/collapse) showing a description of what the lesson covers
+- Descriptions stored as `'desc'` field in `gmat_sp_get_lesson_keys()` in `gmat-study-plan-admin.php`
+- Formatted via `gmat_sp_format_description()` — multi-line text becomes an HTML `<ul>` list
+- CSS: `.gmat-sp-lesson__desc` with max-height transition, `.gmat-sp-lesson__expand-icon` chevron
+- JS: Click handler on `.gmat-sp-lesson` toggles `.open` class (ignores clicks on links/buttons)
+
+**Debug page:** Add `?gmat_sp_debug_xapi=1` to course URL (admin only) — shows xAPI activity statuses, lesson key mappings, pass/fail signals, exercise results (3-state), review results (3-state), and QLE granular failures
 
 **Lesson key format:** e.g., `cr_lesson_1`, `quant_exercise_3`, `verbal_review_2`
 **xAPI activity ID format:** `http://www.uniqueurl.com/{xapi_slug}`
@@ -412,3 +451,33 @@ Two configuration areas:
    - **Input border:** Removed browser-default focus outline/border on textarea with `!important` overrides for theme conflicts
    - **Placeholder alignment:** Changed `align-items: flex-end` → `center` on input-wrap, increased textarea min-height to 36px with padding for vertical centering
    - **AI response formatting:** Added `gmat_chatbox_format_reply()` PHP function that converts plain-text AI responses to structured HTML — detects bullet points (•/-/*), numbered lists, section headers (lines ending with `:` under 80 chars), **bold**, *italic*, `code` markdown. If response already contains HTML tags, passes through untouched. All output runs through `wp_kses_post()` sanitization.
+
+**Session 8 (Study Plan v5 — Feb 2026):**
+1. **Lesson-level accordion:** Each lesson card now expands on click to show a description of what the lesson covers. Descriptions stored as `'desc'` field in `gmat_sp_get_lesson_keys()`. Formatted as `<ul>` lists via `gmat_sp_format_description()`. CSS max-height transition, chevron icon rotates on open.
+2. **xAPI pass/fail signal parsing:** Refactored `gmat_sp_get_xapi_status_map()` into `gmat_sp_fetch_xapi_data()` which returns both status map and pass/fail signals. Pass/fail signals are JSON-encoded in xAPI completed statement object names (e.g., `{"CR_Exercise_4_Pass_or_Fail": "Fail"}`). ~50 variable-to-lesson-key mappings in `gmat_sp_get_pass_fail_variable_map()`.
+3. **Dynamic suggestion logic:** Replaced old `gmat_sp_is_attempted_not_complete()` heuristic with `gmat_sp_should_suggest_review()` which checks actual pass/fail signals first, then falls back to the old heuristic. Granular quant exercise failures via `gmat_sp_get_quant_exercise_failures()` using `QLE_*` prefix variables. Verbal review cross-suggest via `gmat_sp_is_review_failed_or_incomplete()`.
+4. **Unit descriptions:** Each unit in both verbal-first and quant-first builders has a `'description'` field rendered as brief text at the top of the expanded unit body.
+5. **Debug page enhanced:** `?gmat_sp_debug_xapi=1` now shows pass/fail signals and suggestion logic results in addition to xAPI activity statuses.
+6. **Files modified:** `inc/gmat-study-plan.php`, `inc/gmat-study-plan-admin.php`, `css/gmat-study-plan.css`, `js/gmat-study-plan.js`
+
+**Session 9 (Study Plan v6 — Suggestion Logic Fix — Feb 2026):**
+1. **Removed all fallback heuristics from suggestion logic.** User rule: "Do not assume attempted and completed as pass or failed." Only explicit Pass/Fail xAPI signals now trigger suggestions.
+2. **New 3-state result functions:** `gmat_sp_get_exercise_result()` and `gmat_sp_get_review_result()` return `'fail'`|`'pass'`|`'none'`. Replaced `gmat_sp_should_suggest_review()`, `gmat_sp_is_review_failed_or_incomplete()`, and `gmat_sp_is_attempted_not_complete()`.
+3. **Hardened pass/fail parsing:** Added `trim()` to pass/fail values (handles trailing whitespace). Fixed `result: {}` (empty object) edge case — now treated as valid completion (`|| empty($stmt['result'])`).
+4. **Updated all suggestion logic in both verbal-first and quant-first builders** (Units 3-6 verbal CR exercises, Units 3-6 quant cross-suggests, Units 3-6 verbal cross-suggests in quant-first path).
+5. **Cross-suggest now 3-state:** `'fail'` → full remediation links, `'pass'` → just the review link, `'none'` → no cross-suggest at all (previously "none" still showed cross-suggest).
+6. **Removed DI suggestion logic** — DI modules no longer show "Suggested areas of focus" boxes (not needed per docs).
+7. **Topic names in lesson cards:** Added `'topic'` field to all lesson keys in admin.php, rendered as `<span class="gmat-sp-lesson__topic">`. Improved CSS visibility (darker color, heavier font weight).
+8. **Debug page enhanced:** Now shows exercise results (3-state), review results (3-state), and QLE granular failures instead of old suggestion logic output.
+9. **Files modified:** `inc/gmat-study-plan.php`, `css/gmat-study-plan.css`
+
+**Session 10 (Study Plan v7 — Smart Quotes Fix + Suggested Lesson Cards — Feb 2026):**
+1. **Fixed curly/smart quotes breaking JSON parsing.** xAPI content authoring tools (Articulate Storyline) embed `"` (U+201C) and `"` (U+201D) instead of straight `"` in object name JSON. `json_decode()` failed with `JSON_ERROR_UTF8`. Fixed with 4-layer sanitization in `gmat_sp_fetch_xapi_data()`: strip BOM, replace smart quotes → straight, `mb_convert_encoding()`, regex fallback.
+2. **Moved suggestion text into suggested lesson cards.** Replaced the separate orange "Suggested areas of focus" box with inline suggested lesson styling:
+   - Each unit now has `'suggested_lessons'` field — associative array mapping `lesson_key => suggestion_text`
+   - When exercise fails (e.g., CR Exercise 4), suggestion text moves to the NEXT unit's `suggested_lessons` (e.g., `cr_lesson_5` in Unit 4 Review)
+   - Old orange box (`'suggest'` field) set to `''` for affected units
+3. **Suggested lesson card styling:** Amber background (`#fffbeb`), amber border (`#fde68a`), orange left bar + number badge (`#f68525`), "SUGGESTED" orange pill badge, accordion shows "Areas to focus on:" + suggestion text. CSS class: `.gmat-sp-lesson--suggested`.
+4. **Updated both verbal-first and quant-first builders** (Units 3-6) with `suggested_lessons` field.
+5. **Removed temporary footer debug function** (`gmat_sp_debug_footer`) — was used to diagnose the smart quotes issue.
+6. **Files modified:** `inc/gmat-study-plan.php`, `css/gmat-study-plan.css`

@@ -68,6 +68,18 @@ All includes are in `functions.php` lines 21-30. Some may be commented out durin
 - Score field name is `overall` (NOT `total`) — critical for cross-module consistency
 - Chatbox response formatting: `gmat_chatbox_format_reply()` converts plain-text AI replies to HTML — handles bullet points (•/-/*), numbered lists, section headers (lines ending in `:` under 80 chars), **bold**, *italic*, `code`. Passes through untouched if response already contains HTML tags. All output sanitized via `wp_kses_post()`
 
+### Study Plan Key Functions (v7)
+- `gmat_sp_fetch_xapi_data($user_id)` — core function returning both `status_map` and `pass_fail` signals (static cached). Includes 4-layer smart quotes sanitization before `json_decode()` (BOM strip, curly→straight quotes, `mb_convert_encoding()`, regex fallback).
+- `gmat_sp_get_pass_fail_map($user_id)` — returns `variable_name => "Pass"|"Fail"` from xAPI completed statement object names
+- `gmat_sp_get_pass_fail_variable_map()` — maps ~50 xAPI variable names to lesson keys
+- `gmat_sp_get_exercise_result($user_id, $lesson_key)` — returns `'fail'`|`'pass'`|`'none'` (no fallback)
+- `gmat_sp_get_review_result($user_id, $review_key)` — returns `'fail'`|`'pass'`|`'none'` (multi-variable: fails if ANY fails)
+- `gmat_sp_get_quant_exercise_failures($user_id, $exercise_num, $learn_keys, $ids)` — explicit QLE_* failures only (no fallback)
+- **Rule:** Only explicit Pass/Fail xAPI signals trigger suggestions. Never assume attempted/completed = pass/fail.
+- `gmat_sp_format_description($desc)` — converts newline-separated text to HTML `<ul>` list
+- Lesson descriptions stored as `'desc'` field, topic names stored as `'topic'` field in `gmat_sp_get_lesson_keys()`
+- **Suggested lessons:** Units have `'suggested_lessons'` field (associative array: `lesson_key => suggestion_text`). When exercise fails, suggestion moves to NEXT unit's `suggested_lessons`. Renderer applies `.gmat-sp-lesson--suggested` class + "Suggested" badge + accordion with suggestion text.
+
 ### JavaScript
 - All JS wraps in `(function($) { 'use strict'; ... })(jQuery);` IIFE
 - Chatbox shares `AI_AVATAR_SVG` constant across render functions
@@ -146,4 +158,6 @@ Score entry format (stored as JSON arrays):
 
 ## Additional Context
 
-See `context.md` (in project root) for exhaustive feature documentation including: two-phase Step 1 flow, study plan section/unit/lesson structure, xAPI tracking states, dashboard readiness calculation formula, chatbox security layers, responsive breakpoints, and full session development history.
+See `context.md` (in project root) for exhaustive feature documentation including: two-phase Step 1 flow, study plan section/unit/lesson structure, xAPI tracking states, pass/fail signal parsing, lesson accordion descriptions, dashboard readiness calculation formula, chatbox security layers, responsive breakpoints, and full session development history.
+
+Reference docs in `docs/` folder: Verbal First Study Plan.docx, Quant First Study Plan.docx, Pass and fail signals.docx, unique ids of the lessons.docx, ids of the learndash lessons.docx.

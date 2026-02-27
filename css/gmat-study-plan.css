@@ -147,7 +147,7 @@
     font-weight: 700;
     color: #1e3a5f;
     margin: 0 0 16px;
-    font-style: italic;
+    /* font-style: italic; */
 }
 
 .gmat-sp-section__card {
@@ -261,15 +261,14 @@
 /* ── Unit Body (collapsible) ── */
 
 .gmat-sp-unit__body {
-    max-height: 0;
+    height: 0;
     overflow: hidden;
-    transition: max-height 0.35s ease, padding 0.35s ease;
+    transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     padding: 0 18px;
 }
 
-.gmat-sp-unit.open .gmat-sp-unit__body {
-    max-height: 5000px; /* Large enough for any content */
-    padding: 18px;
+.gmat-sp-unit__body-inner {
+    padding: 18px 0;
 }
 
 
@@ -349,12 +348,12 @@
 
 .gmat-sp-lesson {
     display: flex;
-    align-items: center;
-    gap: 14px;
+    flex-direction: column;
     padding: 12px 16px;
     background: #f8fafc;
     border-radius: 12px;
     transition: background 0.15s ease;
+    cursor: pointer;
 }
 
 .gmat-sp-lesson:hover {
@@ -442,9 +441,11 @@
 }
 
 .gmat-sp-lesson__topic {
-    font-size: 12px;
-    color: #94a3b8;
-    font-weight: 400;
+    display: block;
+    font-size: 12.5px;
+    color: #64748b;
+    font-weight: 500;
+    line-height: 1.4;
 }
 
 
@@ -596,6 +597,142 @@
 
 
 /* ============================================================================
+   Unit Description — brief text below unit title inside accordion body
+   ============================================================================ */
+
+.gmat-sp-unit__desc {
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.5;
+    margin: 0 0 16px;
+    padding: 0 0 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+
+/* ============================================================================
+   Lesson Accordion — expandable description inside each lesson card
+   ============================================================================ */
+
+.gmat-sp-lesson__top-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+}
+
+.gmat-sp-lesson__expand-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    transition: transform 0.25s ease;
+    margin-left: auto;
+    padding-left: 6px;
+}
+
+.gmat-sp-lesson.open .gmat-sp-lesson__expand-icon {
+    transform: rotate(180deg);
+}
+
+.gmat-sp-lesson__desc {
+    width: 100%;
+    height: 0;
+    overflow: hidden;
+    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0 16px 0 50px;
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.6;
+    box-sizing: border-box;
+}
+
+.gmat-sp-lesson__desc-inner {
+    padding: 10px 0 4px;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 8px;
+}
+
+.gmat-sp-lesson__desc ul {
+    margin: 0;
+    padding: 0 0 0 18px;
+    list-style: disc;
+}
+
+.gmat-sp-lesson__desc li {
+    margin-bottom: 4px;
+}
+
+.gmat-sp-lesson__desc li:last-child {
+    margin-bottom: 0;
+}
+
+
+/* ============================================================================
+   Suggested Lesson — visually distinct card for dynamically-added lessons
+   ============================================================================ */
+
+.gmat-sp-lesson--suggested {
+    background: #fffbeb;
+    border: 1.5px solid #fde68a;
+    position: relative;
+}
+
+.gmat-sp-lesson--suggested:hover {
+    background: #fef9c3;
+}
+
+.gmat-sp-lesson--suggested .gmat-sp-lesson__number-col::before {
+    background: #f68525;
+}
+
+.gmat-sp-lesson--suggested .gmat-sp-lesson__number {
+    background: #f68525;
+    color: #fff;
+}
+
+.gmat-sp-lesson--suggested .gmat-sp-lesson__name {
+    color: #92400e;
+}
+
+.gmat-sp-lesson--suggested .gmat-sp-lesson__topic {
+    color: #a16207;
+}
+
+.gmat-sp-lesson__suggested-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 16px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    background: #f68525;
+    color: #fff;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.gmat-sp-lesson--suggested .gmat-sp-lesson__desc-inner {
+    border-top-color: #fde68a;
+}
+
+.gmat-sp-lesson__suggest-label {
+    font-weight: 700;
+    color: #92400e;
+    margin: 0 0 4px;
+    font-size: 13px;
+}
+
+.gmat-sp-lesson--suggested .gmat-sp-lesson__desc ul {
+    color: #78350f;
+}
+
+.gmat-sp-lesson--suggested .gmat-sp-lesson__desc li {
+    color: #78350f;
+}
+
+
+/* ============================================================================
    Responsive
    ============================================================================ */
 
@@ -628,15 +765,21 @@
         font-size: 11px;
     }
 
-    .gmat-sp-unit.open .gmat-sp-unit__body {
-        padding: 14px;
+    .gmat-sp-unit__body {
+        padding: 0 14px;
+    }
+
+    .gmat-sp-unit__body-inner {
+        padding: 14px 0;
     }
 
     /* ── Fix: Lesson row stacking on mobile ── */
     .gmat-sp-lesson {
-        flex-wrap: nowrap;
-        gap: 10px;
         padding: 10px 12px;
+    }
+
+    .gmat-sp-lesson__top-row {
+        gap: 10px;
     }
 
     /* Lesson info takes remaining space, truncates if needed */
@@ -695,7 +838,11 @@
     }
 
     .gmat-sp-lesson__topic {
-        display: none;
+        font-size: 11px;
+    }
+
+    .gmat-sp-unit__title {
+        font-size: 13px;
     }
 
     .gmat-sp-unit__header-left {
@@ -709,5 +856,21 @@
     .gmat-sp-suggest {
         padding: 12px 14px;
         gap: 8px;
+    }
+
+    .gmat-sp-lesson__desc {
+        padding: 0 10px 0 38px;
+    }
+
+    .gmat-sp-lesson__desc-inner {
+        padding: 8px 0 4px;
+    }
+
+    .gmat-sp-lesson__desc li {
+        font-size: 12px;
+    }
+
+    .gmat-sp-unit__desc {
+        font-size: 12px;
     }
 }

@@ -39,22 +39,72 @@
                 var $unit = $(this).closest('.gmat-sp-unit');
                 self.toggleUnit($unit);
             });
+
+            // Lesson accordion toggle — click on lesson row
+            this.$wrap.on('click', '.gmat-sp-lesson', function (e) {
+                // Don't toggle if user clicked a link or button
+                if ($(e.target).closest('a, button').length) return;
+
+                var $lesson = $(this);
+                var $desc = $lesson.find('.gmat-sp-lesson__desc');
+                if (!$desc.length) return;
+
+                var isOpen = $lesson.hasClass('open');
+                if (isOpen) {
+                    // Collapse: set explicit height first, then transition to 0
+                    $desc.css('height', $desc[0].scrollHeight + 'px');
+                    // Force reflow so the browser registers the starting height
+                    $desc[0].offsetHeight; // eslint-disable-line no-unused-expressions
+                    $desc.css('height', '0');
+                    $lesson.removeClass('open');
+                } else {
+                    // Expand: set height to scrollHeight, then clear after transition
+                    $desc.css('height', $desc[0].scrollHeight + 'px');
+                    $lesson.addClass('open');
+                    // After transition ends, set height to auto for flexible content
+                    $desc.one('transitionend', function () {
+                        if ($lesson.hasClass('open')) {
+                            $desc.css('height', 'auto');
+                        }
+                    });
+                }
+            });
         },
 
         // ── Unit Accordion Toggle ──
         toggleUnit: function ($unit) {
             var isOpen = $unit.hasClass('open');
+            var $body = $unit.find('.gmat-sp-unit__body');
 
             if (this.singleOpenPerSection) {
                 // Close all other units in the same section
+                var self = this;
                 var $section = $unit.closest('.gmat-sp-section__card');
-                $section.find('.gmat-sp-unit.open').not($unit).removeClass('open');
+                $section.find('.gmat-sp-unit.open').not($unit).each(function () {
+                    var $other = $(this);
+                    var $otherBody = $other.find('.gmat-sp-unit__body');
+                    $otherBody.css('height', $otherBody[0].scrollHeight + 'px');
+                    $otherBody[0].offsetHeight; // force reflow
+                    $otherBody.css('height', '0');
+                    $other.removeClass('open');
+                });
             }
 
             if (isOpen) {
+                // Collapse
+                $body.css('height', $body[0].scrollHeight + 'px');
+                $body[0].offsetHeight; // force reflow
+                $body.css('height', '0');
                 $unit.removeClass('open');
             } else {
+                // Expand
+                $body.css('height', $body[0].scrollHeight + 'px');
                 $unit.addClass('open');
+                $body.one('transitionend', function () {
+                    if ($unit.hasClass('open')) {
+                        $body.css('height', 'auto');
+                    }
+                });
 
                 // Smooth scroll so the unit header is fully visible
                 setTimeout(function () {
@@ -91,6 +141,8 @@
 
                 if ($target.length) {
                     $target.addClass('open');
+                    // Set height to auto immediately on page load (no animation needed)
+                    $target.find('.gmat-sp-unit__body').css('height', 'auto');
                 }
             });
 

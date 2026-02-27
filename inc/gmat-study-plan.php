@@ -77,7 +77,7 @@ function gmat_sp_override_course_content($content) {
     gmat_sp_render($plan, $preference, $user_id, $lesson_ids);
     return ob_get_clean();
 }
-// add_filter('the_content', 'gmat_sp_override_course_content', 999);
+add_filter('the_content', 'gmat_sp_override_course_content', 999);
 
 // Also remove the default LearnDash course content (lesson list) below
 function gmat_sp_remove_ld_content($content, $post) {
@@ -86,7 +86,7 @@ function gmat_sp_remove_ld_content($content, $post) {
     if (!function_exists('gurutor_user_has_active_paid_access') || !gurutor_user_has_active_paid_access()) return $content;
     return '';
 }
-// add_filter('learndash_content', 'gmat_sp_remove_ld_content', 999, 2);
+add_filter('learndash_content', 'gmat_sp_remove_ld_content', 999, 2);
 
 
 // ============================================================================
@@ -116,33 +116,33 @@ function gmat_sp_remove_ld_content($content, $post) {
 // ============================================================================
 
 /**
- * Fetch and cache all xAPI statuses for a user.
+ * Core xAPI data fetcher — fetches and caches both status map and pass/fail signals.
  * Makes exactly 2 API calls per page load (completed + attempted).
- * Returns associative array: activity_id => 'completed' | 'in-progress'
+ * Returns array with two keys:
+ *   'status_map'   => activity_id => 'completed' | 'in-progress'
+ *   'pass_fail'    => variable_name => 'Pass' | 'Fail'
  */
-function gmat_sp_get_xapi_status_map($user_id) {
+function gmat_sp_fetch_xapi_data($user_id) {
     static $cache = array();
 
-    // Return from cache if already fetched for this user
     if (isset($cache[$user_id])) {
         return $cache[$user_id];
     }
 
     $status_map = array();
+    $pass_fail_signals = array();
 
-    // Get user email for xAPI agent lookup
     $user = get_userdata($user_id);
     if (!$user || empty($user->user_email)) {
-        $cache[$user_id] = $status_map;
-        return $status_map;
+        $cache[$user_id] = array('status_map' => $status_map, 'pass_fail' => $pass_fail_signals);
+        return $cache[$user_id];
     }
 
     $email = $user->user_email;
 
-    // Check that the GrassBlade function exists
     if (!function_exists('grassblade_fetch_statements')) {
-        $cache[$user_id] = $status_map;
-        return $status_map;
+        $cache[$user_id] = array('status_map' => $status_map, 'pass_fail' => $pass_fail_signals);
+        return $cache[$user_id];
     }
 
     // ── Fetch COMPLETED statements (verb = completed) ──
@@ -168,13 +168,52 @@ function gmat_sp_get_xapi_status_map($user_id) {
                 if (isset($stmt['result']['success']) && $stmt['result']['success'] === true) {
                     $is_completed = true;
                 }
-                // If no result block at all, the completed verb alone is sufficient
-                if (!isset($stmt['result'])) {
+                // If no result block at all (or empty result {}), the completed verb alone is sufficient
+                if (!isset($stmt['result']) || empty($stmt['result'])) {
                     $is_completed = true;
                 }
 
                 if ($is_completed) {
                     $status_map[$activity_id] = 'completed';
+                }
+
+                // ── Parse pass/fail signals from object name ──
+                // Exercises emit completed statements where object.definition.name
+                // contains JSON like: {"CR_Exercise_4_Pass_or_Fail": "Fail"}
+                $obj_name = '';
+                if (isset($stmt['object']['definition']['name']['en-US'])) {
+                    $obj_name = trim($stmt['object']['definition']['name']['en-US']);
+                }
+
+                if (!empty($obj_name) && substr($obj_name, 0, 1) === '{') {
+                    // Sanitize: strip BOM, fix smart quotes, remove invalid UTF-8
+                    $obj_name = preg_replace('/^\xEF\xBB\xBF/', '', $obj_name); // BOM
+                    $obj_name = str_replace(
+                        array("\xE2\x80\x9C", "\xE2\x80\x9D", "\xE2\x80\x98", "\xE2\x80\x99"),
+                        array('"', '"', "'", "'"),
+                        $obj_name
+                    ); // smart quotes → straight quotes
+                    if (function_exists('mb_convert_encoding')) {
+                        $obj_name = mb_convert_encoding($obj_name, 'UTF-8', 'UTF-8');
+                    }
+                    $pf_data = json_decode($obj_name, true);
+                    if ($pf_data === null && json_last_error() !== JSON_ERROR_NONE) {
+                        // Last resort: strip all non-ASCII, rebuild JSON manually
+                        if (preg_match('/"([A-Za-z0-9_]+_Pass_or_Fail)"\s*:\s*"(Pass|Fail)"/', $obj_name, $m)) {
+                            $pf_data = array($m[1] => $m[2]);
+                        }
+                    }
+                    if (is_array($pf_data)) {
+                        foreach ($pf_data as $var_name => $value) {
+                            if (strpos($var_name, '_Pass_or_Fail') !== false) {
+                                // Store the most recent signal (statements come newest first)
+                                // Trim the value to handle trailing whitespace from xAPI data
+                                if (!isset($pass_fail_signals[$var_name])) {
+                                    $pass_fail_signals[$var_name] = trim($value);
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -203,9 +242,183 @@ function gmat_sp_get_xapi_status_map($user_id) {
         }
     }
 
-    // Cache the result for this page load
-    $cache[$user_id] = $status_map;
-    return $status_map;
+    $cache[$user_id] = array('status_map' => $status_map, 'pass_fail' => $pass_fail_signals);
+    return $cache[$user_id];
+}
+
+/**
+ * Get xAPI status map for a user. Wrapper around gmat_sp_fetch_xapi_data().
+ * Returns associative array: activity_id => 'completed' | 'in-progress'
+ */
+function gmat_sp_get_xapi_status_map($user_id) {
+    $data = gmat_sp_fetch_xapi_data($user_id);
+    return $data['status_map'];
+}
+
+/**
+ * Get the pass/fail signal map for a user.
+ * Returns: variable_name => "Pass" | "Fail"
+ * No additional API calls — uses the same cached data.
+ */
+function gmat_sp_get_pass_fail_map($user_id) {
+    $data = gmat_sp_fetch_xapi_data($user_id);
+    return $data['pass_fail'];
+}
+
+
+/**
+ * Map of pass/fail variable names to lesson keys.
+ * These variable names are emitted by exercises as JSON in xAPI object names.
+ *
+ * For quant exercises, the QLE_* variables map to the specific lesson
+ * that was failed within the exercise (granular per-topic signals).
+ */
+function gmat_sp_get_pass_fail_variable_map() {
+    return array(
+        // CR Exercises
+        'CR_Exercise_4_Pass_or_Fail' => 'cr_exercise_4',
+        'CR_Exercise_5_Pass_or_Fail' => 'cr_exercise_5',
+        'CR_Exercise_6_Pass_or_Fail' => 'cr_exercise_6',
+        'CR_Exercise_7_Pass_or_Fail' => 'cr_exercise_7',
+        'CR_Exercise_8_Pass_or_Fail' => 'cr_exercise_8',
+
+        // Verbal Reviews
+        'Unit2_Verbal_Review_Pass_or_Fail' => 'verbal_review_2',
+        'Unit3_Verbal_Review_Pass_or_Fail' => 'verbal_review_3',
+        'Unit4_Verbal_Review_Pass_or_Fail' => 'verbal_review_4',
+        'Unit5_Verbal_Review_Pass_or_Fail' => 'verbal_review_5',
+
+        // Quant Lessons (direct pass/fail from the lesson itself)
+        'PSS_Lesson_1_Pass_or_Fail' => 'pss_lesson_1',
+        'ALG_Lesson_1_Pass_or_Fail' => 'algebra_1',
+        'WP_Lesson_1_Pass_or_Fail'  => 'word_problems_1',
+        'NP_Lesson_1_Pass_or_Fail'  => 'number_props_1',
+        'FPR_Lesson_1_Pass_or_Fail' => 'fprs_1',
+        'PSS_Lesson_2_Pass_or_Fail' => 'pss_lesson_2',
+        'ALG_Lesson_2_Pass_or_Fail' => 'algebra_2',
+        'NP_Lesson_2_Pass_or_Fail'  => 'number_props_2',
+        'WP_Lesson_2_Pass_or_Fail'  => 'word_problems_2',
+        'FPR_Lesson_2_Pass_or_Fail' => 'fprs_2',
+        'ALG_Lesson_3_Pass_or_Fail' => 'algebra_3',
+        'NP_Lesson_3_Pass_or_Fail'  => 'number_props_3',
+        'WP_Lesson_3_Pass_or_Fail'  => 'word_problems_3',
+        'ALG_Lesson_4_Pass_or_Fail' => 'algebra_4',
+        'WP_Lesson_4_Pass_or_Fail'  => 'word_problems_4',
+        'ALG_Lesson_5_Pass_or_Fail' => 'algebra_5',
+        'WP_Lesson_5_Pass_or_Fail'  => 'word_problems_5',
+        'WP_Lesson_6_Pass_or_Fail'  => 'word_problems_6',
+        'WP_Lesson_7_Pass_or_Fail'  => 'word_problems_7',
+
+        // Quant Exercise GRANULAR pass/fail (maps to the specific lesson failed within the exercise)
+        'QLE_1_ALG1_Pass_or_Fail' => 'algebra_1',
+        'QLE_1_NP1_Pass_or_Fail'  => 'number_props_1',
+        'QLE_1_WP1_Pass_or_Fail'  => 'word_problems_1',
+        'QLE_1_PSS1_Pass_or_Fail' => 'pss_lesson_1',
+        'QLE_2_ALG2_Pass_or_Fail' => 'algebra_2',
+        'QLE_2_NP2_Pass_or_Fail'  => 'number_props_2',
+        'QLE_2_WP2_Pass_or_Fail'  => 'word_problems_2',
+        'QLE_2_PSS2_Pass_or_Fail' => 'pss_lesson_2',
+        'QLE_2_FPR1_Pass_or_Fail' => 'fprs_1',
+        'QLE_3_ALG3_Pass_or_Fail' => 'algebra_3',
+        'QLE_3_FPR2_Pass_or_Fail' => 'fprs_2',
+        'QLE_3_WP3_Pass_or_Fail'  => 'word_problems_3',
+        'QLE_3_WP4_Pass_or_Fail'  => 'word_problems_4',
+        'QLE_4_ALG4_Pass_or_Fail' => 'algebra_4',
+        'QLE_4_WP5_Pass_or_Fail'  => 'word_problems_5',
+        'QLE_4_WP6_Pass_or_Fail'  => 'word_problems_6',
+        'QLE_5_ALG5_Pass_or_Fail' => 'algebra_5',
+        'QLE_5_NP3_Pass_or_Fail'  => 'number_props_3',
+        'QLE_5_WP7_Pass_or_Fail'  => 'word_problems_7',
+
+        // Quant Review Sets — granular pass/fail per topic area within each review
+        // If any variable for a review shows "Fail", the review is considered failed
+        'QRS__Unit2_ALG5_Pass_or_Fail' => 'quant_review_2',
+        'QRS__Unit2_NP3_Pass_or_Fail'  => 'quant_review_2',
+        'QRS__Unit2_WP7_Pass_or_Fail'  => 'quant_review_2',
+        'QRS__Unit3_ALG5_Pass_or_Fail' => 'quant_review_3',
+        'QRS__Unit3_NP3_Pass_or_Fail'  => 'quant_review_3',
+        'QRS__Unit3_WP7_Pass_or_Fail'  => 'quant_review_3',
+        'QRS__Unit4_ALG5_Pass_or_Fail' => 'quant_review_4',
+        'QRS__Unit4_NP3_Pass_or_Fail'  => 'quant_review_4',
+        'QRS__Unit4_WP7_Pass_or_Fail'  => 'quant_review_4',
+        'QRS__Unit5_ALG5_Pass_or_Fail' => 'quant_review_5',
+        'QRS__Unit5_NP3_Pass_or_Fail'  => 'quant_review_5',
+        'QRS__Unit5_WP7_Pass_or_Fail'  => 'quant_review_5',
+    );
+}
+
+/**
+ * Get the pass/fail result of an exercise from xAPI signals.
+ * NO fallback heuristic — only returns a result when an explicit signal exists.
+ *
+ * @param int    $user_id
+ * @param string $lesson_key  The exercise lesson key (e.g., 'cr_exercise_4')
+ * @return string 'fail' | 'pass' | 'none' (no signal exists)
+ */
+function gmat_sp_get_exercise_result($user_id, $lesson_key) {
+    $pf_map  = gmat_sp_get_pass_fail_map($user_id);
+    $var_map = gmat_sp_get_pass_fail_variable_map();
+
+    foreach ($var_map as $var_name => $mapped_key) {
+        if ($mapped_key === $lesson_key && isset($pf_map[$var_name])) {
+            return ($pf_map[$var_name] === 'Fail') ? 'fail' : 'pass';
+        }
+    }
+    return 'none';
+}
+
+/**
+ * Get the pass/fail result of a review set (verbal or quant) from xAPI signals.
+ * For reviews with multiple variables (QRS_*), returns 'fail' if ANY variable shows Fail.
+ * NO fallback heuristic — only returns a result when an explicit signal exists.
+ *
+ * @param int    $user_id
+ * @param string $review_key  e.g., 'verbal_review_2', 'quant_review_3'
+ * @return string 'fail' | 'pass' | 'none' (no signal exists)
+ */
+function gmat_sp_get_review_result($user_id, $review_key) {
+    $pf_map  = gmat_sp_get_pass_fail_map($user_id);
+    $var_map = gmat_sp_get_pass_fail_variable_map();
+
+    $has_any_signal = false;
+    foreach ($var_map as $var_name => $mapped_key) {
+        if ($mapped_key !== $review_key) continue;
+        if (!isset($pf_map[$var_name])) continue;
+
+        $has_any_signal = true;
+        if ($pf_map[$var_name] === 'Fail') {
+            return 'fail';
+        }
+    }
+    return $has_any_signal ? 'pass' : 'none';
+}
+
+/**
+ * Get the list of lesson keys that failed within a specific quant exercise,
+ * using the granular QLE_* pass/fail variables.
+ * NO fallback — returns empty array if no QLE signals exist.
+ *
+ * @param int    $user_id
+ * @param int    $exercise_num  1-5 (which quant exercise)
+ * @param array  $learn_keys    The lesson keys from this unit's learn section
+ * @param array  $lesson_ids
+ * @return array  Lesson keys that failed (empty if no signals)
+ */
+function gmat_sp_get_quant_exercise_failures($user_id, $exercise_num, $learn_keys, $lesson_ids) {
+    $pf_map  = gmat_sp_get_pass_fail_map($user_id);
+    $var_map = gmat_sp_get_pass_fail_variable_map();
+
+    $prefix = 'QLE_' . $exercise_num . '_';
+    $failed_keys = array();
+
+    foreach ($var_map as $var_name => $mapped_key) {
+        if (strpos($var_name, $prefix) !== 0) continue;
+        if (isset($pf_map[$var_name]) && $pf_map[$var_name] === 'Fail') {
+            $failed_keys[] = $mapped_key;
+        }
+    }
+
+    return array_unique($failed_keys);
 }
 
 
@@ -298,15 +511,7 @@ function gmat_sp_is_complete($user_id, $lesson_key, $lesson_ids) {
     return gmat_sp_get_status($user_id, $lesson_key, $lesson_ids) === 'completed';
 }
 
-/**
- * Check if a lesson/exercise has been attempted but NOT completed.
- * This is the condition for showing conditional review lessons and suggestions.
- * Returns true only when the user has started but not finished the exercise.
- */
-function gmat_sp_is_attempted_not_complete($user_id, $lesson_key, $lesson_ids) {
-    $status = gmat_sp_get_status($user_id, $lesson_key, $lesson_ids);
-    return ($status === 'in-progress');
-}
+
 
 
 /**
@@ -358,9 +563,10 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     // ── VERBAL SECTION ──
     $verbal_units = array();
 
-    // Verbal Unit 1
+    // Verbal Unit 1 — Foundations of GMAT Reasoning
     $verbal_units[] = array(
-        'title' => 'Unit 1',
+        'title' => 'Unit 1 – Foundations of GMAT Reasoning',
+        'description' => 'This unit builds the foundation for GMAT Verbal by teaching how Critical Reasoning and Reading Comprehension are structured and tested. You\'ll learn how to deconstruct arguments, identify question types, and read passages strategically so you can focus on reasoning instead of getting overwhelmed by content.',
         'learn' => array('intro_verbal', 'intro_quant', 'intro_di', 'cr_lesson_1', 'cr_lesson_2', 'rc_lesson_1'),
         'practice' => array('cr_exercise_1', 'cr_exercise_2'),
         'review' => array(),
@@ -369,9 +575,10 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'suggest_redo' => array(),
     );
 
-    // Verbal Unit 2
+    // Verbal Unit 2 — Core Argument and Reading Skills
     $verbal_units[] = array(
-        'title' => 'Unit 2',
+        'title' => 'Unit 2 – Core Argument and Reading Skills',
+        'description' => 'This unit develops your ability to classify arguments and understand the core tasks in assumption-based questions. You\'ll also begin applying structured strategies to Reading Comprehension, learning how question type and language patterns guide correct answers.',
         'learn' => array('cr_lesson_3', 'cr_lesson_4', 'rc_lesson_2', 'rc_lesson_3'),
         'practice' => array('cr_exercise_3', 'rc_exercise_1'),
         'review' => array(),
@@ -380,74 +587,76 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'suggest_redo' => array(),
     );
 
-    // Verbal Unit 3
-    // Suggestion only shown when CR Exercise 4 has been attempted but not completed
-    $v3_suggest = '';
-    $v3_suggest_links = array();
-    if (gmat_sp_is_attempted_not_complete($user_id, 'cr_exercise_4', $ids)) {
-        $v3_suggest = 'You need to improve: identifying, extracting key info, targeting, eliminating';
-    }
+    // Verbal Unit 3 — Strategic Decision-Making in CR
+    $cr4_result = gmat_sp_get_exercise_result($user_id, 'cr_exercise_4');
     $verbal_units[] = array(
-        'title' => 'Unit 3',
+        'title' => 'Unit 3 – Strategic Decision-Making in CR',
+        'description' => 'This unit trains you to handle plan-based arguments, one of the most common and misunderstood CR types. You\'ll practice targeting goals, constraints, and assumptions while reinforcing Unit 2 skills under exam-like conditions.',
         'learn' => array('cr_lesson_5'),
         'practice' => array('cr_exercise_4'),
         'review' => array('verbal_review_2'),
-        'suggest' => $v3_suggest,
-        'suggest_links' => $v3_suggest_links,
+        'suggest' => '',
+        'suggest_links' => array(),
         'suggest_redo' => array(),
     );
 
-    // Verbal Unit 4 — conditional: if CR Exercise 4 attempted but not passed, add CR Lesson 5 to review
+    // Verbal Unit 4 — Regular Argument Analysis
     $v4_extra_review = array();
-    if (gmat_sp_is_attempted_not_complete($user_id, 'cr_exercise_4', $ids)) {
+    $v4_suggested_lessons = array();
+    if ($cr4_result === 'fail') {
         $v4_extra_review[] = 'cr_lesson_5';
+        $v4_suggested_lessons['cr_lesson_5'] = 'You need to improve: identifying, extracting key info, targeting, eliminating';
     }
-    $v4_suggest = '';
-    if (gmat_sp_is_attempted_not_complete($user_id, 'cr_exercise_5', $ids)) {
-        $v4_suggest = 'You need to improve: identifying, extracting key info, targeting, eliminating';
-    }
+    $cr5_result = gmat_sp_get_exercise_result($user_id, 'cr_exercise_5');
     $verbal_units[] = array(
-        'title' => 'Unit 4',
+        'title' => 'Unit 4 – Regular Argument Analysis',
+        'description' => 'This unit focuses on "regular" CR arguments and strengthens your ability to evaluate how information affects conclusions. You\'ll refine your ability to identify logical gaps and eliminate attractive but irrelevant answers under time pressure. You\'ll finish up the unit with a thorough review of the verbal concepts from Unit 3 under exam-like conditions.',
         'learn' => array('cr_lesson_6'),
         'practice' => array('cr_exercise_5'),
         'review' => array_merge($v4_extra_review, array('verbal_review_3')),
-        'suggest' => $v4_suggest,
+        'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
+        'suggested_lessons' => $v4_suggested_lessons,
     );
 
-    // Verbal Unit 5 — conditional: if CR Exercise 5 attempted but not passed, add CR Lesson 6 to review
+    // Verbal Unit 5 — Explanation-Based Reasoning
     $v5_extra_review = array();
-    if (gmat_sp_is_attempted_not_complete($user_id, 'cr_exercise_5', $ids)) {
+    $v5_suggested_lessons = array();
+    if ($cr5_result === 'fail') {
         $v5_extra_review[] = 'cr_lesson_6';
+        $v5_suggested_lessons['cr_lesson_6'] = 'You need to improve: identifying, extracting key info, targeting, eliminating';
     }
-    $v5_suggest = '';
-    if (gmat_sp_is_attempted_not_complete($user_id, 'cr_exercise_6', $ids)) {
-        $v5_suggest = 'You need to improve: identifying, extracting key info, targeting, eliminating';
-    }
+    $cr6_result = gmat_sp_get_exercise_result($user_id, 'cr_exercise_6');
     $verbal_units[] = array(
-        'title' => 'Unit 5',
+        'title' => 'Unit 5 – Explanation-Based Reasoning',
+        'description' => 'This unit builds mastery of explanation arguments by teaching you how to recognize observation-and-explanation reasoning and the specific thought patterns that correct answers consistently address. You\'ll then reinforce the concepts from Unit 4 by completing a Unit 4 Verbal Review Set under exam-like conditions.',
         'learn' => array('cr_lesson_7'),
         'practice' => array('cr_exercise_6'),
         'review' => array_merge($v5_extra_review, array('verbal_review_4')),
-        'suggest' => $v5_suggest,
+        'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
+        'suggested_lessons' => $v5_suggested_lessons,
     );
 
-    // Verbal Unit 6 — conditional: if CR Exercise 6 attempted but not passed, add CR Lesson 7 to review
+    // Verbal Unit 6 — Advanced Logical Structures
     $v6_extra_review = array();
-    if (gmat_sp_is_attempted_not_complete($user_id, 'cr_exercise_6', $ids)) {
+    $v6_suggested_lessons = array();
+    if ($cr6_result === 'fail') {
         $v6_extra_review[] = 'cr_lesson_7';
+        $v6_suggested_lessons['cr_lesson_7'] = 'You need to improve: identifying, extracting key info, targeting, eliminating';
     }
     $verbal_units[] = array(
-        'title' => 'Unit 6',
+        'title' => 'Unit 6 – Advanced Logical Structures',
+        'description' => 'This unit covers advanced CR families, including structure- and evidence-based questions. You\'ll learn to analyze arguments independent of topic content and apply advanced reasoning skills consistently across difficult questions before revisiting the concepts from Unit 5 under exam-like conditions.',
         'learn' => array('cr_lesson_8', 'cr_lesson_9'),
         'practice' => array('cr_exercise_7', 'cr_exercise_8'),
         'review' => array_merge($v6_extra_review, array('verbal_review_5')),
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
+        'suggested_lessons' => $v6_suggested_lessons,
     );
 
     $plan[] = array('section' => 'Verbal', 'units' => $verbal_units);
@@ -455,9 +664,10 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     // ── QUANT SECTION ──
     $quant_units = array();
 
-    // Quant Unit 1
+    // Quant Unit 1 — Section Structure & Scoring
     $quant_units[] = array(
-        'title' => 'Unit 1',
+        'title' => 'Unit 1 – Section Structure & Scoring',
+        'description' => '',
         'learn' => array('intro_quant'),
         'practice' => array(),
         'review' => array(),
@@ -466,154 +676,115 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'suggest_redo' => array(),
     );
 
-    // Quant Unit 2
+    // Quant Unit 2 — Strategic Algebra and Translation
     $q2_learn = array('pss_lesson_1', 'algebra_1', 'word_problems_1', 'number_props_1');
-    $q2_not_passed = array();
-    foreach ($q2_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q2_not_passed[] = $lk;
-        }
-    }
+    // Use granular QLE_1 pass/fail signals for exercise failures
+    $q2_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
     $quant_units[] = array(
-        'title' => 'Unit 2',
+        'title' => 'Unit 2 – Strategic Algebra and Translation',
+        'description' => 'This unit introduces core problem-solving strategies like smart numbers and working backwards, alongside essential algebra, number properties, and translation skills. You\'ll learn how to simplify problems strategically instead of defaulting to brute-force math.',
         'learn' => $q2_learn,
         'practice' => array('quant_exercise_1'),
         'review' => array(),
-        'suggest' => !empty($q2_not_passed) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q2_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q2_not_passed,
+        'suggest_redo' => $q2_exercise_failures,
     );
 
-    // Quant Unit 3
+    // Quant Unit 3 — Structure, Estimation, and Multi-Step Reasoning
     $q3_learn = array('pss_lesson_2', 'number_props_2', 'algebra_2', 'word_problems_2', 'fprs_1');
-    $q3_not_passed = array();
-    foreach ($q3_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q3_not_passed[] = $lk;
-        }
-    }
-    // Add Unit 2 lessons to review only if they were attempted but not completed
-    $q3_review_extra = array();
-    foreach ($q2_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q3_review_extra[] = $lk;
-        }
-    }
-    // Verbal cross-suggest — only when relevant exercises not completed
+    $q3_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
+    // Add Unit 2 failed lessons to review (from QLE_1 signals)
+    $q3_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
+    // Verbal cross-suggest — only show when explicit pass/fail signal exists
     $q3_cross_links = array();
-    if (!gmat_sp_is_complete($user_id, 'verbal_review_2', $ids)) {
-        $q3_cross_links[] = 'rc_exercise_1';
-        $q3_cross_links[] = 'verbal_review_2';
-    } else {
-        $q3_cross_links[] = 'verbal_review_2';
+    $vr2_result = gmat_sp_get_review_result($user_id, 'verbal_review_2');
+    if ($vr2_result === 'fail') {
+        $q3_cross_links = array('rc_exercise_1', 'verbal_review_2');
+    } elseif ($vr2_result === 'pass') {
+        $q3_cross_links = array('verbal_review_2');
     }
     $quant_units[] = array(
-        'title' => 'Unit 3',
+        'title' => 'Unit 3 – Structure, Estimation, and Multi-Step Reasoning',
+        'description' => 'This unit deepens your ability to recognize structure in algebra, number properties, and word problems. You\'ll learn estimation, remainders, quadratics, inequalities, and overlapping sets while avoiding common GMAT language traps. You\'ll finish the unit by revisiting the concepts from Quant Unit 2 under exam-like conditions.',
         'learn' => $q3_learn,
         'practice' => array('quant_exercise_2'),
         'review' => array_merge($q3_review_extra, array('quant_review_2')),
-        'suggest' => !empty($q3_not_passed) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q3_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q3_not_passed,
+        'suggest_redo' => $q3_exercise_failures,
         'cross_suggest' => '',
         'cross_suggest_links' => $q3_cross_links,
     );
 
-    // Quant Unit 4
+    // Quant Unit 4 — Advanced Word Problems and Abstraction
     $q4_learn = array('fprs_2', 'algebra_3', 'word_problems_3', 'word_problems_4');
-    $q4_not_passed = array();
-    foreach ($q4_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q4_not_passed[] = $lk;
-        }
-    }
-    $q4_review_extra = array();
-    foreach ($q3_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q4_review_extra[] = $lk;
-        }
-    }
+    $q4_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
+    $q4_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
     $q4_cross_links = array();
-    if (!gmat_sp_is_complete($user_id, 'verbal_review_3', $ids)) {
-        $q4_cross_links[] = 'cr_exercise_4';
-        $q4_cross_links[] = 'verbal_review_3';
-    } else {
-        $q4_cross_links[] = 'verbal_review_3';
+    $vr3_result = gmat_sp_get_review_result($user_id, 'verbal_review_3');
+    if ($vr3_result === 'fail') {
+        $q4_cross_links = array('cr_lesson_5', 'cr_exercise_4', 'verbal_review_3');
+    } elseif ($vr3_result === 'pass') {
+        $q4_cross_links = array('verbal_review_3');
     }
     $quant_units[] = array(
-        'title' => 'Unit 4',
+        'title' => 'Unit 4 – Advanced Word Problems and Abstraction',
+        'description' => 'This unit focuses on higher-level abstraction, including functions, sequences, rates with changing conditions, combinatorics, and statistics. You\'ll learn how to manage complexity by choosing the right structure rather than adding equations. You\'ll finish the unit by revisiting the concepts from Quant Unit 3 under exam-like conditions.',
         'learn' => $q4_learn,
         'practice' => array('quant_exercise_3'),
         'review' => array_merge($q4_review_extra, array('quant_review_3')),
-        'suggest' => !empty($q4_not_passed) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q4_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q4_not_passed,
+        'suggest_redo' => $q4_exercise_failures,
         'cross_suggest' => '',
         'cross_suggest_links' => $q4_cross_links,
     );
 
-    // Quant Unit 5
+    // Quant Unit 5 — Systems, Probability, and Weighted Reasoning
     $q5_learn = array('algebra_4', 'word_problems_5', 'word_problems_6');
-    $q5_not_passed = array();
-    foreach ($q5_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q5_not_passed[] = $lk;
-        }
-    }
-    $q5_review_extra = array();
-    foreach ($q4_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q5_review_extra[] = $lk;
-        }
-    }
+    $q5_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
+    $q5_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
     $q5_cross_links = array();
-    if (!gmat_sp_is_complete($user_id, 'verbal_review_4', $ids)) {
-        $q5_cross_links[] = 'cr_exercise_5';
-        $q5_cross_links[] = 'verbal_review_4';
-    } else {
-        $q5_cross_links[] = 'verbal_review_4';
+    $vr4_result = gmat_sp_get_review_result($user_id, 'verbal_review_4');
+    if ($vr4_result === 'fail') {
+        $q5_cross_links = array('cr_lesson_6', 'cr_exercise_5', 'verbal_review_4');
+    } elseif ($vr4_result === 'pass') {
+        $q5_cross_links = array('verbal_review_4');
     }
     $quant_units[] = array(
-        'title' => 'Unit 5',
+        'title' => 'Unit 5 – Systems, Probability, and Weighted Reasoning',
+        'description' => 'This unit develops advanced reasoning skills involving systems, weighted averages, probability, and unit conversions. You\'ll learn how to split complex problems into simpler cases and avoid common structural mistakes. You\'ll finish the unit by revisiting the concepts from Quant Unit 4 under exam-like conditions.',
         'learn' => $q5_learn,
         'practice' => array('quant_exercise_4'),
         'review' => array_merge($q5_review_extra, array('quant_review_4')),
-        'suggest' => !empty($q5_not_passed) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q5_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q5_not_passed,
+        'suggest_redo' => $q5_exercise_failures,
         'cross_suggest' => '',
         'cross_suggest_links' => $q5_cross_links,
     );
 
-    // Quant Unit 6
+    // Quant Unit 6 — Patterns, Constraints, and Edge Cases
     $q6_learn = array('number_props_3', 'word_problems_7', 'algebra_5');
-    $q6_not_passed = array();
-    foreach ($q6_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q6_not_passed[] = $lk;
-        }
-    }
-    $q6_review_extra = array();
-    foreach ($q5_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q6_review_extra[] = $lk;
-        }
-    }
+    $q6_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 5, $q6_learn, $ids);
+    $q6_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
     $q6_cross_links = array();
-    if (!gmat_sp_is_complete($user_id, 'verbal_review_5', $ids)) {
-        $q6_cross_links[] = 'cr_exercise_6';
-        $q6_cross_links[] = 'verbal_review_5';
-    } else {
-        $q6_cross_links[] = 'verbal_review_5';
+    $vr5_result = gmat_sp_get_review_result($user_id, 'verbal_review_5');
+    if ($vr5_result === 'fail') {
+        $q6_cross_links = array('cr_lesson_7', 'cr_exercise_6', 'verbal_review_5');
+    } elseif ($vr5_result === 'pass') {
+        $q6_cross_links = array('verbal_review_5');
     }
     $quant_units[] = array(
-        'title' => 'Unit 6',
+        'title' => 'Unit 6 – Patterns, Constraints, and Edge Cases',
+        'description' => 'This unit covers advanced number properties, probability structures, statistics bounds, and algebraic techniques like conjugation. The focus is on recognizing patterns, managing constraints, and handling high-difficulty questions efficiently.',
         'learn' => $q6_learn,
         'practice' => array('quant_exercise_5'),
         'review' => array_merge($q6_review_extra, array('quant_review_5')),
-        'suggest' => !empty($q6_not_passed) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q6_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q6_not_passed,
+        'suggest_redo' => $q6_exercise_failures,
         'cross_suggest' => '',
         'cross_suggest_links' => $q6_cross_links,
     );
@@ -623,48 +794,39 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     // ── DATA INSIGHTS SECTION ──
     $di_units = array();
 
-    // DI Unit 1 — suggest links to CR Lesson 8 & CR Exercise 7 if exercise 7 not completed
-    $di1_suggest_links = array();
-    if (!gmat_sp_is_complete($user_id, 'cr_exercise_7', $ids)) {
-        $di1_suggest_links = array('cr_lesson_8', 'cr_exercise_7');
-    } else {
-        $di1_suggest_links = array('cr_exercise_7');
-    }
+    // DI Unit 1 — Data Sufficiency and Logical Control
     $di_units[] = array(
-        'title' => 'Unit 1',
+        'title' => 'Unit 1 – Data Sufficiency and Logical Control',
+        'description' => 'This unit builds mastery of Data Sufficiency by teaching structured evaluation methods, rephrasing, and logical testing strategies. You\'ll learn how to determine sufficiency confidently without unnecessary calculation, while reinforcing core reasoning skills.',
         'learn' => array('intro_di', 'di_lesson_1', 'di_lesson_2', 'di_lesson_3'),
         'practice' => array(),
         'review' => array(),
         'suggest' => '',
-        'suggest_links' => $di1_suggest_links,
+        'suggest_links' => array(),
         'suggest_redo' => array(),
     );
 
-    // DI Unit 2
-    $di2_suggest_links = array();
-    if (!gmat_sp_is_complete($user_id, 'cr_exercise_8', $ids)) {
-        $di2_suggest_links = array('cr_lesson_9', 'cr_exercise_8');
-    } else {
-        $di2_suggest_links = array('cr_exercise_8');
-    }
+    // DI Unit 2 — Interpreting Visual and Tabular Data
     $di_units[] = array(
-        'title' => 'Unit 2',
+        'title' => 'Unit 2 – Interpreting Visual and Tabular Data',
+        'description' => 'This unit focuses on extracting meaning from graphs and tables under time pressure. You\'ll learn how to filter information, avoid visual traps, and make accurate yes/no decisions using structured analysis.',
         'learn' => array('di_lesson_4', 'di_lesson_5'),
         'practice' => array(),
         'review' => array(),
         'suggest' => '',
-        'suggest_links' => $di2_suggest_links,
+        'suggest_links' => array(),
         'suggest_redo' => array(),
     );
 
-    // DI Unit 3
+    // DI Unit 3 — Multi-Source and Multi-Step Reasoning
     $di_units[] = array(
-        'title' => 'Unit 3',
+        'title' => 'Unit 3 – Multi-Source and Multi-Step Reasoning',
+        'description' => 'This unit trains you to synthesize information across multiple sources and conditions. You\'ll learn how to translate complex setups, manage interdependent information, and apply quantitative reasoning in integrated contexts.',
         'learn' => array('di_lesson_6', 'di_lesson_7'),
         'practice' => array(),
         'review' => array(),
         'suggest' => '',
-        'suggest_links' => array('quant_exercise_5'),
+        'suggest_links' => array(),
         'suggest_redo' => array(),
     );
 
@@ -684,9 +846,10 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     // ── QUANT SECTION ──
     $quant_units = array();
 
-    // Quant Unit 1
+    // Quant Unit 1 — Orientation and Foundations
     $quant_units[] = array(
-        'title' => 'Unit 1',
+        'title' => 'Unit 1 – Orientation and Foundations',
+        'description' => 'This unit introduces the structure of the GMAT and how Quant, Verbal, and Data Insights are tested. It sets the foundation for effective study strategies.',
         'learn' => array('intro_quant', 'intro_verbal', 'intro_di'),
         'practice' => array(),
         'review' => array(),
@@ -695,118 +858,78 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'suggest_redo' => array(),
     );
 
-    // Quant Unit 2
+    // Quant Unit 2 — Strategic Algebra and Translation
     $q2_learn = array('pss_lesson_1', 'algebra_1', 'word_problems_1', 'number_props_1');
-    $q2_not_passed = array();
-    foreach ($q2_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q2_not_passed[] = $lk;
-        }
-    }
+    $q2_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
     $quant_units[] = array(
-        'title' => 'Unit 2',
+        'title' => 'Unit 2 – Strategic Algebra and Translation',
+        'description' => 'This unit introduces core problem-solving strategies like smart numbers and working backwards, alongside essential algebra, number properties, and translation skills. You\'ll learn how to simplify problems strategically instead of defaulting to brute-force math.',
         'learn' => $q2_learn,
         'practice' => array('quant_exercise_1'),
         'review' => array(),
-        'suggest' => !empty($q2_not_passed) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q2_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q2_not_passed,
+        'suggest_redo' => $q2_exercise_failures,
     );
 
-    // Quant Unit 3
+    // Quant Unit 3 — Structure, Estimation, and Multi-Step Reasoning
     $q3_learn = array('pss_lesson_2', 'number_props_2', 'algebra_2', 'word_problems_2', 'fprs_1');
-    $q3_not_passed = array();
-    foreach ($q3_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q3_not_passed[] = $lk;
-        }
-    }
-    $q3_review_extra = array();
-    foreach ($q2_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q3_review_extra[] = $lk;
-        }
-    }
+    $q3_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
+    $q3_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
     $quant_units[] = array(
-        'title' => 'Unit 3',
+        'title' => 'Unit 3 – Structure, Estimation, and Multi-Step Reasoning',
+        'description' => 'This unit deepens your ability to recognize structure in algebra, number properties, and word problems. You\'ll learn estimation, remainders, quadratics, inequalities, and overlapping sets while avoiding common GMAT language traps. You\'ll finish the unit by revisiting the concepts from Quant Unit 2 under exam-like conditions.',
         'learn' => $q3_learn,
         'practice' => array('quant_exercise_2'),
         'review' => array_merge($q3_review_extra, array('quant_review_2')),
-        'suggest' => !empty($q3_not_passed) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q3_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q3_not_passed,
+        'suggest_redo' => $q3_exercise_failures,
     );
 
-    // Quant Unit 4
+    // Quant Unit 4 — Advanced Word Problems and Abstraction
     $q4_learn = array('fprs_2', 'algebra_3', 'word_problems_3', 'word_problems_4');
-    $q4_not_passed = array();
-    foreach ($q4_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q4_not_passed[] = $lk;
-        }
-    }
-    $q4_review_extra = array();
-    foreach ($q3_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q4_review_extra[] = $lk;
-        }
-    }
+    $q4_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
+    $q4_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
     $quant_units[] = array(
-        'title' => 'Unit 4',
+        'title' => 'Unit 4 – Advanced Word Problems and Abstraction',
+        'description' => 'This unit focuses on higher-level abstraction, including functions, sequences, rates with changing conditions, combinatorics, and statistics. You\'ll learn how to manage complexity by choosing the right structure rather than adding equations. You\'ll finish the unit by revisiting the concepts from Quant Unit 3 under exam-like conditions.',
         'learn' => $q4_learn,
         'practice' => array('quant_exercise_3'),
         'review' => array_merge($q4_review_extra, array('quant_review_3')),
-        'suggest' => !empty($q4_not_passed) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q4_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q4_not_passed,
+        'suggest_redo' => $q4_exercise_failures,
     );
 
-    // Quant Unit 5
+    // Quant Unit 5 — Systems, Probability, and Weighted Reasoning
     $q5_learn = array('algebra_4', 'word_problems_5', 'word_problems_6');
-    $q5_not_passed = array();
-    foreach ($q5_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q5_not_passed[] = $lk;
-        }
-    }
-    $q5_review_extra = array();
-    foreach ($q4_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q5_review_extra[] = $lk;
-        }
-    }
+    $q5_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
+    $q5_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
     $quant_units[] = array(
-        'title' => 'Unit 5',
+        'title' => 'Unit 5 – Systems, Probability, and Weighted Reasoning',
+        'description' => 'This unit develops advanced reasoning skills involving systems, weighted averages, probability, and unit conversions. You\'ll learn how to split complex problems into simpler cases and avoid common structural mistakes. You\'ll finish the unit by revisiting the concepts from Quant Unit 4 under exam-like conditions.',
         'learn' => $q5_learn,
         'practice' => array('quant_exercise_4'),
         'review' => array_merge($q5_review_extra, array('quant_review_4')),
-        'suggest' => !empty($q5_not_passed) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q5_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q5_not_passed,
+        'suggest_redo' => $q5_exercise_failures,
     );
 
-    // Quant Unit 6
+    // Quant Unit 6 — Patterns, Constraints, and Edge Cases
     $q6_learn = array('number_props_3', 'word_problems_7', 'algebra_5');
-    $q6_not_passed = array();
-    foreach ($q6_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q6_not_passed[] = $lk;
-        }
-    }
-    $q6_review_extra = array();
-    foreach ($q5_learn as $lk) {
-        if (gmat_sp_is_attempted_not_complete($user_id, $lk, $ids)) {
-            $q6_review_extra[] = $lk;
-        }
-    }
+    $q6_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 5, $q6_learn, $ids);
+    $q6_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
     $quant_units[] = array(
-        'title' => 'Unit 6',
+        'title' => 'Unit 6 – Patterns, Constraints, and Edge Cases',
+        'description' => 'This unit covers advanced number properties, probability structures, statistics bounds, and algebraic techniques like conjugation. The focus is on recognizing patterns, managing constraints, and handling high-difficulty questions efficiently. You\'ll finish the unit by revisiting the concepts from Quant Unit 5 under exam-like conditions.',
         'learn' => $q6_learn,
         'practice' => array('quant_exercise_5'),
         'review' => array_merge($q6_review_extra, array('quant_review_5')),
-        'suggest' => !empty($q6_not_passed) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q6_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q6_not_passed,
+        'suggest_redo' => $q6_exercise_failures,
     );
 
     $plan[] = array('section' => 'Quant', 'units' => $quant_units);
@@ -814,9 +937,10 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     // ── VERBAL SECTION ──
     $verbal_units = array();
 
-    // Verbal Unit 1
+    // Verbal Unit 1 — Foundations of GMAT Reasoning
     $verbal_units[] = array(
-        'title' => 'Unit 1',
+        'title' => 'Unit 1 – Foundations of GMAT Reasoning',
+        'description' => 'This unit introduces GMAT Verbal reasoning, including how Critical Reasoning and Reading Comprehension are structured and scored.',
         'learn' => array('intro_verbal', 'cr_lesson_1', 'cr_lesson_2', 'rc_lesson_1'),
         'practice' => array('cr_exercise_1', 'cr_exercise_2'),
         'review' => array(),
@@ -825,9 +949,10 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'suggest_redo' => array(),
     );
 
-    // Verbal Unit 2
+    // Verbal Unit 2 — Core Argument and Reading Skills
     $verbal_units[] = array(
-        'title' => 'Unit 2',
+        'title' => 'Unit 2 – Core Argument and Reading Skills',
+        'description' => 'This unit teaches you to classify CR arguments and apply strategic approaches to RC question types and answer-choice language.',
         'learn' => array('cr_lesson_3', 'cr_lesson_4', 'rc_lesson_2', 'rc_lesson_3'),
         'practice' => array('cr_exercise_3', 'rc_exercise_1'),
         'review' => array(),
@@ -836,102 +961,110 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'suggest_redo' => array(),
     );
 
-    // Verbal Unit 3
-    $v3_suggest = '';
-    if (gmat_sp_is_attempted_not_complete($user_id, 'cr_exercise_4', $ids)) {
-        $v3_suggest = 'You need to improve: identifying, extracting key info, targeting, eliminating';
-    }
+    // Verbal Unit 3 — Strategic Decision-Making in CR
+    $cr4_result = gmat_sp_get_exercise_result($user_id, 'cr_exercise_4');
     $v3_cross_links = array();
-    if (!gmat_sp_is_complete($user_id, 'quant_review_2', $ids)) {
+    $qr2_result = gmat_sp_get_review_result($user_id, 'quant_review_2');
+    if ($qr2_result === 'fail') {
         $v3_cross_links = array('quant_exercise_1', 'quant_review_2');
-    } else {
+    } elseif ($qr2_result === 'pass') {
         $v3_cross_links = array('quant_review_2');
     }
     $verbal_units[] = array(
-        'title' => 'Unit 3',
+        'title' => 'Unit 3 – Strategic Decision-Making in CR',
+        'description' => 'This unit focuses on plan-argument reasoning in CR and consolidates verbal skills through a timed review.',
         'learn' => array('cr_lesson_5'),
         'practice' => array('cr_exercise_4'),
         'review' => array('verbal_review_2'),
-        'suggest' => $v3_suggest,
+        'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
         'cross_suggest' => '',
         'cross_suggest_links' => $v3_cross_links,
     );
 
-    // Verbal Unit 4
+    // Verbal Unit 4 — Regular Argument Analysis
     $v4_extra_review = array();
-    if (gmat_sp_is_attempted_not_complete($user_id, 'cr_exercise_4', $ids)) {
+    $v4_suggested_lessons = array();
+    if ($cr4_result === 'fail') {
         $v4_extra_review[] = 'cr_lesson_5';
+        $v4_suggested_lessons['cr_lesson_5'] = 'You need to improve: identifying, extracting key info, targeting, eliminating';
     }
-    $v4_suggest = '';
-    if (gmat_sp_is_attempted_not_complete($user_id, 'cr_exercise_5', $ids)) {
-        $v4_suggest = 'You need to improve: identifying, extracting key info, targeting, eliminating';
-    }
+    $cr5_result = gmat_sp_get_exercise_result($user_id, 'cr_exercise_5');
     $v4_cross_links = array();
-    if (!gmat_sp_is_complete($user_id, 'quant_review_3', $ids)) {
+    $qr3_result = gmat_sp_get_review_result($user_id, 'quant_review_3');
+    if ($qr3_result === 'fail') {
         $v4_cross_links = array('quant_exercise_2', 'quant_review_3');
-    } else {
+    } elseif ($qr3_result === 'pass') {
         $v4_cross_links = array('quant_review_3');
     }
     $verbal_units[] = array(
-        'title' => 'Unit 4',
+        'title' => 'Unit 4 – Regular Argument Analysis',
+        'description' => 'This unit advances your CR skills with regular-argument analysis and continues to build verbal reasoning under timed conditions.',
         'learn' => array('cr_lesson_6'),
         'practice' => array('cr_exercise_5'),
         'review' => array_merge($v4_extra_review, array('verbal_review_3')),
-        'suggest' => $v4_suggest,
+        'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
         'cross_suggest' => '',
         'cross_suggest_links' => $v4_cross_links,
+        'suggested_lessons' => $v4_suggested_lessons,
     );
 
-    // Verbal Unit 5
+    // Verbal Unit 5 — Explanation-Based Reasoning
     $v5_extra_review = array();
-    if (gmat_sp_is_attempted_not_complete($user_id, 'cr_exercise_5', $ids)) {
+    $v5_suggested_lessons = array();
+    if ($cr5_result === 'fail') {
         $v5_extra_review[] = 'cr_lesson_6';
+        $v5_suggested_lessons['cr_lesson_6'] = 'You need to improve: identifying, extracting key info, targeting, eliminating';
     }
-    $v5_suggest = '';
-    if (gmat_sp_is_attempted_not_complete($user_id, 'cr_exercise_6', $ids)) {
-        $v5_suggest = 'You need to improve: identifying, extracting key info, targeting, eliminating';
-    }
+    $cr6_result = gmat_sp_get_exercise_result($user_id, 'cr_exercise_6');
     $v5_cross_links = array();
-    if (!gmat_sp_is_complete($user_id, 'quant_review_4', $ids)) {
+    $qr4_result = gmat_sp_get_review_result($user_id, 'quant_review_4');
+    if ($qr4_result === 'fail') {
         $v5_cross_links = array('quant_exercise_3', 'quant_review_4');
-    } else {
+    } elseif ($qr4_result === 'pass') {
         $v5_cross_links = array('quant_review_4');
     }
     $verbal_units[] = array(
-        'title' => 'Unit 5',
+        'title' => 'Unit 5 – Explanation-Based Reasoning',
+        'description' => 'This unit teaches explanation-argument reasoning and uses thought pattern recognition to avoid common CR traps.',
         'learn' => array('cr_lesson_7'),
         'practice' => array('cr_exercise_6'),
         'review' => array_merge($v5_extra_review, array('verbal_review_4')),
-        'suggest' => $v5_suggest,
+        'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
         'cross_suggest' => '',
         'cross_suggest_links' => $v5_cross_links,
+        'suggested_lessons' => $v5_suggested_lessons,
     );
 
-    // Verbal Unit 6
+    // Verbal Unit 6 — Advanced Logical Structures
     $v6_extra_review = array();
-    if (gmat_sp_is_attempted_not_complete($user_id, 'cr_exercise_6', $ids)) {
+    $v6_suggested_lessons = array();
+    if ($cr6_result === 'fail') {
         $v6_extra_review[] = 'cr_lesson_7';
+        $v6_suggested_lessons['cr_lesson_7'] = 'You need to improve: identifying, extracting key info, targeting, eliminating';
     }
     $v6_cross_links = array();
-    if (!gmat_sp_is_complete($user_id, 'quant_review_5', $ids)) {
+    $qr5_result = gmat_sp_get_review_result($user_id, 'quant_review_5');
+    if ($qr5_result === 'fail') {
         $v6_cross_links = array('quant_exercise_4', 'quant_review_5');
-    } else {
+    } elseif ($qr5_result === 'pass') {
         $v6_cross_links = array('quant_review_5');
     }
     $verbal_units[] = array(
-        'title' => 'Unit 6',
+        'title' => 'Unit 6 – Advanced Logical Structures',
+        'description' => 'This unit completes verbal training with structure-family and evidence-family question types, plus a final comprehensive verbal review.',
         'learn' => array('cr_lesson_8', 'cr_lesson_9'),
         'practice' => array('cr_exercise_7', 'cr_exercise_8'),
         'review' => array_merge($v6_extra_review, array('verbal_review_5')),
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
+        'suggested_lessons' => $v6_suggested_lessons,
         'cross_suggest' => '',
         'cross_suggest_links' => $v6_cross_links,
     );
@@ -941,54 +1074,70 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     // ── DATA INSIGHTS SECTION ──
     $di_units = array();
 
-    // DI Unit 1
+    // DI Unit 1 — Data Sufficiency and Logical Control
     $di_units[] = array(
-        'title' => 'Unit 1',
+        'title' => 'Unit 1 – Data Sufficiency and Logical Control',
+        'description' => 'This unit builds mastery of Data Sufficiency by teaching structured evaluation methods, rephrasing, and logical testing strategies. You\'ll learn how to determine sufficiency confidently without unnecessary calculation, while reinforcing core reasoning skills.',
         'learn' => array('intro_di', 'di_lesson_1', 'di_lesson_2', 'di_lesson_3'),
         'practice' => array(),
         'review' => array(),
         'suggest' => '',
-        'suggest_links' => array('quant_exercise_5'),
+        'suggest_links' => array(),
         'suggest_redo' => array(),
     );
 
-    // DI Unit 2
-    $di2_suggest_links = array();
-    if (!gmat_sp_is_complete($user_id, 'cr_exercise_7', $ids)) {
-        $di2_suggest_links = array('cr_lesson_8', 'cr_exercise_7');
-    } else {
-        $di2_suggest_links = array('cr_exercise_7');
-    }
+    // DI Unit 2 — Interpreting Visual and Tabular Data
     $di_units[] = array(
-        'title' => 'Unit 2',
+        'title' => 'Unit 2 – Interpreting Visual and Tabular Data',
+        'description' => 'This unit focuses on extracting meaning from graphs and tables under time pressure. You\'ll learn how to filter information, avoid visual traps, and make accurate yes/no decisions using structured analysis.',
         'learn' => array('di_lesson_4', 'di_lesson_5'),
         'practice' => array(),
         'review' => array(),
         'suggest' => '',
-        'suggest_links' => $di2_suggest_links,
+        'suggest_links' => array(),
         'suggest_redo' => array(),
     );
 
-    // DI Unit 3
-    $di3_suggest_links = array();
-    if (!gmat_sp_is_complete($user_id, 'cr_exercise_8', $ids)) {
-        $di3_suggest_links = array('cr_lesson_9', 'cr_exercise_8');
-    } else {
-        $di3_suggest_links = array('cr_exercise_8');
-    }
+    // DI Unit 3 — Multi-Source and Multi-Step Reasoning
     $di_units[] = array(
-        'title' => 'Unit 3',
+        'title' => 'Unit 3 – Multi-Source and Multi-Step Reasoning',
+        'description' => 'This unit trains you to synthesize information across multiple sources and conditions. You\'ll learn how to translate complex setups, manage interdependent information, and apply quantitative reasoning in integrated contexts.',
         'learn' => array('di_lesson_6', 'di_lesson_7'),
         'practice' => array(),
         'review' => array(),
         'suggest' => '',
-        'suggest_links' => $di3_suggest_links,
+        'suggest_links' => array(),
         'suggest_redo' => array(),
     );
 
     $plan[] = array('section' => 'Data Insights', 'units' => $di_units);
 
     return $plan;
+}
+
+
+// ============================================================================
+// Format a lesson description (newline-separated points) into an HTML list
+// ============================================================================
+
+function gmat_sp_format_description($desc) {
+    if (empty($desc)) return '';
+
+    $lines = explode("\n", $desc);
+    $lines = array_map('trim', $lines);
+    $lines = array_filter($lines, 'strlen');
+
+    if (count($lines) <= 1) {
+        return '<p>' . esc_html($desc) . '</p>';
+    }
+
+    $html = '<ul>';
+    foreach ($lines as $line) {
+        $html .= '<li>' . esc_html($line) . '</li>';
+    }
+    $html .= '</ul>';
+
+    return $html;
 }
 
 
@@ -1122,6 +1271,10 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
 
                             <!-- ── Unit Accordion Body ── -->
                             <div class="gmat-sp-unit__body">
+                              <div class="gmat-sp-unit__body-inner">
+                                <?php if (!empty($unit['description'])) : ?>
+                                    <p class="gmat-sp-unit__desc"><?php echo esc_html($unit['description']); ?></p>
+                                <?php endif; ?>
                                 <?php
                                 $sub_sections = array(
                                     'learn'    => 'Learn',
@@ -1138,44 +1291,69 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                                         </div>
 
                                         <div class="gmat-sp-lesson-list">
-                                            <?php foreach ($unit[$type] as $lk) :
+                                            <?php
+                                            $suggested_lessons = isset($unit['suggested_lessons']) ? $unit['suggested_lessons'] : array();
+                                            foreach ($unit[$type] as $lk) :
                                                 $status  = gmat_sp_get_status($user_id, $lk, $lesson_ids);
                                                 $label   = isset($all_keys[$lk]) ? $all_keys[$lk]['label'] : $lk;
                                                 $url     = gmat_sp_get_url($lk, $lesson_ids);
                                                 $has_id  = isset($lesson_ids[$lk]) && intval($lesson_ids[$lk]) > 0;
-                                                $topic   = $has_id ? gmat_sp_get_topic_name($lk, $lesson_ids) : '';
+                                                $topic   = isset($all_keys[$lk]['topic']) && !empty($all_keys[$lk]['topic']) ? $all_keys[$lk]['topic'] : '';
+                                                $is_suggested  = isset($suggested_lessons[$lk]);
+                                                $suggest_text  = $is_suggested ? $suggested_lessons[$lk] : '';
+                                                $desc = $is_suggested ? $suggest_text : (isset($all_keys[$lk]['desc']) ? $all_keys[$lk]['desc'] : '');
+                                                $card_classes = 'gmat-sp-lesson gmat-sp-lesson--' . $status;
+                                                if ($is_suggested) $card_classes .= ' gmat-sp-lesson--suggested';
                                             ?>
-                                                <div class="gmat-sp-lesson gmat-sp-lesson--<?php echo $status; ?>">
-                                                    <div class="gmat-sp-lesson__number-col">
-                                                        <span class="gmat-sp-lesson__number gmat-sp-lesson__number--<?php echo $status; ?>"><?php echo $lesson_num; ?></span>
-                                                    </div>
-                                                    <div class="gmat-sp-lesson__info">
-                                                        <span class="gmat-sp-lesson__name"><?php echo esc_html($label); ?></span>
-                                                        <?php if ($topic) : ?>
-                                                            <span class="gmat-sp-lesson__topic">Topic: <?php echo esc_html($topic); ?></span>
-                                                        <?php else : ?>
-                                                            <span class="gmat-sp-lesson__topic">Topic</span>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                    <div class="gmat-sp-lesson__actions">
-                                                        <?php if ($status === 'completed') : ?>
-                                                            <span class="gmat-sp-lesson__status-badge gmat-sp-lesson__status-badge--completed">Completed</span>
-                                                            <?php if ($has_id) : ?>
-                                                                <a href="<?php echo esc_url($url); ?>" class="gmat-sp-lesson__btn gmat-sp-lesson__btn--review">Review</a>
+                                                <div class="<?php echo $card_classes; ?>">
+                                                    <div class="gmat-sp-lesson__top-row">
+                                                        <div class="gmat-sp-lesson__number-col">
+                                                            <span class="gmat-sp-lesson__number gmat-sp-lesson__number--<?php echo $status; ?>"><?php echo $lesson_num; ?></span>
+                                                        </div>
+                                                        <div class="gmat-sp-lesson__info">
+                                                            <span class="gmat-sp-lesson__name"><?php echo esc_html($label); ?></span>
+                                                            <?php if ($topic) : ?>
+                                                                <span class="gmat-sp-lesson__topic">Topic: <?php echo esc_html($topic); ?></span>
                                                             <?php endif; ?>
-                                                        <?php elseif ($status === 'in-progress') : ?>
-                                                            <span class="gmat-sp-lesson__status-badge gmat-sp-lesson__status-badge--progress">In Progress</span>
-                                                            <?php if ($has_id) : ?>
-                                                                <a href="<?php echo esc_url($url); ?>" class="gmat-sp-lesson__btn gmat-sp-lesson__btn--continue">Continue</a>
+                                                        </div>
+                                                        <div class="gmat-sp-lesson__actions">
+                                                            <?php if ($is_suggested) : ?>
+                                                                <span class="gmat-sp-lesson__suggested-badge">Suggested</span>
                                                             <?php endif; ?>
-                                                        <?php else : ?>
-                                                            <?php if ($has_id) : ?>
-                                                                <a href="<?php echo esc_url($url); ?>" class="gmat-sp-lesson__btn">Start Lesson</a>
+                                                            <?php if ($status === 'completed') : ?>
+                                                                <span class="gmat-sp-lesson__status-badge gmat-sp-lesson__status-badge--completed">Completed</span>
+                                                                <?php if ($has_id) : ?>
+                                                                    <a href="<?php echo esc_url($url); ?>" class="gmat-sp-lesson__btn gmat-sp-lesson__btn--review">Review</a>
+                                                                <?php endif; ?>
+                                                            <?php elseif ($status === 'in-progress') : ?>
+                                                                <span class="gmat-sp-lesson__status-badge gmat-sp-lesson__status-badge--progress">In Progress</span>
+                                                                <?php if ($has_id) : ?>
+                                                                    <a href="<?php echo esc_url($url); ?>" class="gmat-sp-lesson__btn gmat-sp-lesson__btn--continue">Continue</a>
+                                                                <?php endif; ?>
                                                             <?php else : ?>
-                                                                <span class="gmat-sp-lesson__btn gmat-sp-lesson__btn--disabled">Coming Soon</span>
+                                                                <?php if ($has_id) : ?>
+                                                                    <a href="<?php echo esc_url($url); ?>" class="gmat-sp-lesson__btn">Start Lesson</a>
+                                                                <?php else : ?>
+                                                                    <span class="gmat-sp-lesson__btn gmat-sp-lesson__btn--disabled">Coming Soon</span>
+                                                                <?php endif; ?>
                                                             <?php endif; ?>
+                                                        </div>
+                                                        <?php if ($desc) : ?>
+                                                            <span class="gmat-sp-lesson__expand-icon">
+                                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="<?php echo $is_suggested ? '#b45309' : '#94a3b8'; ?>" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                            </span>
                                                         <?php endif; ?>
                                                     </div>
+                                                    <?php if ($desc) : ?>
+                                                        <div class="gmat-sp-lesson__desc">
+                                                            <div class="gmat-sp-lesson__desc-inner">
+                                                                <?php if ($is_suggested) : ?>
+                                                                    <p class="gmat-sp-lesson__suggest-label">Areas to focus on:</p>
+                                                                <?php endif; ?>
+                                                                <?php echo gmat_sp_format_description($desc); ?>
+                                                            </div>
+                                                        </div>
+                                                    <?php endif; ?>
                                                 </div>
                                             <?php
                                                 $lesson_num++;
@@ -1266,6 +1444,7 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                                     </div>
                                 <?php endif; ?>
 
+                              </div><!-- /.gmat-sp-unit__body-inner -->
                             </div><!-- /.gmat-sp-unit__body -->
                         </div><!-- /.gmat-sp-unit -->
                     <?php endforeach; // units ?>
@@ -1287,7 +1466,14 @@ function gmat_sp_debug_xapi_mapping($content) {
     if (!current_user_can('manage_options')) return $content;
     if (!isset($_GET['gmat_sp_debug_xapi'])) return $content;
 
+    // Allow admin to debug a specific user: ?gmat_sp_debug_user=123
     $user_id = get_current_user_id();
+    if (isset($_GET['gmat_sp_debug_user'])) {
+        $debug_uid = intval($_GET['gmat_sp_debug_user']);
+        if ($debug_uid > 0 && get_userdata($debug_uid)) {
+            $user_id = $debug_uid;
+        }
+    }
     $lesson_ids = gmat_sp_get_lesson_ids();
 
     // Force load xAPI data
@@ -1299,6 +1485,45 @@ function gmat_sp_debug_xapi_mapping($content) {
     ob_start();
     echo '<div style="background:#fff;border:2px solid #00409E;padding:20px;margin:20px;font-family:monospace;font-size:12px;max-width:1200px;">';
     echo '<h2 style="color:#00409E;">GMAT Study Plan &mdash; xAPI Tracking Debug</h2>';
+    $debug_user = get_userdata($user_id);
+    echo '<p><strong>Debugging user:</strong> ' . esc_html($debug_user->user_login) . ' (ID: ' . $user_id . ', email: ' . esc_html($debug_user->user_email) . ')</p>';
+    echo '<p style="color:#666;">Tip: Add <code>&amp;gmat_sp_debug_user=USER_ID</code> to debug a different user.</p>';
+
+    // 0. Show raw completed statement object names (for debugging pass/fail parsing)
+    $user = get_userdata($user_id);
+    if ($user && !empty($user->user_email) && function_exists('grassblade_fetch_statements')) {
+        $raw_completed = grassblade_fetch_statements(array(
+            'agent_email' => $user->user_email,
+            'verb'        => 'http://adlnet.gov/expapi/verbs/completed',
+            'limit'       => 50,
+        ));
+        $raw_stmts = array();
+        if (!is_wp_error($raw_completed) && is_array($raw_completed)) {
+            $raw_stmts = isset($raw_completed['statements']) ? $raw_completed['statements'] : $raw_completed;
+        }
+
+        echo '<h3>Raw Completed Statements (' . count($raw_stmts) . '):</h3>';
+        echo '<table style="border-collapse:collapse;width:100%;">';
+        echo '<tr style="background:#f0f0f0;"><th style="border:1px solid #ccc;padding:4px;">Object ID</th><th style="border:1px solid #ccc;padding:4px;">Object Name (en-US)</th><th style="border:1px solid #ccc;padding:4px;">Has Result?</th><th style="border:1px solid #ccc;padding:4px;">JSON Parse?</th></tr>';
+        foreach ($raw_stmts as $s) {
+            $obj_id = isset($s['object']['id']) ? $s['object']['id'] : '(none)';
+            $obj_name = isset($s['object']['definition']['name']['en-US']) ? $s['object']['definition']['name']['en-US'] : '(none)';
+            $has_result = isset($s['result']) ? (empty($s['result']) ? 'empty {}' : 'yes') : 'no';
+            $trimmed = trim($obj_name);
+            $json_ok = '—';
+            if (!empty($trimmed) && substr($trimmed, 0, 1) === '{') {
+                $decoded = json_decode($trimmed, true);
+                $json_ok = is_array($decoded) ? 'OK: ' . implode(', ', array_map(function($k, $v) { return $k . '=' . $v; }, array_keys($decoded), $decoded)) : 'FAIL (json_last_error=' . json_last_error() . ')';
+            }
+            echo '<tr>';
+            echo '<td style="border:1px solid #ccc;padding:4px;font-size:10px;word-break:break-all;">' . esc_html($obj_id) . '</td>';
+            echo '<td style="border:1px solid #ccc;padding:4px;word-break:break-all;">' . esc_html($obj_name) . '</td>';
+            echo '<td style="border:1px solid #ccc;padding:4px;">' . esc_html($has_result) . '</td>';
+            echo '<td style="border:1px solid #ccc;padding:4px;">' . esc_html($json_ok) . '</td>';
+            echo '</tr>';
+        }
+        echo '</table>';
+    }
 
     // 1. Show all xAPI activity statuses found for this user
     echo '<h3>All xAPI Activity Statuses (' . count($xapi_map) . '):</h3>';
@@ -1350,12 +1575,88 @@ function gmat_sp_debug_xapi_mapping($content) {
     }
     echo '</table>';
 
-    echo '<p style="margin-top:15px;color:#666;"><strong>Legend:</strong> Green = completed. Yellow = in-progress. White = not started. Red = no xAPI URL configured.</p>';
+    // 3. Show pass/fail signals
+    $pf_map = gmat_sp_get_pass_fail_map($user_id);
+    $var_map = gmat_sp_get_pass_fail_variable_map();
+
+    echo '<h3 style="margin-top:20px;">Pass/Fail Signals (' . count($pf_map) . ' detected):</h3>';
+    if (empty($pf_map)) {
+        echo '<p style="color:#999;">No pass/fail signals found for this user.</p>';
+    } else {
+        echo '<table style="border-collapse:collapse;width:100%;">';
+        echo '<tr style="background:#f0f0f0;"><th style="border:1px solid #ccc;padding:4px;">Variable Name</th><th style="border:1px solid #ccc;padding:4px;">Result</th><th style="border:1px solid #ccc;padding:4px;">Maps To Lesson Key</th></tr>';
+        foreach ($pf_map as $var_name => $result) {
+            $mapped_lesson = isset($var_map[$var_name]) ? $var_map[$var_name] : '—';
+            $bg = ($result === 'Pass') ? '#e8f5e9' : '#ffebee';
+            echo '<tr style="background:' . $bg . ';">';
+            echo '<td style="border:1px solid #ccc;padding:4px;">' . esc_html($var_name) . '</td>';
+            echo '<td style="border:1px solid #ccc;padding:4px;font-weight:bold;">' . esc_html($result) . '</td>';
+            echo '<td style="border:1px solid #ccc;padding:4px;">' . esc_html($mapped_lesson) . '</td>';
+            echo '</tr>';
+        }
+        echo '</table>';
+    }
+
+    // 4. Show exercise results (3-state: pass/fail/none)
+    $exercise_keys = array('cr_exercise_4', 'cr_exercise_5', 'cr_exercise_6', 'cr_exercise_7', 'cr_exercise_8');
+    echo '<h3 style="margin-top:20px;">Exercise Results (pass/fail/none):</h3>';
+    echo '<table style="border-collapse:collapse;width:100%;">';
+    echo '<tr style="background:#f0f0f0;"><th style="border:1px solid #ccc;padding:4px;">Exercise Key</th><th style="border:1px solid #ccc;padding:4px;">Result</th></tr>';
+    foreach ($exercise_keys as $ek) {
+        $result = gmat_sp_get_exercise_result($user_id, $ek);
+        $bg = ($result === 'fail') ? '#fff3e0' : (($result === 'pass') ? '#e8f5e9' : '#ffffff');
+        $color = ($result === 'fail') ? '#d32f2f' : (($result === 'pass') ? '#2e7d32' : '#999');
+        echo '<tr style="background:' . $bg . ';">';
+        echo '<td style="border:1px solid #ccc;padding:4px;">' . esc_html($ek) . '</td>';
+        echo '<td style="border:1px solid #ccc;padding:4px;font-weight:bold;color:' . $color . ';">' . esc_html($result) . '</td>';
+        echo '</tr>';
+    }
+    echo '</table>';
+
+    // 5. Show review results (3-state: pass/fail/none)
+    $review_keys = array('verbal_review_2', 'verbal_review_3', 'verbal_review_4', 'verbal_review_5', 'quant_review_2', 'quant_review_3', 'quant_review_4', 'quant_review_5');
+    echo '<h3 style="margin-top:20px;">Review Results (pass/fail/none):</h3>';
+    echo '<table style="border-collapse:collapse;width:100%;">';
+    echo '<tr style="background:#f0f0f0;"><th style="border:1px solid #ccc;padding:4px;">Review Key</th><th style="border:1px solid #ccc;padding:4px;">Result</th></tr>';
+    foreach ($review_keys as $rk) {
+        $result = gmat_sp_get_review_result($user_id, $rk);
+        $bg = ($result === 'fail') ? '#fff3e0' : (($result === 'pass') ? '#e8f5e9' : '#ffffff');
+        $color = ($result === 'fail') ? '#d32f2f' : (($result === 'pass') ? '#2e7d32' : '#999');
+        echo '<tr style="background:' . $bg . ';">';
+        echo '<td style="border:1px solid #ccc;padding:4px;">' . esc_html($rk) . '</td>';
+        echo '<td style="border:1px solid #ccc;padding:4px;font-weight:bold;color:' . $color . ';">' . esc_html($result) . '</td>';
+        echo '</tr>';
+    }
+    echo '</table>';
+
+    // 6. Show quant exercise granular failures (QLE)
+    echo '<h3 style="margin-top:20px;">Quant Exercise Failures (QLE signals):</h3>';
+    echo '<table style="border-collapse:collapse;width:100%;">';
+    echo '<tr style="background:#f0f0f0;"><th style="border:1px solid #ccc;padding:4px;">Exercise #</th><th style="border:1px solid #ccc;padding:4px;">Failed Lesson Keys</th></tr>';
+    $qle_learn_sets = array(
+        1 => array('pss_lesson_1', 'algebra_1', 'word_problems_1', 'number_props_1'),
+        2 => array('pss_lesson_2', 'number_props_2', 'algebra_2', 'word_problems_2', 'fprs_1'),
+        3 => array('fprs_2', 'algebra_3', 'word_problems_3', 'word_problems_4'),
+        4 => array('algebra_4', 'word_problems_5', 'word_problems_6'),
+        5 => array('number_props_3', 'word_problems_7', 'algebra_5'),
+    );
+    foreach ($qle_learn_sets as $num => $keys) {
+        $failures = gmat_sp_get_quant_exercise_failures($user_id, $num, $keys, $lesson_ids);
+        $display = !empty($failures) ? implode(', ', $failures) : '(none)';
+        $bg = !empty($failures) ? '#fff3e0' : '#ffffff';
+        echo '<tr style="background:' . $bg . ';">';
+        echo '<td style="border:1px solid #ccc;padding:4px;">QLE ' . $num . '</td>';
+        echo '<td style="border:1px solid #ccc;padding:4px;">' . esc_html($display) . '</td>';
+        echo '</tr>';
+    }
+    echo '</table>';
+
+    echo '<p style="margin-top:15px;color:#666;"><strong>Legend:</strong> Green = completed/pass. Yellow = in-progress. White = not started. Red = no xAPI URL / fail.</p>';
     echo '</div>';
 
     return ob_get_clean() . $content;
 }
-// add_filter('the_content', 'gmat_sp_debug_xapi_mapping', 1);
+add_filter('the_content', 'gmat_sp_debug_xapi_mapping', 1);
 
 
 // ============================================================================
@@ -1386,4 +1687,4 @@ function gmat_sp_ajax_refresh() {
 
     wp_send_json_success(array('html' => $html));
 }
-// add_action('wp_ajax_gmat_sp_refresh', 'gmat_sp_ajax_refresh');
+add_action('wp_ajax_gmat_sp_refresh', 'gmat_sp_ajax_refresh');

@@ -421,6 +421,32 @@ function gmat_sp_get_quant_exercise_failures($user_id, $exercise_num, $learn_key
     return array_unique($failed_keys);
 }
 
+/**
+ * Get the list of learn lesson keys that have a direct Fail signal.
+ * Only checks direct lesson pass/fail variables (contain '_Lesson_' in name),
+ * NOT granular exercise signals (QLE_*) or review signals (QRS_*).
+ *
+ * @param int   $user_id
+ * @param array $learn_keys  The lesson keys from this unit's learn section
+ * @return array  Lesson keys that failed (empty if no direct fail signals)
+ */
+function gmat_sp_get_learn_lesson_failures($user_id, $learn_keys) {
+    $pf_map  = gmat_sp_get_pass_fail_map($user_id);
+    $var_map = gmat_sp_get_pass_fail_variable_map();
+
+    $failed_keys = array();
+
+    foreach ($var_map as $var_name => $mapped_key) {
+        if (strpos($var_name, '_Lesson_') === false) continue;
+        if (!in_array($mapped_key, $learn_keys, true)) continue;
+        if (isset($pf_map[$var_name]) && $pf_map[$var_name] === 'Fail') {
+            $failed_keys[] = $mapped_key;
+        }
+    }
+
+    return array_unique($failed_keys);
+}
+
 
 /**
  * Build a mapping: lesson_key => xAPI activity ID
@@ -680,6 +706,9 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     $q2_learn = array('pss_lesson_1', 'algebra_1', 'word_problems_1', 'number_props_1');
     // Use granular QLE_1 pass/fail signals for exercise failures
     $q2_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
+    // Direct lesson fail signals — show in "Recommend redoing" suggest box
+    $q2_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q2_learn);
+    $q2_all_redo = array_values(array_unique(array_merge($q2_learn_failures, $q2_exercise_failures)));
     $quant_units[] = array(
         'title' => 'Unit 2 – Strategic Algebra and Translation',
         'description' => 'This unit introduces core problem-solving strategies like smart numbers and working backwards, alongside essential algebra, number properties, and translation skills. You\'ll learn how to simplify problems strategically instead of defaulting to brute-force math.',
@@ -688,7 +717,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'review' => array(),
         'suggest' => !empty($q2_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q2_exercise_failures,
+        'suggest_redo' => $q2_all_redo,
     );
 
     // Quant Unit 3 — Structure, Estimation, and Multi-Step Reasoning
@@ -696,6 +725,9 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     $q3_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
     // Add Unit 2 failed lessons to review (from QLE_1 signals)
     $q3_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
+    // Direct lesson fail signals — show in "Recommend redoing" suggest box
+    $q3_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q3_learn);
+    $q3_all_redo = array_values(array_unique(array_merge($q3_learn_failures, $q3_exercise_failures)));
     // Verbal cross-suggest — only show when explicit pass/fail signal exists
     $q3_cross_links = array();
     $vr2_result = gmat_sp_get_review_result($user_id, 'verbal_review_2');
@@ -712,7 +744,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'review' => array_merge($q3_review_extra, array('quant_review_2')),
         'suggest' => !empty($q3_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q3_exercise_failures,
+        'suggest_redo' => $q3_all_redo,
         'cross_suggest' => '',
         'cross_suggest_links' => $q3_cross_links,
     );
@@ -721,6 +753,8 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     $q4_learn = array('fprs_2', 'algebra_3', 'word_problems_3', 'word_problems_4');
     $q4_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
     $q4_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
+    $q4_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q4_learn);
+    $q4_all_redo = array_values(array_unique(array_merge($q4_learn_failures, $q4_exercise_failures)));
     $q4_cross_links = array();
     $vr3_result = gmat_sp_get_review_result($user_id, 'verbal_review_3');
     if ($vr3_result === 'fail') {
@@ -736,7 +770,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'review' => array_merge($q4_review_extra, array('quant_review_3')),
         'suggest' => !empty($q4_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q4_exercise_failures,
+        'suggest_redo' => $q4_all_redo,
         'cross_suggest' => '',
         'cross_suggest_links' => $q4_cross_links,
     );
@@ -745,6 +779,8 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     $q5_learn = array('algebra_4', 'word_problems_5', 'word_problems_6');
     $q5_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
     $q5_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
+    $q5_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q5_learn);
+    $q5_all_redo = array_values(array_unique(array_merge($q5_learn_failures, $q5_exercise_failures)));
     $q5_cross_links = array();
     $vr4_result = gmat_sp_get_review_result($user_id, 'verbal_review_4');
     if ($vr4_result === 'fail') {
@@ -760,7 +796,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'review' => array_merge($q5_review_extra, array('quant_review_4')),
         'suggest' => !empty($q5_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q5_exercise_failures,
+        'suggest_redo' => $q5_all_redo,
         'cross_suggest' => '',
         'cross_suggest_links' => $q5_cross_links,
     );
@@ -769,6 +805,8 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     $q6_learn = array('number_props_3', 'word_problems_7', 'algebra_5');
     $q6_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 5, $q6_learn, $ids);
     $q6_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
+    $q6_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q6_learn);
+    $q6_all_redo = array_values(array_unique(array_merge($q6_learn_failures, $q6_exercise_failures)));
     $q6_cross_links = array();
     $vr5_result = gmat_sp_get_review_result($user_id, 'verbal_review_5');
     if ($vr5_result === 'fail') {
@@ -784,7 +822,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'review' => array_merge($q6_review_extra, array('quant_review_5')),
         'suggest' => !empty($q6_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q6_exercise_failures,
+        'suggest_redo' => $q6_all_redo,
         'cross_suggest' => '',
         'cross_suggest_links' => $q6_cross_links,
     );
@@ -861,6 +899,8 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     // Quant Unit 2 — Strategic Algebra and Translation
     $q2_learn = array('pss_lesson_1', 'algebra_1', 'word_problems_1', 'number_props_1');
     $q2_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
+    $q2_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q2_learn);
+    $q2_all_redo = array_values(array_unique(array_merge($q2_learn_failures, $q2_exercise_failures)));
     $quant_units[] = array(
         'title' => 'Unit 2 – Strategic Algebra and Translation',
         'description' => 'This unit introduces core problem-solving strategies like smart numbers and working backwards, alongside essential algebra, number properties, and translation skills. You\'ll learn how to simplify problems strategically instead of defaulting to brute-force math.',
@@ -869,13 +909,15 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'review' => array(),
         'suggest' => !empty($q2_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q2_exercise_failures,
+        'suggest_redo' => $q2_all_redo,
     );
 
     // Quant Unit 3 — Structure, Estimation, and Multi-Step Reasoning
     $q3_learn = array('pss_lesson_2', 'number_props_2', 'algebra_2', 'word_problems_2', 'fprs_1');
     $q3_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
     $q3_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
+    $q3_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q3_learn);
+    $q3_all_redo = array_values(array_unique(array_merge($q3_learn_failures, $q3_exercise_failures)));
     $quant_units[] = array(
         'title' => 'Unit 3 – Structure, Estimation, and Multi-Step Reasoning',
         'description' => 'This unit deepens your ability to recognize structure in algebra, number properties, and word problems. You\'ll learn estimation, remainders, quadratics, inequalities, rates, and overlapping sets while avoiding common GMAT language traps. You\'ll finish the unit by revisiting the concepts from Quant Unit 2 under exam-like conditions.',
@@ -884,13 +926,15 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'review' => array_merge($q3_review_extra, array('quant_review_2')),
         'suggest' => !empty($q3_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q3_exercise_failures,
+        'suggest_redo' => $q3_all_redo,
     );
 
     // Quant Unit 4 — Advanced Word Problems and Abstraction
     $q4_learn = array('fprs_2', 'algebra_3', 'word_problems_3', 'word_problems_4');
     $q4_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
     $q4_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
+    $q4_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q4_learn);
+    $q4_all_redo = array_values(array_unique(array_merge($q4_learn_failures, $q4_exercise_failures)));
     $quant_units[] = array(
         'title' => 'Unit 4 – Advanced Word Problems and Abstraction',
         'description' => 'This unit focuses on higher-level abstraction, including functions, sequences, rates with changing conditions, combinatorics, and statistics. You\'ll learn how to leverage diagrams to represent some of the more challenging word problems subtopics. You\'ll finish the unit by revisiting the concepts from Quant Unit 3 under exam-like conditions.',
@@ -899,13 +943,15 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'review' => array_merge($q4_review_extra, array('quant_review_3')),
         'suggest' => !empty($q4_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q4_exercise_failures,
+        'suggest_redo' => $q4_all_redo,
     );
 
     // Quant Unit 5 — Systems, Probability, and Weighted Reasoning
     $q5_learn = array('algebra_4', 'word_problems_5', 'word_problems_6');
     $q5_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
     $q5_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
+    $q5_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q5_learn);
+    $q5_all_redo = array_values(array_unique(array_merge($q5_learn_failures, $q5_exercise_failures)));
     $quant_units[] = array(
         'title' => 'Unit 5 – Systems, Probability, and Weighted Reasoning',
         'description' => 'This unit develops advanced reasoning skills involving quadratics, inequalities, weighted averages, probability, and unit conversions. You\'ll continue to leverage the word problems diagrams from Quant Unit 4 and learn some new ones that simplify complex statistics questions. You\'ll finish the unit by revisiting the concepts from Quant Unit 4 under exam-like conditions.',
@@ -914,13 +960,15 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'review' => array_merge($q5_review_extra, array('quant_review_4')),
         'suggest' => !empty($q5_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q5_exercise_failures,
+        'suggest_redo' => $q5_all_redo,
     );
 
     // Quant Unit 6 — Patterns, Constraints, and Edge Cases
     $q6_learn = array('number_props_3', 'word_problems_7', 'algebra_5');
     $q6_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 5, $q6_learn, $ids);
     $q6_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
+    $q6_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q6_learn);
+    $q6_all_redo = array_values(array_unique(array_merge($q6_learn_failures, $q6_exercise_failures)));
     $quant_units[] = array(
         'title' => 'Unit 6 – Patterns, Constraints, and Edge Cases',
         'description' => 'This unit covers advanced number properties, probability structures, statistics bounds, and algebraic techniques like conjugation. You\'ll finish the unit by revisiting the concepts from Quant Unit 5 under exam-like conditions.',
@@ -929,7 +977,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'review' => array_merge($q6_review_extra, array('quant_review_5')),
         'suggest' => !empty($q6_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
-        'suggest_redo' => $q6_exercise_failures,
+        'suggest_redo' => $q6_all_redo,
     );
 
     $plan[] = array('section' => 'Quant', 'units' => $quant_units);

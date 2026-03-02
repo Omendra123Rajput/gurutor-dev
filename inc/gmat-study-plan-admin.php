@@ -268,10 +268,10 @@ function gmat_sp_get_lesson_keys() {
             'desc' => "Practice identifying common RC answer-choice language traps\nPractice applying question-specific strategies under tutor guidance"),
 
         // ── Problem Solving Strategies (PSS) ──
-        'pss_lesson_1'   => array('label' => 'PSS Lesson 1', 'section' => 'PSS Lessons', 'xapi_slug' => 'problem-solving-strategies-lesson-1-copy',
+        'pss_lesson_1'   => array('label' => 'Problem Solving Strategies Lesson 1', 'section' => 'PSS Lessons', 'xapi_slug' => 'problem-solving-strategies-lesson-1-copy',
             'topic' => 'Smart Numbers & Working Backwards',
             'desc' => "Smart Numbers: Learn when and how to replace variables with smart numbers to simplify problems without changing the underlying logic\nWorking Backwards: Learn how to work backwards from the answer choices and reverse the problem to save time and avoid unnecessary algebra"),
-        'pss_lesson_2'   => array('label' => 'PSS Lesson 2', 'section' => 'PSS Lessons', 'xapi_slug' => 'problem-solving-strategies-lesson-2-copy',
+        'pss_lesson_2'   => array('label' => 'Problem Solving Strategies Lesson 2', 'section' => 'PSS Lessons', 'xapi_slug' => 'problem-solving-strategies-lesson-2-copy',
             'topic' => 'Estimation',
             'desc' => "Estimation: Learn how to approximate intelligently to eliminate answer choices and save time without sacrificing accuracy"),
 
@@ -387,25 +387,25 @@ function gmat_sp_get_lesson_keys() {
         // di_lesson_5 = DI Lesson 5 (Table Interpretation) — NOT AVAILABLE, admin-configurable
         // di_lesson_6 = DI Lesson 6 (Two-Part Analysis) — NOT AVAILABLE, admin-configurable
         // di_lesson_7 = DI Lesson 7 (Multi-Source Reasoning) — NOT AVAILABLE, admin-configurable
-        'di_lesson_1'     => array('label' => 'DI Lesson 1 (DS Intro)',              'section' => 'DI Lessons', 'xapi_slug' => '',
+        'di_lesson_1'     => array('label' => 'DI Lesson 1: Data Sufficiency Methods', 'section' => 'DI Lessons', 'xapi_slug' => '',
             'topic' => 'DS Question Structure & Methodology',
             'desc' => "Learn the structure of Data Sufficiency questions, including how prompts, statements, and answer choices work together\nLearn a consistent step-by-step approach for evaluating sufficiency without solving more than necessary\nLearn how to distinguish value questions from yes/no questions and adjust your evaluation strategy accordingly\nLearn how to demonstrate insufficiency confidently instead of guessing or over-solving"),
-        'di_lesson_2'     => array('label' => 'DI Lesson 2 (DS Strategies 1)',       'section' => 'DI Lessons', 'xapi_slug' => '',
+        'di_lesson_2'     => array('label' => 'DI Lesson 2: DS Strategies 1',        'section' => 'DI Lessons', 'xapi_slug' => '',
             'topic' => 'Rephrasing and Counting Variables & Equations',
             'desc' => "Learn how to rephrase the question in a clearer form so you know exactly what information is required\nLearn how to count variables and equations to determine whether enough information exists to answer the question"),
-        'di_lesson_3'     => array('label' => 'DI Lesson 3 (DS Strategies 2)',       'section' => 'DI Lessons', 'xapi_slug' => 'di-lesson-4-ds-strategies-2',
+        'di_lesson_3'     => array('label' => 'DI Lesson 3: DS Strategies 2',        'section' => 'DI Lessons', 'xapi_slug' => 'di-lesson-4-ds-strategies-2',
             'topic' => 'Testing Cases & Logical Evaluation',
             'desc' => "Learn how to test strategic cases to uncover hidden insufficiency or confirm consistency\nLearn when logical reasoning alone is sufficient to answer a DS question without calculations or case testing"),
-        'di_lesson_4'     => array('label' => 'DI Lesson 4 (Graphics Interp.)',      'section' => 'DI Lessons', 'xapi_slug' => '',
+        'di_lesson_4'     => array('label' => 'DI Lesson 4: Graphics Interpretation', 'section' => 'DI Lessons', 'xapi_slug' => '',
             'topic' => 'Practice Graphics Interpretation',
             'desc' => "Learn how to extract trends, relationships, and constraints from charts and graphs without getting lost in details"),
-        'di_lesson_5'     => array('label' => 'DI Lesson 5 (Table Interp.)',         'section' => 'DI Lessons', 'xapi_slug' => '',
+        'di_lesson_5'     => array('label' => 'DI Lesson 5: Table Analysis',          'section' => 'DI Lessons', 'xapi_slug' => '',
             'topic' => 'Practice Table Analysis',
             'desc' => "Learn how to use table filters and sorting efficiently to isolate relevant data\nLearn how to balance speed and precision when working with dense data tables"),
-        'di_lesson_6'     => array('label' => 'DI Lesson 6 (Two-Part Analysis)',     'section' => 'DI Lessons', 'xapi_slug' => '',
+        'di_lesson_6'     => array('label' => 'DI Lesson 6: Two-Part Analysis',      'section' => 'DI Lessons', 'xapi_slug' => '',
             'topic' => 'Practice Two-Part Analysis',
-            'desc' => "Learn how two-part analysis questions are built and what each part is actually testing"),
-        'di_lesson_7'     => array('label' => 'DI Lesson 7 (Multi-Source Reasoning)','section' => 'DI Lessons', 'xapi_slug' => '',
+            'desc' => "Learn how two-part analysis questions are built and how they borrow from the topics tested in the quant and verbal sections"),
+        'di_lesson_7'     => array('label' => 'DI Lesson 7: Multi-Source Reasoning', 'section' => 'DI Lessons', 'xapi_slug' => '',
             'topic' => 'Practice Multi-Source Reasoning',
             'desc' => "Learn how to scan, prioritize, and cross-reference multiple information sources efficiently"),
     );
@@ -439,12 +439,12 @@ function gmat_sp_get_lesson_ids() {
  */
 function gmat_sp_get_xapi_url_fields() {
     return array(
-        'di_lesson_1' => 'DI Lesson 1 (DS Intro)',
-        'di_lesson_2' => 'DI Lesson 2 (DS Strategies 1)',
-        'di_lesson_4' => 'DI Lesson 4 (Graphics Interp.)',
-        'di_lesson_5' => 'DI Lesson 5 (Table Interp.)',
-        'di_lesson_6' => 'DI Lesson 6 (Two-Part Analysis)',
-        'di_lesson_7' => 'DI Lesson 7 (Multi-Source Reasoning)',
+        'di_lesson_1' => 'DI Lesson 1: Data Sufficiency Methods',
+        'di_lesson_2' => 'DI Lesson 2: DS Strategies 1',
+        'di_lesson_4' => 'DI Lesson 4: Graphics Interpretation',
+        'di_lesson_5' => 'DI Lesson 5: Table Analysis',
+        'di_lesson_6' => 'DI Lesson 6: Two-Part Analysis',
+        'di_lesson_7' => 'DI Lesson 7: Multi-Source Reasoning',
     );
 }
 

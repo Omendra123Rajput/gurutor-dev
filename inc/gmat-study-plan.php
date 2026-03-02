@@ -706,7 +706,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     }
     $quant_units[] = array(
         'title' => 'Unit 3 – Structure, Estimation, and Multi-Step Reasoning',
-        'description' => 'This unit deepens your ability to recognize structure in algebra, number properties, and word problems. You\'ll learn estimation, remainders, quadratics, inequalities, and overlapping sets while avoiding common GMAT language traps. You\'ll finish the unit by revisiting the concepts from Quant Unit 2 under exam-like conditions.',
+        'description' => 'This unit deepens your ability to recognize structure in algebra, number properties, and word problems. You\'ll learn estimation, remainders, quadratics, inequalities, rates, and overlapping sets while avoiding common GMAT language traps. You\'ll finish the unit by revisiting the concepts from Quant Unit 2 under exam-like conditions.',
         'learn' => $q3_learn,
         'practice' => array('quant_exercise_2'),
         'review' => array_merge($q3_review_extra, array('quant_review_2')),
@@ -730,7 +730,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     }
     $quant_units[] = array(
         'title' => 'Unit 4 – Advanced Word Problems and Abstraction',
-        'description' => 'This unit focuses on higher-level abstraction, including functions, sequences, rates with changing conditions, combinatorics, and statistics. You\'ll learn how to manage complexity by choosing the right structure rather than adding equations. You\'ll finish the unit by revisiting the concepts from Quant Unit 3 under exam-like conditions.',
+        'description' => 'This unit focuses on higher-level abstraction, including functions, sequences, rates with changing conditions, combinatorics, and statistics. You\'ll learn how to leverage diagrams to represent some of the more challenging word problems subtopics. You\'ll finish the unit by revisiting the concepts from Quant Unit 3 under exam-like conditions.',
         'learn' => $q4_learn,
         'practice' => array('quant_exercise_3'),
         'review' => array_merge($q4_review_extra, array('quant_review_3')),
@@ -754,7 +754,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     }
     $quant_units[] = array(
         'title' => 'Unit 5 – Systems, Probability, and Weighted Reasoning',
-        'description' => 'This unit develops advanced reasoning skills involving systems, weighted averages, probability, and unit conversions. You\'ll learn how to split complex problems into simpler cases and avoid common structural mistakes. You\'ll finish the unit by revisiting the concepts from Quant Unit 4 under exam-like conditions.',
+        'description' => 'This unit develops advanced reasoning skills involving quadratics, inequalities, weighted averages, probability, and unit conversions. You\'ll continue to leverage the word problems diagrams from Quant Unit 4 and learn some new ones that simplify complex statistics questions. You\'ll finish the unit by revisiting the concepts from Quant Unit 4 under exam-like conditions.',
         'learn' => $q5_learn,
         'practice' => array('quant_exercise_4'),
         'review' => array_merge($q5_review_extra, array('quant_review_4')),
@@ -778,7 +778,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     }
     $quant_units[] = array(
         'title' => 'Unit 6 – Patterns, Constraints, and Edge Cases',
-        'description' => 'This unit covers advanced number properties, probability structures, statistics bounds, and algebraic techniques like conjugation. The focus is on recognizing patterns, managing constraints, and handling high-difficulty questions efficiently.',
+        'description' => 'This unit covers advanced number properties, probability structures, statistics bounds, and algebraic techniques like conjugation. You\'ll finish the unit by revisiting the concepts from Quant Unit 5 under exam-like conditions.',
         'learn' => $q6_learn,
         'practice' => array('quant_exercise_5'),
         'review' => array_merge($q6_review_extra, array('quant_review_5')),
@@ -846,10 +846,10 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     // ── QUANT SECTION ──
     $quant_units = array();
 
-    // Quant Unit 1 — Orientation and Foundations
+    // Quant Unit 1 — Section Structure & Scoring
     $quant_units[] = array(
-        'title' => 'Unit 1 – Orientation and Foundations',
-        'description' => 'This unit introduces the structure of the GMAT and how Quant, Verbal, and Data Insights are tested. It sets the foundation for effective study strategies.',
+        'title' => 'Unit 1 – Section Structure & Scoring',
+        'description' => '',
         'learn' => array('intro_quant', 'intro_verbal', 'intro_di'),
         'practice' => array(),
         'review' => array(),
@@ -878,7 +878,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     $q3_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
     $quant_units[] = array(
         'title' => 'Unit 3 – Structure, Estimation, and Multi-Step Reasoning',
-        'description' => 'This unit deepens your ability to recognize structure in algebra, number properties, and word problems. You\'ll learn estimation, remainders, quadratics, inequalities, and overlapping sets while avoiding common GMAT language traps. You\'ll finish the unit by revisiting the concepts from Quant Unit 2 under exam-like conditions.',
+        'description' => 'This unit deepens your ability to recognize structure in algebra, number properties, and word problems. You\'ll learn estimation, remainders, quadratics, inequalities, rates, and overlapping sets while avoiding common GMAT language traps. You\'ll finish the unit by revisiting the concepts from Quant Unit 2 under exam-like conditions.',
         'learn' => $q3_learn,
         'practice' => array('quant_exercise_2'),
         'review' => array_merge($q3_review_extra, array('quant_review_2')),
@@ -893,7 +893,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     $q4_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
     $quant_units[] = array(
         'title' => 'Unit 4 – Advanced Word Problems and Abstraction',
-        'description' => 'This unit focuses on higher-level abstraction, including functions, sequences, rates with changing conditions, combinatorics, and statistics. You\'ll learn how to manage complexity by choosing the right structure rather than adding equations. You\'ll finish the unit by revisiting the concepts from Quant Unit 3 under exam-like conditions.',
+        'description' => 'This unit focuses on higher-level abstraction, including functions, sequences, rates with changing conditions, combinatorics, and statistics. You\'ll learn how to leverage diagrams to represent some of the more challenging word problems subtopics. You\'ll finish the unit by revisiting the concepts from Quant Unit 3 under exam-like conditions.',
         'learn' => $q4_learn,
         'practice' => array('quant_exercise_3'),
         'review' => array_merge($q4_review_extra, array('quant_review_3')),
@@ -908,7 +908,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     $q5_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
     $quant_units[] = array(
         'title' => 'Unit 5 – Systems, Probability, and Weighted Reasoning',
-        'description' => 'This unit develops advanced reasoning skills involving systems, weighted averages, probability, and unit conversions. You\'ll learn how to split complex problems into simpler cases and avoid common structural mistakes. You\'ll finish the unit by revisiting the concepts from Quant Unit 4 under exam-like conditions.',
+        'description' => 'This unit develops advanced reasoning skills involving quadratics, inequalities, weighted averages, probability, and unit conversions. You\'ll continue to leverage the word problems diagrams from Quant Unit 4 and learn some new ones that simplify complex statistics questions. You\'ll finish the unit by revisiting the concepts from Quant Unit 4 under exam-like conditions.',
         'learn' => $q5_learn,
         'practice' => array('quant_exercise_4'),
         'review' => array_merge($q5_review_extra, array('quant_review_4')),
@@ -923,7 +923,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     $q6_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
     $quant_units[] = array(
         'title' => 'Unit 6 – Patterns, Constraints, and Edge Cases',
-        'description' => 'This unit covers advanced number properties, probability structures, statistics bounds, and algebraic techniques like conjugation. The focus is on recognizing patterns, managing constraints, and handling high-difficulty questions efficiently. You\'ll finish the unit by revisiting the concepts from Quant Unit 5 under exam-like conditions.',
+        'description' => 'This unit covers advanced number properties, probability structures, statistics bounds, and algebraic techniques like conjugation. You\'ll finish the unit by revisiting the concepts from Quant Unit 5 under exam-like conditions.',
         'learn' => $q6_learn,
         'practice' => array('quant_exercise_5'),
         'review' => array_merge($q6_review_extra, array('quant_review_5')),
@@ -940,7 +940,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     // Verbal Unit 1 — Foundations of GMAT Reasoning
     $verbal_units[] = array(
         'title' => 'Unit 1 – Foundations of GMAT Reasoning',
-        'description' => 'This unit introduces GMAT Verbal reasoning, including how Critical Reasoning and Reading Comprehension are structured and scored.',
+        'description' => 'This unit builds the foundation for GMAT Verbal by teaching how Critical Reasoning and Reading Comprehension are structured and tested. You\'ll learn how to deconstruct arguments, identify question types, and read passages strategically so you can focus on reasoning instead of getting overwhelmed by content.',
         'learn' => array('intro_verbal', 'cr_lesson_1', 'cr_lesson_2', 'rc_lesson_1'),
         'practice' => array('cr_exercise_1', 'cr_exercise_2'),
         'review' => array(),
@@ -952,7 +952,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     // Verbal Unit 2 — Core Argument and Reading Skills
     $verbal_units[] = array(
         'title' => 'Unit 2 – Core Argument and Reading Skills',
-        'description' => 'This unit teaches you to classify CR arguments and apply strategic approaches to RC question types and answer-choice language.',
+        'description' => 'This unit develops your ability to classify arguments and understand the core tasks in assumption-based questions. You\'ll also begin applying structured strategies to Reading Comprehension, learning how question type and language patterns guide correct answers.',
         'learn' => array('cr_lesson_3', 'cr_lesson_4', 'rc_lesson_2', 'rc_lesson_3'),
         'practice' => array('cr_exercise_3', 'rc_exercise_1'),
         'review' => array(),
@@ -972,7 +972,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     }
     $verbal_units[] = array(
         'title' => 'Unit 3 – Strategic Decision-Making in CR',
-        'description' => 'This unit focuses on plan-argument reasoning in CR and consolidates verbal skills through a timed review.',
+        'description' => 'This unit trains you to handle plan-based arguments, one of the most common and misunderstood CR types. You\'ll practice targeting goals, constraints, and assumptions while reinforcing Unit 2 skills under exam-like conditions.',
         'learn' => array('cr_lesson_5'),
         'practice' => array('cr_exercise_4'),
         'review' => array('verbal_review_2'),
@@ -1000,7 +1000,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     }
     $verbal_units[] = array(
         'title' => 'Unit 4 – Regular Argument Analysis',
-        'description' => 'This unit advances your CR skills with regular-argument analysis and continues to build verbal reasoning under timed conditions.',
+        'description' => 'This unit focuses on "regular" CR arguments and strengthens your ability to evaluate how information affects conclusions. You\'ll refine your ability to identify logical gaps and eliminate attractive but irrelevant answers under time pressure. You\'ll finish up the unit with a thorough review of the verbal concepts from Unit 3 under exam-like conditions.',
         'learn' => array('cr_lesson_6'),
         'practice' => array('cr_exercise_5'),
         'review' => array_merge($v4_extra_review, array('verbal_review_3')),
@@ -1029,7 +1029,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     }
     $verbal_units[] = array(
         'title' => 'Unit 5 – Explanation-Based Reasoning',
-        'description' => 'This unit teaches explanation-argument reasoning and uses thought pattern recognition to avoid common CR traps.',
+        'description' => 'This unit builds mastery of explanation arguments by teaching you how to recognize observation-and-explanation reasoning and the specific thought patterns that correct answers consistently address. You\'ll then reinforce the concepts from Unit 4 by completing a Unit 4 Verbal Review Set under exam-like conditions.',
         'learn' => array('cr_lesson_7'),
         'practice' => array('cr_exercise_6'),
         'review' => array_merge($v5_extra_review, array('verbal_review_4')),
@@ -1057,7 +1057,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     }
     $verbal_units[] = array(
         'title' => 'Unit 6 – Advanced Logical Structures',
-        'description' => 'This unit completes verbal training with structure-family and evidence-family question types, plus a final comprehensive verbal review.',
+        'description' => 'This unit covers advanced CR families, including structure- and evidence-based questions. You\'ll learn to analyze arguments independent of topic content and apply advanced reasoning skills consistently across difficult questions before revisiting the concepts from Unit 5 under exam-like conditions.',
         'learn' => array('cr_lesson_8', 'cr_lesson_9'),
         'practice' => array('cr_exercise_7', 'cr_exercise_8'),
         'review' => array_merge($v6_extra_review, array('verbal_review_5')),
@@ -1301,7 +1301,7 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                                                 $topic   = isset($all_keys[$lk]['topic']) && !empty($all_keys[$lk]['topic']) ? $all_keys[$lk]['topic'] : '';
                                                 $is_suggested  = isset($suggested_lessons[$lk]);
                                                 $suggest_text  = $is_suggested ? $suggested_lessons[$lk] : '';
-                                                $desc = $is_suggested ? $suggest_text : (isset($all_keys[$lk]['desc']) ? $all_keys[$lk]['desc'] : '');
+                                                $desc = ($is_suggested && !empty($suggest_text)) ? $suggest_text : (isset($all_keys[$lk]['desc']) ? $all_keys[$lk]['desc'] : '');
                                                 $card_classes = 'gmat-sp-lesson gmat-sp-lesson--' . $status;
                                                 if ($is_suggested) $card_classes .= ' gmat-sp-lesson--suggested';
                                             ?>

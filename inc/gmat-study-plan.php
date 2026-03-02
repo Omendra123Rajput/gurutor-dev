@@ -1117,25 +1117,87 @@ function gmat_sp_build_quant_first($user_id, $ids) {
 
 
 // ============================================================================
-// Format a lesson description (newline-separated points) into an HTML list
+// Format a lesson description into HTML.
+// Supports two formats:
+//   1. Flat: newline-separated lines → <ul><li>…</li></ul>
+//   2. Hierarchical (tab-indented):
+//        No tab  = heading (bold <p>)
+//        \t      = child bullet
+//        \t\t    = subchild bullet (nested under parent child)
 // ============================================================================
 
 function gmat_sp_format_description($desc) {
     if (empty($desc)) return '';
 
-    $lines = explode("\n", $desc);
-    $lines = array_map('trim', $lines);
-    $lines = array_filter($lines, 'strlen');
+    $raw_lines = explode("\n", $desc);
 
-    if (count($lines) <= 1) {
-        return '<p>' . esc_html($desc) . '</p>';
+    // Detect if description uses tab hierarchy
+    $has_tabs = false;
+    foreach ($raw_lines as $line) {
+        if (strlen($line) > 0 && $line[0] === "\t") {
+            $has_tabs = true;
+            break;
+        }
     }
 
-    $html = '<ul>';
-    foreach ($lines as $line) {
-        $html .= '<li>' . esc_html($line) . '</li>';
+    // ── Flat format (legacy / CR / RC / DI lessons) ──
+    if (!$has_tabs) {
+        $lines = array_filter(array_map('trim', $raw_lines), 'strlen');
+        if (count($lines) <= 1) {
+            return '<p>' . esc_html(trim($desc)) . '</p>';
+        }
+        $html = '<ul>';
+        foreach ($lines as $line) {
+            $html .= '<li>' . esc_html($line) . '</li>';
+        }
+        $html .= '</ul>';
+        return $html;
     }
-    $html .= '</ul>';
+
+    // ── Hierarchical format ──
+    $html = '';
+    $child_list_open    = false;
+    $subchild_list_open = false;
+    $child_li_open      = false;
+
+    foreach ($raw_lines as $raw_line) {
+        $trimmed = trim($raw_line);
+        if ($trimmed === '') continue;
+
+        // Count leading tabs
+        $level = 0;
+        $len   = strlen($raw_line);
+        while ($level < $len && $raw_line[$level] === "\t") {
+            $level++;
+        }
+
+        if ($level === 0) {
+            // Close any open sub-structures
+            if ($subchild_list_open) { $html .= '</ul>';  $subchild_list_open = false; }
+            if ($child_li_open)      { $html .= '</li>'; $child_li_open = false; }
+            if ($child_list_open)    { $html .= '</ul>';  $child_list_open = false; }
+            // Heading
+            $html .= '<p class="gmat-sp-desc-heading"><strong>' . esc_html($trimmed) . '</strong></p>';
+
+        } elseif ($level === 1) {
+            // Close sub-child list first
+            if ($subchild_list_open) { $html .= '</ul>';  $subchild_list_open = false; }
+            if ($child_li_open)      { $html .= '</li>'; $child_li_open = false; }
+            if (!$child_list_open)   { $html .= '<ul>';   $child_list_open = true; }
+            $html .= '<li>' . esc_html($trimmed);
+            $child_li_open = true;
+
+        } else {
+            // level >= 2 — subchild
+            if (!$subchild_list_open) { $html .= '<ul>'; $subchild_list_open = true; }
+            $html .= '<li>' . esc_html($trimmed) . '</li>';
+        }
+    }
+
+    // Close remaining tags
+    if ($subchild_list_open) $html .= '</ul>';
+    if ($child_li_open)      $html .= '</li>';
+    if ($child_list_open)    $html .= '</ul>';
 
     return $html;
 }

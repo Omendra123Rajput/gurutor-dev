@@ -666,6 +666,23 @@
     margin-bottom: 0;
 }
 
+/* Hierarchical accordion: heading → child → subchild */
+.gmat-sp-desc-heading {
+    font-size: 13px;
+    margin: 8px 0 2px;
+    color: #1e293b;
+}
+
+.gmat-sp-desc-heading:first-child {
+    margin-top: 0;
+}
+
+.gmat-sp-lesson__desc ul ul {
+    margin-top: 2px;
+    padding-left: 16px;
+    list-style: circle;
+}
+
 
 /* ============================================================================
    Suggested Lesson — visually distinct card for dynamically-added lessons
@@ -867,6 +884,10 @@
     }
 
     .gmat-sp-lesson__desc li {
+        font-size: 12px;
+    }
+
+    .gmat-sp-desc-heading {
         font-size: 12px;
     }
 

@@ -1,6 +1,6 @@
 # Gurutor GMAT Platform — AI Context File
 
-> **Last updated:** 2026-02-27
+> **Last updated:** 2026-03-03
 > **Purpose:** Share with any AI model to resume development without context loss.
 > **Project root:** `C:\Users\orajp\Desktop\G9\Gurutor Staging\Revamp\generatepress-child\`
 > **Staging URL:** `https://stg-gurutor-test.kinsta.cloud/`
@@ -69,14 +69,14 @@ $custom_includes = array(
     'inc/gurutor-thankyou-shortcodes.php',
     'inc/gmat-intake-form.php',
     'inc/gmat-settings-account.php',
-    'inc/gmat-chatbox.php',                     // ★ AI Chatbox widget
-    // 'inc/gmat-study-plan-admin.php',         // COMMENTED OUT
-    // 'inc/gmat-study-plan.php',               // COMMENTED OUT
-    // 'inc/gmat-dashboard.php',                // COMMENTED OUT
+    'inc/gmat-chatbox.php',
+    'inc/gmat-study-plan-admin.php',
+    'inc/gmat-study-plan.php',
+    'inc/gmat-dashboard.php',
 );
 ```
 
-**IMPORTANT:** Study plan, study plan admin, and dashboard are currently **commented out**. They get toggled on/off during development. The chatbox is active and loads on course 8112 only.
+**NOTE:** All includes are currently active (no lines commented out). Some may be commented out during development — always check the actual file.
 
 ---
 
@@ -198,16 +198,18 @@ estimated_readiness = today + total_weeks
 - Format: `{"CR_Exercise_4_Pass_or_Fail": "Fail"}` in `$stmt['object']['definition']['name']['en-US']`
 - Parsed automatically during the completed statements fetch (no extra API calls)
 - `gmat_sp_get_pass_fail_map($user_id)` returns `variable_name => "Pass"|"Fail"` map
-- `gmat_sp_get_pass_fail_variable_map()` maps ~50 variable names to lesson keys (CR exercises, verbal reviews, quant lessons, granular QLE_* signals)
+- `gmat_sp_get_pass_fail_variable_map()` maps ~65 variable names to lesson keys (CR exercises, verbal reviews, QLE_*, QRS_*)
 - Granular quant exercise failures: `QLE_N_TOPIC_Pass_or_Fail` maps to specific lesson keys (e.g., `QLE_1_ALG1_Pass_or_Fail` → `algebra_1`)
+- Granular quant review failures: `QRS_UnitN_TOPIC_Pass_or_Fail` maps to specific lesson keys (e.g., `QRS_Unit2_ALG1_Pass_or_Fail` → `algebra_1`)
 
 **Suggestion logic (v6 — no fallback heuristics, pass/fail signals only):**
 - `gmat_sp_get_exercise_result($user_id, $lesson_key)` — returns `'fail'` | `'pass'` | `'none'` (3-state, no fallback)
 - `gmat_sp_get_review_result($user_id, $review_key)` — returns `'fail'` (any variable failed) | `'pass'` (all passed) | `'none'` (no signals)
 - `gmat_sp_get_quant_exercise_failures($user_id, $exercise_num, $learn_keys, $ids)` — returns only explicit QLE_* failures, no fallback
+- `gmat_sp_get_learn_lesson_failures($user_id, $learn_keys)` — returns only explicit learn lesson failures
+- `gmat_sp_get_quant_review_failures($user_id, $review_num)` — returns lesson keys that failed within a specific QRS review
 - **Rule:** Only explicit Pass/Fail xAPI signals trigger suggestions. "Attempted-not-complete" or "not-started" NEVER triggers suggestions.
-- **Removed:** `gmat_sp_should_suggest_review()`, `gmat_sp_is_review_failed_or_incomplete()`, `gmat_sp_is_attempted_not_complete()` — all had fallback heuristics
-- **Cross-suggest (3-state):** If review result is `'fail'` → show remediation links. If `'pass'` → show just review link. If `'none'` → no cross-suggest at all.
+- **Cross-suggest (3-state):** If review result is `'fail'` → show remediation links (including granular QRS failures for quant-first). If `'pass'` → show just review link. If `'none'` → no cross-suggest at all.
 - Each unit has a `'description'` field rendered as a brief text at the top of the expanded unit body
 
 **Smart/curly quotes sanitization (v7):**
@@ -215,15 +217,14 @@ estimated_readiness = today + total_weeks
 - `gmat_sp_fetch_xapi_data()` applies 4-layer sanitization before `json_decode()`: strip BOM, replace smart quotes → straight, `mb_convert_encoding()` fix, regex fallback extraction
 - Without this fix, `json_decode()` fails with `JSON_ERROR_UTF8` (error code 4)
 
-**Suggested lesson cards (v7):**
-- Units have a `'suggested_lessons'` field — associative array mapping `lesson_key => suggestion_text`
-- When an exercise fails (e.g., CR Exercise 4), the suggestion text moves to the NEXT unit's `suggested_lessons` (e.g., `cr_lesson_5` in Unit 4)
-- The old orange "Suggested areas of focus" box (`'suggest'` field) is set to `''` for affected units
-- Renderer checks `$unit['suggested_lessons'][$lk]` and applies:
-  - `.gmat-sp-lesson--suggested` class — amber background (`#fffbeb`), amber border, orange left bar + number badge
-  - "Suggested" orange pill badge (`.gmat-sp-lesson__suggested-badge`)
-  - Suggestion text replaces normal lesson description in accordion, prefixed with "Areas to focus on:"
-- CSS: amber/orange theme consistent with existing suggest box palette
+**Two suggest boxes per unit (v8 — dual suggest architecture):**
+- **Practice suggest box** (`suggest` + `suggest_redo`): Orange "Suggested areas of focus" box rendered ABOVE practice lesson cards. Shows own unit's learn/exercise failures with "Recommend redoing:" links.
+- **Review suggest box** (`review_suggest` + `review_suggest_redo` + `cross_suggest` + `cross_suggest_links`): Same orange box rendered ABOVE review lesson cards. Shows previous unit's failures + cross-section links.
+- **Helper function:** `gmat_sp_build_suggest_html($args, $all_keys)` builds the HTML for both boxes. Accepts suggest text, suggest_links, suggest_redo, cross_suggest, cross_suggest_links.
+- **Verbal units** use `review_suggest`/`review_suggest_redo` only (previous unit exercise failures belong in review section). Practice suggest fields are empty.
+- **Quant units** use both: `suggest`/`suggest_redo` for own failures (practice) + `review_suggest`/`review_suggest_redo` for previous unit failures (review).
+- **No more review_extra:** Failed lessons no longer appear as lesson cards in review arrays. They appear only as suggest box "Recommend redoing:" links.
+- **QRS variables (v8):** Fixed from `QRS__UnitN_ALG5` (wrong) to `QRS_UnitN_ALG1` (correct per-unit topics). `gmat_sp_get_qrs_lesson_map()` maps 16 QRS topic suffixes to lesson keys.
 
 **Lesson-level accordion (v5):**
 - Each lesson card is expandable (click to expand/collapse) showing a description of what the lesson covers
@@ -481,3 +482,18 @@ Two configuration areas:
 4. **Updated both verbal-first and quant-first builders** (Units 3-6) with `suggested_lessons` field.
 5. **Removed temporary footer debug function** (`gmat_sp_debug_footer`) — was used to diagnose the smart quotes issue.
 6. **Files modified:** `inc/gmat-study-plan.php`, `css/gmat-study-plan.css`
+
+**Session 11 (Study Plan v8 — QRS Fix + Dual Suggest Boxes + Quant-First Cross-Suggestions — Mar 2026):**
+1. **Fixed QRS variable names in `gmat_sp_get_pass_fail_variable_map()`:** Old format `QRS__UnitN_ALG5_Pass_or_Fail` (double underscore, wrong topic suffixes reused across all units) replaced with correct `QRS_UnitN_TOPIC_Pass_or_Fail` (single underscore, unit-specific topics). 19 variables for Units 2-5. Unit 6 QRS omitted (no `quant_review_6` lesson key exists yet).
+2. **Added `gmat_sp_get_qrs_lesson_map()` helper:** Maps 16 QRS topic suffixes to lesson keys (ALG1→algebra_1, NP1→number_props_1, WP1→word_problems_1, PSS1→pss_lesson_1, FPR1→fprs_1, FRP4→fprs_2, etc.).
+3. **Added `gmat_sp_get_quant_review_failures($user_id, $review_num)` helper:** Iterates pass/fail map for `QRS_UnitN_*` variables, extracts topic suffix, maps to lesson keys via `gmat_sp_get_qrs_lesson_map()`. Returns array of failed lesson keys.
+4. **Updated quant-first verbal cross-suggestions (Units 3-6):** When quant review fails, cross-suggest now includes specific failed QRS lesson keys + exercise + review set (previously only exercise + review).
+5. **Added `gmat_sp_get_learn_lesson_failures($user_id, $learn_keys)` helper:** Returns learn lessons that explicitly failed based on pass/fail signals.
+6. **Restructured suggest boxes to dual-box architecture:**
+   - **Practice suggest box** (`suggest` + `suggest_redo`): Orange "Suggested areas of focus" box rendered ABOVE practice lesson cards, showing own unit's learn/exercise failures.
+   - **Review suggest box** (`review_suggest` + `review_suggest_redo` + `cross_suggest_links`): Same orange box rendered ABOVE review lesson cards, showing previous unit's failures + cross-section links.
+   - **Added `gmat_sp_build_suggest_html($args, $all_keys)` helper:** Builds suggest box HTML, used for both practice and review suggest boxes. Replaces the old inline `ob_start()` template in the renderer.
+   - **Removed `review_extra` from review arrays:** Failed lessons no longer appear as lesson cards — only as suggest box "Recommend redoing:" links.
+   - **Verbal units (4-6):** Moved `suggest`→`review_suggest`, `suggest_redo`→`review_suggest_redo` (verbal suggestions belong in review section, not practice).
+   - **Updated all 4 builder sections:** verbal-first verbal (3 units), verbal-first quant (4 units), quant-first quant (4 units), quant-first verbal (3 units).
+7. **Files modified:** `inc/gmat-study-plan.php`

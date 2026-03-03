@@ -68,17 +68,21 @@ All includes are in `functions.php` lines 21-30. Some may be commented out durin
 - Score field name is `overall` (NOT `total`) — critical for cross-module consistency
 - Chatbox response formatting: `gmat_chatbox_format_reply()` converts plain-text AI replies to HTML — handles bullet points (•/-/*), numbered lists, section headers (lines ending in `:` under 80 chars), **bold**, *italic*, `code`. Passes through untouched if response already contains HTML tags. All output sanitized via `wp_kses_post()`
 
-### Study Plan Key Functions (v7)
+### Study Plan Key Functions (v8)
 - `gmat_sp_fetch_xapi_data($user_id)` — core function returning both `status_map` and `pass_fail` signals (static cached). Includes 4-layer smart quotes sanitization before `json_decode()` (BOM strip, curly→straight quotes, `mb_convert_encoding()`, regex fallback).
 - `gmat_sp_get_pass_fail_map($user_id)` — returns `variable_name => "Pass"|"Fail"` from xAPI completed statement object names
-- `gmat_sp_get_pass_fail_variable_map()` — maps ~50 xAPI variable names to lesson keys
+- `gmat_sp_get_pass_fail_variable_map()` — maps ~65 xAPI variable names to lesson keys (CR exercises, verbal reviews, QLE_*, QRS_*)
 - `gmat_sp_get_exercise_result($user_id, $lesson_key)` — returns `'fail'`|`'pass'`|`'none'` (no fallback)
 - `gmat_sp_get_review_result($user_id, $review_key)` — returns `'fail'`|`'pass'`|`'none'` (multi-variable: fails if ANY fails)
 - `gmat_sp_get_quant_exercise_failures($user_id, $exercise_num, $learn_keys, $ids)` — explicit QLE_* failures only (no fallback)
+- `gmat_sp_get_learn_lesson_failures($user_id, $learn_keys)` — explicit learn lesson pass/fail failures
+- `gmat_sp_get_qrs_lesson_map()` — maps QRS topic suffixes (ALG1, NP1, etc.) to lesson keys
+- `gmat_sp_get_quant_review_failures($user_id, $review_num)` — returns lesson keys that failed within a specific QRS review
+- `gmat_sp_build_suggest_html($args, $all_keys)` — builds orange "Suggested areas of focus" box HTML
 - **Rule:** Only explicit Pass/Fail xAPI signals trigger suggestions. Never assume attempted/completed = pass/fail.
 - `gmat_sp_format_description($desc)` — converts newline-separated text to HTML `<ul>` list
 - Lesson descriptions stored as `'desc'` field, topic names stored as `'topic'` field in `gmat_sp_get_lesson_keys()`
-- **Suggested lessons:** Units have `'suggested_lessons'` field (associative array: `lesson_key => suggestion_text`). When exercise fails, suggestion moves to NEXT unit's `suggested_lessons`. Renderer applies `.gmat-sp-lesson--suggested` class + "Suggested" badge + accordion with suggestion text.
+- **Two suggest boxes per unit:** Practice suggest box (`suggest`/`suggest_redo`) renders ABOVE practice lessons. Review suggest box (`review_suggest`/`review_suggest_redo` + `cross_suggest_links`) renders ABOVE review lessons. Verbal units use `review_suggest` only; quant units use both.
 
 ### JavaScript
 - All JS wraps in `(function($) { 'use strict'; ... })(jQuery);` IIFE

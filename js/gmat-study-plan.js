@@ -40,6 +40,26 @@
                 self.toggleUnit($unit);
             });
 
+            // Suggest scroll links — scroll to lesson card, expand unit if needed
+            this.$wrap.on('click', '.gmat-sp-suggest__scroll-link', function (e) {
+                e.preventDefault();
+                var targetId = $(this).attr('href').replace('#', '');
+                var $target = $('#' + targetId);
+                if (!$target.length) return;
+
+                // Expand parent unit if collapsed
+                var $unit = $target.closest('.gmat-sp-unit');
+                if ($unit.length && !$unit.hasClass('open')) {
+                    self.toggleUnit($unit);
+                    // Wait for expand animation, then scroll + highlight
+                    setTimeout(function () {
+                        self.scrollToLesson($target);
+                    }, 400);
+                } else {
+                    self.scrollToLesson($target);
+                }
+            });
+
             // Lesson accordion toggle — click on lesson row
             this.$wrap.on('click', '.gmat-sp-lesson', function (e) {
                 // Don't toggle if user clicked a link or button
@@ -115,6 +135,17 @@
                     }
                 }, 120);
             }
+        },
+
+        // ── Scroll to lesson card and briefly highlight it ──
+        scrollToLesson: function ($lesson) {
+            var top = $lesson.offset().top - 160;
+            $('html, body').animate({ scrollTop: top }, 350, function () {
+                $lesson.addClass('gmat-sp-lesson--highlight');
+                setTimeout(function () {
+                    $lesson.removeClass('gmat-sp-lesson--highlight');
+                }, 1500);
+            });
         },
 
         // ── Auto-expand first incomplete unit on page load ──

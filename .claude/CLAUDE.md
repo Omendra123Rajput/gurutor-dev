@@ -160,4 +160,4 @@ Score entry format (stored as JSON arrays):
 
 See `context.md` (in project root) for exhaustive feature documentation including: two-phase Step 1 flow, study plan section/unit/lesson structure, xAPI tracking states, pass/fail signal parsing, lesson accordion descriptions, dashboard readiness calculation formula, chatbox security layers, responsive breakpoints, and full session development history.
 
-Reference docs in `docs/` folder: Verbal First Study Plan.docx, Quant First Study Plan.docx, Pass and fail signals.docx, unique ids of the lessons.docx, ids of the learndash lessons.docx.
+

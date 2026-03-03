@@ -332,18 +332,26 @@ function gmat_sp_get_pass_fail_variable_map() {
 
         // Quant Review Sets — granular pass/fail per topic area within each review
         // If any variable for a review shows "Fail", the review is considered failed
-        'QRS__Unit2_ALG5_Pass_or_Fail' => 'quant_review_2',
-        'QRS__Unit2_NP3_Pass_or_Fail'  => 'quant_review_2',
-        'QRS__Unit2_WP7_Pass_or_Fail'  => 'quant_review_2',
-        'QRS__Unit3_ALG5_Pass_or_Fail' => 'quant_review_3',
-        'QRS__Unit3_NP3_Pass_or_Fail'  => 'quant_review_3',
-        'QRS__Unit3_WP7_Pass_or_Fail'  => 'quant_review_3',
-        'QRS__Unit4_ALG5_Pass_or_Fail' => 'quant_review_4',
-        'QRS__Unit4_NP3_Pass_or_Fail'  => 'quant_review_4',
-        'QRS__Unit4_WP7_Pass_or_Fail'  => 'quant_review_4',
-        'QRS__Unit5_ALG5_Pass_or_Fail' => 'quant_review_5',
-        'QRS__Unit5_NP3_Pass_or_Fail'  => 'quant_review_5',
-        'QRS__Unit5_WP7_Pass_or_Fail'  => 'quant_review_5',
+        // Unit 2 QRS
+        'QRS_Unit2_ALG1_Pass_or_Fail'  => 'quant_review_2',
+        'QRS_Unit2_NP1_Pass_or_Fail'   => 'quant_review_2',
+        'QRS_Unit2_WP1_Pass_or_Fail'   => 'quant_review_2',
+        'QRS_Unit2_PSS1_Pass_or_Fail'  => 'quant_review_2',
+        // Unit 3 QRS
+        'QRS_Unit3_ALG2_Pass_or_Fail'  => 'quant_review_3',
+        'QRS_Unit3_NP2_Pass_or_Fail'   => 'quant_review_3',
+        'QRS_Unit3_WP2_Pass_or_Fail'   => 'quant_review_3',
+        'QRS_Unit3_PSS2_Pass_or_Fail'  => 'quant_review_3',
+        'QRS_Unit3_FPR1_Pass_or_Fail'  => 'quant_review_3',
+        // Unit 4 QRS
+        'QRS_Unit4_ALG3_Pass_or_Fail'  => 'quant_review_4',
+        'QRS_Unit4_WP3_Pass_or_Fail'   => 'quant_review_4',
+        'QRS_Unit4_WP4_Pass_or_Fail'   => 'quant_review_4',
+        'QRS_Unit4_FRP4_Pass_or_Fail'  => 'quant_review_4',
+        // Unit 5 QRS
+        'QRS_Unit5_ALG4_Pass_or_Fail'  => 'quant_review_5',
+        'QRS_Unit5_WP5_Pass_or_Fail'   => 'quant_review_5',
+        'QRS_Unit5_WP6_Pass_or_Fail'   => 'quant_review_5',
     );
 }
 
@@ -441,6 +449,68 @@ function gmat_sp_get_learn_lesson_failures($user_id, $learn_keys) {
         if (!in_array($mapped_key, $learn_keys, true)) continue;
         if (isset($pf_map[$var_name]) && $pf_map[$var_name] === 'Fail') {
             $failed_keys[] = $mapped_key;
+        }
+    }
+
+    return array_unique($failed_keys);
+}
+
+/**
+ * Map of QRS variable topic suffixes to lesson keys.
+ * Used for granular failure detection within quant review sets.
+ * When a QRS variable shows "Fail", this tells us WHICH lesson topic failed.
+ */
+function gmat_sp_get_qrs_lesson_map() {
+    return array(
+        // Unit 2 QRS topics
+        'ALG1'  => 'algebra_1',
+        'NP1'   => 'number_props_1',
+        'WP1'   => 'word_problems_1',
+        'PSS1'  => 'pss_lesson_1',
+        // Unit 3 QRS topics
+        'ALG2'  => 'algebra_2',
+        'NP2'   => 'number_props_2',
+        'WP2'   => 'word_problems_2',
+        'PSS2'  => 'pss_lesson_2',
+        'FPR1'  => 'fprs_1',
+        // Unit 4 QRS topics
+        'ALG3'  => 'algebra_3',
+        'WP3'   => 'word_problems_3',
+        'WP4'   => 'word_problems_4',
+        'FRP4'  => 'fprs_2',
+        // Unit 5 QRS topics
+        'ALG4'  => 'algebra_4',
+        'WP5'   => 'word_problems_5',
+        'WP6'   => 'word_problems_6',
+    );
+}
+
+/**
+ * Get the list of lesson keys that failed within a specific quant review,
+ * using the granular QRS_UnitN_* pass/fail variables.
+ * NO fallback — returns empty array if no QRS signals exist.
+ *
+ * @param int $user_id
+ * @param int $review_num  2-5 (which quant review unit)
+ * @return array  Lesson keys that failed (empty if no signals)
+ */
+function gmat_sp_get_quant_review_failures($user_id, $review_num) {
+    $pf_map  = gmat_sp_get_pass_fail_map($user_id);
+    $qrs_map = gmat_sp_get_qrs_lesson_map();
+
+    $prefix = 'QRS_Unit' . $review_num . '_';
+    $failed_keys = array();
+
+    foreach ($pf_map as $var_name => $value) {
+        if (strpos($var_name, $prefix) !== 0) continue;
+        if ($value !== 'Fail') continue;
+
+        // Extract topic suffix: QRS_Unit2_ALG1_Pass_or_Fail → ALG1
+        $suffix_part = substr($var_name, strlen($prefix));
+        $topic_suffix = str_replace('_Pass_or_Fail', '', $suffix_part);
+
+        if (isset($qrs_map[$topic_suffix])) {
+            $failed_keys[] = $qrs_map[$topic_suffix];
         }
     }
 
@@ -638,9 +708,11 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'learn' => array('cr_lesson_6'),
         'practice' => array('cr_exercise_5'),
         'review' => array('verbal_review_3'),
-        'suggest' => ($cr4_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'suggest' => '',
         'suggest_links' => array(),
-        'suggest_redo' => $v4_suggest_redo,
+        'suggest_redo' => array(),
+        'review_suggest' => ($cr4_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'review_suggest_redo' => $v4_suggest_redo,
     );
 
     // Verbal Unit 5 — Explanation-Based Reasoning
@@ -655,9 +727,11 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'learn' => array('cr_lesson_7'),
         'practice' => array('cr_exercise_6'),
         'review' => array('verbal_review_4'),
-        'suggest' => ($cr5_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'suggest' => '',
         'suggest_links' => array(),
-        'suggest_redo' => $v5_suggest_redo,
+        'suggest_redo' => array(),
+        'review_suggest' => ($cr5_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'review_suggest_redo' => $v5_suggest_redo,
     );
 
     // Verbal Unit 6 — Advanced Logical Structures
@@ -671,9 +745,11 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'learn' => array('cr_lesson_8', 'cr_lesson_9'),
         'practice' => array('cr_exercise_7', 'cr_exercise_8'),
         'review' => array('verbal_review_5'),
-        'suggest' => ($cr6_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'suggest' => '',
         'suggest_links' => array(),
-        'suggest_redo' => $v6_suggest_redo,
+        'suggest_redo' => array(),
+        'review_suggest' => ($cr6_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'review_suggest_redo' => $v6_suggest_redo,
     );
 
     $plan[] = array('section' => 'Verbal', 'units' => $verbal_units);
@@ -695,9 +771,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
 
     // Quant Unit 2 — Strategic Algebra and Translation
     $q2_learn = array('pss_lesson_1', 'algebra_1', 'word_problems_1', 'number_props_1');
-    // Use granular QLE_1 pass/fail signals for exercise failures
     $q2_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
-    // Direct lesson fail signals — show in "Recommend redoing" suggest box
     $q2_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q2_learn);
     $q2_all_redo = array_values(array_unique(array_merge($q2_learn_failures, $q2_exercise_failures)));
     $quant_units[] = array(
@@ -706,7 +780,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'learn' => $q2_learn,
         'practice' => array('quant_exercise_1'),
         'review' => array(),
-        'suggest' => !empty($q2_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q2_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q2_all_redo,
     );
@@ -714,9 +788,11 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     // Quant Unit 3 — Structure, Estimation, and Multi-Step Reasoning
     $q3_learn = array('pss_lesson_2', 'number_props_2', 'algebra_2', 'word_problems_2', 'fprs_1');
     $q3_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
-    // Add Unit 2 failed lessons to review (from QLE_1 signals)
-    $q3_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
-    // Direct lesson fail signals — show in "Recommend redoing" suggest box
+    // Review extra: previous unit's learn + exercise failures (above Unit 2 Quant Review Set)
+    $q3_review_extra = array_values(array_unique(array_merge(
+        gmat_sp_get_learn_lesson_failures($user_id, $q2_learn),
+        gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids)
+    )));
     $q3_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q3_learn);
     $q3_all_redo = array_values(array_unique(array_merge($q3_learn_failures, $q3_exercise_failures)));
     // Verbal cross-suggest — only show when explicit pass/fail signal exists
@@ -732,10 +808,12 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'description' => 'This unit deepens your ability to recognize structure in algebra, number properties, and word problems. You\'ll learn estimation, remainders, quadratics, inequalities, rates, and overlapping sets while avoiding common GMAT language traps. You\'ll finish the unit by revisiting the concepts from Quant Unit 2 under exam-like conditions.',
         'learn' => $q3_learn,
         'practice' => array('quant_exercise_2'),
-        'review' => array_merge($q3_review_extra, array('quant_review_2')),
-        'suggest' => !empty($q3_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
+        'review' => array('quant_review_2'),
+        'suggest' => !empty($q3_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q3_all_redo,
+        'review_suggest' => !empty($q3_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest_redo' => $q3_review_extra,
         'cross_suggest' => '',
         'cross_suggest_links' => $q3_cross_links,
     );
@@ -743,7 +821,11 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     // Quant Unit 4 — Advanced Word Problems and Abstraction
     $q4_learn = array('fprs_2', 'algebra_3', 'word_problems_3', 'word_problems_4');
     $q4_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
-    $q4_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
+    // Review extra: previous unit's learn + exercise failures
+    $q4_review_extra = array_values(array_unique(array_merge(
+        gmat_sp_get_learn_lesson_failures($user_id, $q3_learn),
+        gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids)
+    )));
     $q4_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q4_learn);
     $q4_all_redo = array_values(array_unique(array_merge($q4_learn_failures, $q4_exercise_failures)));
     $q4_cross_links = array();
@@ -758,10 +840,12 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'description' => 'This unit focuses on higher-level abstraction, including functions, sequences, rates with changing conditions, combinatorics, and statistics. You\'ll learn how to leverage diagrams to represent some of the more challenging word problems subtopics. You\'ll finish the unit by revisiting the concepts from Quant Unit 3 under exam-like conditions.',
         'learn' => $q4_learn,
         'practice' => array('quant_exercise_3'),
-        'review' => array_merge($q4_review_extra, array('quant_review_3')),
-        'suggest' => !empty($q4_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
+        'review' => array('quant_review_3'),
+        'suggest' => !empty($q4_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q4_all_redo,
+        'review_suggest' => !empty($q4_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest_redo' => $q4_review_extra,
         'cross_suggest' => '',
         'cross_suggest_links' => $q4_cross_links,
     );
@@ -769,7 +853,11 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     // Quant Unit 5 — Systems, Probability, and Weighted Reasoning
     $q5_learn = array('algebra_4', 'word_problems_5', 'word_problems_6');
     $q5_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
-    $q5_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
+    // Review extra: previous unit's learn + exercise failures
+    $q5_review_extra = array_values(array_unique(array_merge(
+        gmat_sp_get_learn_lesson_failures($user_id, $q4_learn),
+        gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids)
+    )));
     $q5_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q5_learn);
     $q5_all_redo = array_values(array_unique(array_merge($q5_learn_failures, $q5_exercise_failures)));
     $q5_cross_links = array();
@@ -784,10 +872,12 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'description' => 'This unit develops advanced reasoning skills involving quadratics, inequalities, weighted averages, probability, and unit conversions. You\'ll continue to leverage the word problems diagrams from Quant Unit 4 and learn some new ones that simplify complex statistics questions. You\'ll finish the unit by revisiting the concepts from Quant Unit 4 under exam-like conditions.',
         'learn' => $q5_learn,
         'practice' => array('quant_exercise_4'),
-        'review' => array_merge($q5_review_extra, array('quant_review_4')),
-        'suggest' => !empty($q5_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
+        'review' => array('quant_review_4'),
+        'suggest' => !empty($q5_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q5_all_redo,
+        'review_suggest' => !empty($q5_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest_redo' => $q5_review_extra,
         'cross_suggest' => '',
         'cross_suggest_links' => $q5_cross_links,
     );
@@ -795,7 +885,11 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     // Quant Unit 6 — Patterns, Constraints, and Edge Cases
     $q6_learn = array('number_props_3', 'word_problems_7', 'algebra_5');
     $q6_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 5, $q6_learn, $ids);
-    $q6_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
+    // Review extra: previous unit's learn + exercise failures
+    $q6_review_extra = array_values(array_unique(array_merge(
+        gmat_sp_get_learn_lesson_failures($user_id, $q5_learn),
+        gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids)
+    )));
     $q6_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q6_learn);
     $q6_all_redo = array_values(array_unique(array_merge($q6_learn_failures, $q6_exercise_failures)));
     $q6_cross_links = array();
@@ -810,10 +904,12 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'description' => 'This unit covers advanced number properties, probability structures, statistics bounds, and algebraic techniques like conjugation. You\'ll finish the unit by revisiting the concepts from Quant Unit 5 under exam-like conditions.',
         'learn' => $q6_learn,
         'practice' => array('quant_exercise_5'),
-        'review' => array_merge($q6_review_extra, array('quant_review_5')),
-        'suggest' => !empty($q6_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
+        'review' => array('quant_review_5'),
+        'suggest' => !empty($q6_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q6_all_redo,
+        'review_suggest' => !empty($q6_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest_redo' => $q6_review_extra,
         'cross_suggest' => '',
         'cross_suggest_links' => $q6_cross_links,
     );
@@ -898,7 +994,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'learn' => $q2_learn,
         'practice' => array('quant_exercise_1'),
         'review' => array(),
-        'suggest' => !empty($q2_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q2_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q2_all_redo,
     );
@@ -906,7 +1002,11 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     // Quant Unit 3 — Structure, Estimation, and Multi-Step Reasoning
     $q3_learn = array('pss_lesson_2', 'number_props_2', 'algebra_2', 'word_problems_2', 'fprs_1');
     $q3_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
-    $q3_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
+    // Review extra: previous unit's learn + exercise failures (above Unit 2 Quant Review Set)
+    $q3_review_extra = array_values(array_unique(array_merge(
+        gmat_sp_get_learn_lesson_failures($user_id, $q2_learn),
+        gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids)
+    )));
     $q3_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q3_learn);
     $q3_all_redo = array_values(array_unique(array_merge($q3_learn_failures, $q3_exercise_failures)));
     $quant_units[] = array(
@@ -914,16 +1014,22 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'description' => 'This unit deepens your ability to recognize structure in algebra, number properties, and word problems. You\'ll learn estimation, remainders, quadratics, inequalities, rates, and overlapping sets while avoiding common GMAT language traps. You\'ll finish the unit by revisiting the concepts from Quant Unit 2 under exam-like conditions.',
         'learn' => $q3_learn,
         'practice' => array('quant_exercise_2'),
-        'review' => array_merge($q3_review_extra, array('quant_review_2')),
-        'suggest' => !empty($q3_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
+        'review' => array('quant_review_2'),
+        'suggest' => !empty($q3_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q3_all_redo,
+        'review_suggest' => !empty($q3_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest_redo' => $q3_review_extra,
     );
 
     // Quant Unit 4 — Advanced Word Problems and Abstraction
     $q4_learn = array('fprs_2', 'algebra_3', 'word_problems_3', 'word_problems_4');
     $q4_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
-    $q4_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
+    // Review extra: previous unit's learn + exercise failures
+    $q4_review_extra = array_values(array_unique(array_merge(
+        gmat_sp_get_learn_lesson_failures($user_id, $q3_learn),
+        gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids)
+    )));
     $q4_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q4_learn);
     $q4_all_redo = array_values(array_unique(array_merge($q4_learn_failures, $q4_exercise_failures)));
     $quant_units[] = array(
@@ -931,16 +1037,22 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'description' => 'This unit focuses on higher-level abstraction, including functions, sequences, rates with changing conditions, combinatorics, and statistics. You\'ll learn how to leverage diagrams to represent some of the more challenging word problems subtopics. You\'ll finish the unit by revisiting the concepts from Quant Unit 3 under exam-like conditions.',
         'learn' => $q4_learn,
         'practice' => array('quant_exercise_3'),
-        'review' => array_merge($q4_review_extra, array('quant_review_3')),
-        'suggest' => !empty($q4_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
+        'review' => array('quant_review_3'),
+        'suggest' => !empty($q4_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q4_all_redo,
+        'review_suggest' => !empty($q4_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest_redo' => $q4_review_extra,
     );
 
     // Quant Unit 5 — Systems, Probability, and Weighted Reasoning
     $q5_learn = array('algebra_4', 'word_problems_5', 'word_problems_6');
     $q5_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
-    $q5_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
+    // Review extra: previous unit's learn + exercise failures
+    $q5_review_extra = array_values(array_unique(array_merge(
+        gmat_sp_get_learn_lesson_failures($user_id, $q4_learn),
+        gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids)
+    )));
     $q5_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q5_learn);
     $q5_all_redo = array_values(array_unique(array_merge($q5_learn_failures, $q5_exercise_failures)));
     $quant_units[] = array(
@@ -948,16 +1060,22 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'description' => 'This unit develops advanced reasoning skills involving quadratics, inequalities, weighted averages, probability, and unit conversions. You\'ll continue to leverage the word problems diagrams from Quant Unit 4 and learn some new ones that simplify complex statistics questions. You\'ll finish the unit by revisiting the concepts from Quant Unit 4 under exam-like conditions.',
         'learn' => $q5_learn,
         'practice' => array('quant_exercise_4'),
-        'review' => array_merge($q5_review_extra, array('quant_review_4')),
-        'suggest' => !empty($q5_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
+        'review' => array('quant_review_4'),
+        'suggest' => !empty($q5_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q5_all_redo,
+        'review_suggest' => !empty($q5_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest_redo' => $q5_review_extra,
     );
 
     // Quant Unit 6 — Patterns, Constraints, and Edge Cases
     $q6_learn = array('number_props_3', 'word_problems_7', 'algebra_5');
     $q6_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 5, $q6_learn, $ids);
-    $q6_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
+    // Review extra: previous unit's learn + exercise failures
+    $q6_review_extra = array_values(array_unique(array_merge(
+        gmat_sp_get_learn_lesson_failures($user_id, $q5_learn),
+        gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids)
+    )));
     $q6_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q6_learn);
     $q6_all_redo = array_values(array_unique(array_merge($q6_learn_failures, $q6_exercise_failures)));
     $quant_units[] = array(
@@ -965,10 +1083,12 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'description' => 'This unit covers advanced number properties, probability structures, statistics bounds, and algebraic techniques like conjugation. You\'ll finish the unit by revisiting the concepts from Quant Unit 5 under exam-like conditions.',
         'learn' => $q6_learn,
         'practice' => array('quant_exercise_5'),
-        'review' => array_merge($q6_review_extra, array('quant_review_5')),
-        'suggest' => !empty($q6_exercise_failures) ? 'You need to improve your understanding/planning/solving' : '',
+        'review' => array('quant_review_5'),
+        'suggest' => !empty($q6_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q6_all_redo,
+        'review_suggest' => !empty($q6_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest_redo' => $q6_review_extra,
     );
 
     $plan[] = array('section' => 'Quant', 'units' => $quant_units);
@@ -1005,7 +1125,9 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     $v3_cross_links = array();
     $qr2_result = gmat_sp_get_review_result($user_id, 'quant_review_2');
     if ($qr2_result === 'fail') {
-        $v3_cross_links = array('quant_exercise_1', 'quant_review_2');
+        $qr2_failed_lessons = gmat_sp_get_quant_review_failures($user_id, 2);
+        $v3_cross_links = array_merge($qr2_failed_lessons, array('quant_exercise_1', 'quant_review_2'));
+        $v3_cross_links = array_values(array_unique($v3_cross_links));
     } elseif ($qr2_result === 'pass') {
         $v3_cross_links = array('quant_review_2');
     }
@@ -1031,7 +1153,9 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     $v4_cross_links = array();
     $qr3_result = gmat_sp_get_review_result($user_id, 'quant_review_3');
     if ($qr3_result === 'fail') {
-        $v4_cross_links = array('quant_exercise_2', 'quant_review_3');
+        $qr3_failed_lessons = gmat_sp_get_quant_review_failures($user_id, 3);
+        $v4_cross_links = array_merge($qr3_failed_lessons, array('quant_exercise_2', 'quant_review_3'));
+        $v4_cross_links = array_values(array_unique($v4_cross_links));
     } elseif ($qr3_result === 'pass') {
         $v4_cross_links = array('quant_review_3');
     }
@@ -1041,9 +1165,11 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'learn' => array('cr_lesson_6'),
         'practice' => array('cr_exercise_5'),
         'review' => array('verbal_review_3'),
-        'suggest' => ($cr4_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'suggest' => '',
         'suggest_links' => array(),
-        'suggest_redo' => $v4_suggest_redo,
+        'suggest_redo' => array(),
+        'review_suggest' => ($cr4_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'review_suggest_redo' => $v4_suggest_redo,
         'cross_suggest' => '',
         'cross_suggest_links' => $v4_cross_links,
     );
@@ -1057,7 +1183,9 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     $v5_cross_links = array();
     $qr4_result = gmat_sp_get_review_result($user_id, 'quant_review_4');
     if ($qr4_result === 'fail') {
-        $v5_cross_links = array('quant_exercise_3', 'quant_review_4');
+        $qr4_failed_lessons = gmat_sp_get_quant_review_failures($user_id, 4);
+        $v5_cross_links = array_merge($qr4_failed_lessons, array('quant_exercise_3', 'quant_review_4'));
+        $v5_cross_links = array_values(array_unique($v5_cross_links));
     } elseif ($qr4_result === 'pass') {
         $v5_cross_links = array('quant_review_4');
     }
@@ -1067,9 +1195,11 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'learn' => array('cr_lesson_7'),
         'practice' => array('cr_exercise_6'),
         'review' => array('verbal_review_4'),
-        'suggest' => ($cr5_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'suggest' => '',
         'suggest_links' => array(),
-        'suggest_redo' => $v5_suggest_redo,
+        'suggest_redo' => array(),
+        'review_suggest' => ($cr5_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'review_suggest_redo' => $v5_suggest_redo,
         'cross_suggest' => '',
         'cross_suggest_links' => $v5_cross_links,
     );
@@ -1082,7 +1212,9 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     $v6_cross_links = array();
     $qr5_result = gmat_sp_get_review_result($user_id, 'quant_review_5');
     if ($qr5_result === 'fail') {
-        $v6_cross_links = array('quant_exercise_4', 'quant_review_5');
+        $qr5_failed_lessons = gmat_sp_get_quant_review_failures($user_id, 5);
+        $v6_cross_links = array_merge($qr5_failed_lessons, array('quant_exercise_4', 'quant_review_5'));
+        $v6_cross_links = array_values(array_unique($v6_cross_links));
     } elseif ($qr5_result === 'pass') {
         $v6_cross_links = array('quant_review_5');
     }
@@ -1092,9 +1224,11 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'learn' => array('cr_lesson_8', 'cr_lesson_9'),
         'practice' => array('cr_exercise_7', 'cr_exercise_8'),
         'review' => array('verbal_review_5'),
-        'suggest' => ($cr6_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'suggest' => '',
         'suggest_links' => array(),
-        'suggest_redo' => $v6_suggest_redo,
+        'suggest_redo' => array(),
+        'review_suggest' => ($cr6_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'review_suggest_redo' => $v6_suggest_redo,
         'cross_suggest' => '',
         'cross_suggest_links' => $v6_cross_links,
     );
@@ -1234,6 +1368,80 @@ function gmat_sp_format_description($desc) {
 
 
 // ============================================================================
+// Helper: build suggest box HTML from arguments
+// ============================================================================
+
+function gmat_sp_build_suggest_html($args, $all_keys) {
+    $suggest             = isset($args['suggest']) ? $args['suggest'] : '';
+    $suggest_links       = isset($args['suggest_links']) ? $args['suggest_links'] : array();
+    $suggest_redo        = isset($args['suggest_redo']) ? $args['suggest_redo'] : array();
+    $cross_suggest       = isset($args['cross_suggest']) ? $args['cross_suggest'] : '';
+    $cross_suggest_links = isset($args['cross_suggest_links']) ? $args['cross_suggest_links'] : array();
+
+    if (!$suggest && empty($suggest_links) && empty($suggest_redo) && !$cross_suggest && empty($cross_suggest_links)) {
+        return '';
+    }
+
+    ob_start();
+    ?>
+    <div class="gmat-sp-suggest">
+        <div class="gmat-sp-suggest__icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="#f68525" stroke-width="1.5"/><path d="M10 6v5M10 14h.01" stroke="#f68525" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <div class="gmat-sp-suggest__content">
+            <strong>Suggested areas of focus</strong>
+            <?php if ($suggest) : ?>
+                <p><?php echo esc_html($suggest); ?></p>
+            <?php endif; ?>
+
+            <?php if (!empty($suggest_links)) : ?>
+                <p class="gmat-sp-suggest__links">
+                    <?php
+                    $link_parts = array();
+                    foreach ($suggest_links as $slk) {
+                        $sl_label = isset($all_keys[$slk]) ? $all_keys[$slk]['label'] : $slk;
+                        $link_parts[] = '<a href="#sp-lesson-' . esc_attr($slk) . '" class="gmat-sp-suggest__link gmat-sp-suggest__scroll-link">' . esc_html($sl_label) . '</a>';
+                    }
+                    echo implode(' &amp; ', $link_parts);
+                    ?>
+                </p>
+            <?php endif; ?>
+
+            <?php if (!empty($suggest_redo)) : ?>
+                <p class="gmat-sp-suggest__redo">Recommend redoing:
+                    <?php
+                    $redo_parts = array();
+                    foreach ($suggest_redo as $rk) {
+                        $rk_label = isset($all_keys[$rk]) ? $all_keys[$rk]['label'] : $rk;
+                        $redo_parts[] = '<a href="#sp-lesson-' . esc_attr($rk) . '" class="gmat-sp-suggest__link gmat-sp-suggest__scroll-link">' . esc_html($rk_label) . '</a>';
+                    }
+                    echo implode(', ', $redo_parts);
+                    ?>
+                </p>
+            <?php endif; ?>
+
+            <?php if ($cross_suggest || !empty($cross_suggest_links)) : ?>
+                <p class="gmat-sp-suggest__cross"><strong>Also suggested:</strong>
+                    <?php if (!empty($cross_suggest_links)) :
+                        $cross_parts = array();
+                        foreach ($cross_suggest_links as $clk) {
+                            $cl_label = isset($all_keys[$clk]) ? $all_keys[$clk]['label'] : $clk;
+                            $cross_parts[] = '<a href="#sp-lesson-' . esc_attr($clk) . '" class="gmat-sp-suggest__link gmat-sp-suggest__scroll-link">' . esc_html($cl_label) . '</a>';
+                        }
+                        echo implode(' &amp; ', $cross_parts);
+                    elseif ($cross_suggest) :
+                        echo esc_html($cross_suggest);
+                    endif; ?>
+                </p>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+
+// ============================================================================
 // RENDER THE STUDY PLAN — 3 main sections stacked vertically
 // ============================================================================
 
@@ -1368,75 +1576,30 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                                     <p class="gmat-sp-unit__desc"><?php echo esc_html($unit['description']); ?></p>
                                 <?php endif; ?>
                                 <?php
-                                // ── Pre-build suggest box HTML ──
+                                // ── Build practice + review suggest boxes ──
                                 $suggest             = isset($unit['suggest']) ? $unit['suggest'] : '';
                                 $suggest_links       = isset($unit['suggest_links']) ? $unit['suggest_links'] : array();
+                                $suggest_redo        = isset($unit['suggest_redo']) ? $unit['suggest_redo'] : array();
+                                $review_suggest      = isset($unit['review_suggest']) ? $unit['review_suggest'] : '';
+                                $review_suggest_redo = isset($unit['review_suggest_redo']) ? $unit['review_suggest_redo'] : array();
                                 $cross_suggest       = isset($unit['cross_suggest']) ? $unit['cross_suggest'] : '';
                                 $cross_suggest_links = isset($unit['cross_suggest_links']) ? $unit['cross_suggest_links'] : array();
-                                $suggest_redo        = isset($unit['suggest_redo']) ? $unit['suggest_redo'] : array();
-                                $has_suggest = ($suggest || !empty($suggest_links) || $cross_suggest || !empty($cross_suggest_links) || !empty($suggest_redo));
-                                $suggest_box_html = '';
 
-                                if ($has_suggest) {
-                                    ob_start();
-                                    ?>
-                                    <div class="gmat-sp-suggest">
-                                        <div class="gmat-sp-suggest__icon">
-                                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="#f68525" stroke-width="1.5"/><path d="M10 6v5M10 14h.01" stroke="#f68525" stroke-width="2" stroke-linecap="round"/></svg>
-                                        </div>
-                                        <div class="gmat-sp-suggest__content">
-                                            <strong>Suggested areas of focus</strong>
-                                            <?php if ($suggest) : ?>
-                                                <p><?php echo esc_html($suggest); ?></p>
-                                            <?php endif; ?>
+                                // Practice suggest box: own unit failures
+                                $practice_suggest_html = gmat_sp_build_suggest_html(array(
+                                    'suggest'       => $suggest,
+                                    'suggest_links' => $suggest_links,
+                                    'suggest_redo'  => $suggest_redo,
+                                ), $all_keys);
 
-                                            <?php if (!empty($suggest_links)) : ?>
-                                                <p class="gmat-sp-suggest__links">
-                                                    <?php
-                                                    $link_parts = array();
-                                                    foreach ($suggest_links as $slk) {
-                                                        $sl_label = isset($all_keys[$slk]) ? $all_keys[$slk]['label'] : $slk;
-                                                        $link_parts[] = '<a href="#sp-lesson-' . esc_attr($slk) . '" class="gmat-sp-suggest__link gmat-sp-suggest__scroll-link">' . esc_html($sl_label) . '</a>';
-                                                    }
-                                                    echo implode(' &amp; ', $link_parts);
-                                                    ?>
-                                                </p>
-                                            <?php endif; ?>
+                                // Review suggest box: previous unit failures + cross-section
+                                $review_suggest_html = gmat_sp_build_suggest_html(array(
+                                    'suggest'              => $review_suggest,
+                                    'suggest_redo'         => $review_suggest_redo,
+                                    'cross_suggest'        => $cross_suggest,
+                                    'cross_suggest_links'  => $cross_suggest_links,
+                                ), $all_keys);
 
-                                            <?php if (!empty($suggest_redo)) : ?>
-                                                <p class="gmat-sp-suggest__redo">Recommend redoing:
-                                                    <?php
-                                                    $redo_parts = array();
-                                                    foreach ($suggest_redo as $rk) {
-                                                        $rk_label = isset($all_keys[$rk]) ? $all_keys[$rk]['label'] : $rk;
-                                                        $redo_parts[] = '<a href="#sp-lesson-' . esc_attr($rk) . '" class="gmat-sp-suggest__link gmat-sp-suggest__scroll-link">' . esc_html($rk_label) . '</a>';
-                                                    }
-                                                    echo implode(', ', $redo_parts);
-                                                    ?>
-                                                </p>
-                                            <?php endif; ?>
-
-                                            <?php if ($cross_suggest || !empty($cross_suggest_links)) : ?>
-                                                <p class="gmat-sp-suggest__cross"><strong>Also suggested:</strong>
-                                                    <?php if (!empty($cross_suggest_links)) :
-                                                        $cross_parts = array();
-                                                        foreach ($cross_suggest_links as $clk) {
-                                                            $cl_label = isset($all_keys[$clk]) ? $all_keys[$clk]['label'] : $clk;
-                                                            $cross_parts[] = '<a href="#sp-lesson-' . esc_attr($clk) . '" class="gmat-sp-suggest__link gmat-sp-suggest__scroll-link">' . esc_html($cl_label) . '</a>';
-                                                        }
-                                                        echo implode(' &amp; ', $cross_parts);
-                                                    elseif ($cross_suggest) :
-                                                        echo esc_html($cross_suggest);
-                                                    endif; ?>
-                                                </p>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                    <?php
-                                    $suggest_box_html = ob_get_clean();
-                                }
-
-                                $suggest_box_rendered = false;
                                 $sub_sections = array(
                                     'learn'    => 'Learn',
                                     'practice' => 'Practice',
@@ -1452,10 +1615,13 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                                         </div>
 
                                         <?php
-                                        // Output suggest box inside review section, above the lesson cards
-                                        if ($type === 'review' && $suggest_box_html && !$suggest_box_rendered) {
-                                            echo $suggest_box_html;
-                                            $suggest_box_rendered = true;
+                                        // Output practice suggest box above practice lesson cards
+                                        if ($type === 'practice' && $practice_suggest_html) {
+                                            echo $practice_suggest_html;
+                                        }
+                                        // Output review suggest box above review lesson cards
+                                        if ($type === 'review' && $review_suggest_html) {
+                                            echo $review_suggest_html;
                                         }
                                         ?>
 
@@ -1528,13 +1694,7 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                                                 $lesson_num++;
                                             endforeach; ?>
                                         </div>
-                                        <?php
-                                        // For units without review: render suggest box inside practice subsection
-                                        if ($type === 'practice' && $suggest_box_html && !$suggest_box_rendered && empty($unit['review'])) {
-                                            echo $suggest_box_html;
-                                            $suggest_box_rendered = true;
-                                        }
-                                        ?>
+                                        <?php ?>
                                     </div>
                                 <?php endforeach; // sub_sections ?>
 

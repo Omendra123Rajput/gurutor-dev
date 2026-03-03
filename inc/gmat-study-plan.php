@@ -627,11 +627,9 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     );
 
     // Verbal Unit 4 — Regular Argument Analysis
-    $v4_extra_review = array();
-    $v4_suggested_lessons = array();
+    $v4_suggest_redo = array();
     if ($cr4_result === 'fail') {
-        $v4_extra_review[] = 'cr_lesson_5';
-        $v4_suggested_lessons['cr_lesson_5'] = 'You need to improve: identifying, extracting key info, targeting, eliminating';
+        $v4_suggest_redo[] = 'cr_lesson_5';
     }
     $cr5_result = gmat_sp_get_exercise_result($user_id, 'cr_exercise_5');
     $verbal_units[] = array(
@@ -639,19 +637,16 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'description' => 'This unit focuses on "regular" CR arguments and strengthens your ability to evaluate how information affects conclusions. You\'ll refine your ability to identify logical gaps and eliminate attractive but irrelevant answers under time pressure. You\'ll finish up the unit with a thorough review of the verbal concepts from Unit 3 under exam-like conditions.',
         'learn' => array('cr_lesson_6'),
         'practice' => array('cr_exercise_5'),
-        'review' => array_merge($v4_extra_review, array('verbal_review_3')),
-        'suggest' => '',
+        'review' => array('verbal_review_3'),
+        'suggest' => ($cr4_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
         'suggest_links' => array(),
-        'suggest_redo' => array(),
-        'suggested_lessons' => $v4_suggested_lessons,
+        'suggest_redo' => $v4_suggest_redo,
     );
 
     // Verbal Unit 5 — Explanation-Based Reasoning
-    $v5_extra_review = array();
-    $v5_suggested_lessons = array();
+    $v5_suggest_redo = array();
     if ($cr5_result === 'fail') {
-        $v5_extra_review[] = 'cr_lesson_6';
-        $v5_suggested_lessons['cr_lesson_6'] = 'You need to improve: identifying, extracting key info, targeting, eliminating';
+        $v5_suggest_redo[] = 'cr_lesson_6';
     }
     $cr6_result = gmat_sp_get_exercise_result($user_id, 'cr_exercise_6');
     $verbal_units[] = array(
@@ -659,30 +654,26 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'description' => 'This unit builds mastery of explanation arguments by teaching you how to recognize observation-and-explanation reasoning and the specific thought patterns that correct answers consistently address. You\'ll then reinforce the concepts from Unit 4 by completing a Unit 4 Verbal Review Set under exam-like conditions.',
         'learn' => array('cr_lesson_7'),
         'practice' => array('cr_exercise_6'),
-        'review' => array_merge($v5_extra_review, array('verbal_review_4')),
-        'suggest' => '',
+        'review' => array('verbal_review_4'),
+        'suggest' => ($cr5_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
         'suggest_links' => array(),
-        'suggest_redo' => array(),
-        'suggested_lessons' => $v5_suggested_lessons,
+        'suggest_redo' => $v5_suggest_redo,
     );
 
     // Verbal Unit 6 — Advanced Logical Structures
-    $v6_extra_review = array();
-    $v6_suggested_lessons = array();
+    $v6_suggest_redo = array();
     if ($cr6_result === 'fail') {
-        $v6_extra_review[] = 'cr_lesson_7';
-        $v6_suggested_lessons['cr_lesson_7'] = 'You need to improve: identifying, extracting key info, targeting, eliminating';
+        $v6_suggest_redo[] = 'cr_lesson_7';
     }
     $verbal_units[] = array(
         'title' => 'Unit 6 – Advanced Logical Structures',
         'description' => 'This unit covers advanced CR families, including structure- and evidence-based questions. You\'ll learn to analyze arguments independent of topic content and apply advanced reasoning skills consistently across difficult questions before revisiting the concepts from Unit 5 under exam-like conditions.',
         'learn' => array('cr_lesson_8', 'cr_lesson_9'),
         'practice' => array('cr_exercise_7', 'cr_exercise_8'),
-        'review' => array_merge($v6_extra_review, array('verbal_review_5')),
-        'suggest' => '',
+        'review' => array('verbal_review_5'),
+        'suggest' => ($cr6_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
         'suggest_links' => array(),
-        'suggest_redo' => array(),
-        'suggested_lessons' => $v6_suggested_lessons,
+        'suggest_redo' => $v6_suggest_redo,
     );
 
     $plan[] = array('section' => 'Verbal', 'units' => $verbal_units);
@@ -1032,11 +1023,9 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     );
 
     // Verbal Unit 4 — Regular Argument Analysis
-    $v4_extra_review = array();
-    $v4_suggested_lessons = array();
+    $v4_suggest_redo = array();
     if ($cr4_result === 'fail') {
-        $v4_extra_review[] = 'cr_lesson_5';
-        $v4_suggested_lessons['cr_lesson_5'] = 'You need to improve: identifying, extracting key info, targeting, eliminating';
+        $v4_suggest_redo[] = 'cr_lesson_5';
     }
     $cr5_result = gmat_sp_get_exercise_result($user_id, 'cr_exercise_5');
     $v4_cross_links = array();
@@ -1051,21 +1040,18 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'description' => 'This unit focuses on "regular" CR arguments and strengthens your ability to evaluate how information affects conclusions. You\'ll refine your ability to identify logical gaps and eliminate attractive but irrelevant answers under time pressure. You\'ll finish up the unit with a thorough review of the verbal concepts from Unit 3 under exam-like conditions.',
         'learn' => array('cr_lesson_6'),
         'practice' => array('cr_exercise_5'),
-        'review' => array_merge($v4_extra_review, array('verbal_review_3')),
-        'suggest' => '',
+        'review' => array('verbal_review_3'),
+        'suggest' => ($cr4_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
         'suggest_links' => array(),
-        'suggest_redo' => array(),
+        'suggest_redo' => $v4_suggest_redo,
         'cross_suggest' => '',
         'cross_suggest_links' => $v4_cross_links,
-        'suggested_lessons' => $v4_suggested_lessons,
     );
 
     // Verbal Unit 5 — Explanation-Based Reasoning
-    $v5_extra_review = array();
-    $v5_suggested_lessons = array();
+    $v5_suggest_redo = array();
     if ($cr5_result === 'fail') {
-        $v5_extra_review[] = 'cr_lesson_6';
-        $v5_suggested_lessons['cr_lesson_6'] = 'You need to improve: identifying, extracting key info, targeting, eliminating';
+        $v5_suggest_redo[] = 'cr_lesson_6';
     }
     $cr6_result = gmat_sp_get_exercise_result($user_id, 'cr_exercise_6');
     $v5_cross_links = array();
@@ -1080,21 +1066,18 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'description' => 'This unit builds mastery of explanation arguments by teaching you how to recognize observation-and-explanation reasoning and the specific thought patterns that correct answers consistently address. You\'ll then reinforce the concepts from Unit 4 by completing a Unit 4 Verbal Review Set under exam-like conditions.',
         'learn' => array('cr_lesson_7'),
         'practice' => array('cr_exercise_6'),
-        'review' => array_merge($v5_extra_review, array('verbal_review_4')),
-        'suggest' => '',
+        'review' => array('verbal_review_4'),
+        'suggest' => ($cr5_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
         'suggest_links' => array(),
-        'suggest_redo' => array(),
+        'suggest_redo' => $v5_suggest_redo,
         'cross_suggest' => '',
         'cross_suggest_links' => $v5_cross_links,
-        'suggested_lessons' => $v5_suggested_lessons,
     );
 
     // Verbal Unit 6 — Advanced Logical Structures
-    $v6_extra_review = array();
-    $v6_suggested_lessons = array();
+    $v6_suggest_redo = array();
     if ($cr6_result === 'fail') {
-        $v6_extra_review[] = 'cr_lesson_7';
-        $v6_suggested_lessons['cr_lesson_7'] = 'You need to improve: identifying, extracting key info, targeting, eliminating';
+        $v6_suggest_redo[] = 'cr_lesson_7';
     }
     $v6_cross_links = array();
     $qr5_result = gmat_sp_get_review_result($user_id, 'quant_review_5');
@@ -1108,11 +1091,10 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'description' => 'This unit covers advanced CR families, including structure- and evidence-based questions. You\'ll learn to analyze arguments independent of topic content and apply advanced reasoning skills consistently across difficult questions before revisiting the concepts from Unit 5 under exam-like conditions.',
         'learn' => array('cr_lesson_8', 'cr_lesson_9'),
         'practice' => array('cr_exercise_7', 'cr_exercise_8'),
-        'review' => array_merge($v6_extra_review, array('verbal_review_5')),
-        'suggest' => '',
+        'review' => array('verbal_review_5'),
+        'suggest' => ($cr6_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
         'suggest_links' => array(),
-        'suggest_redo' => array(),
-        'suggested_lessons' => $v6_suggested_lessons,
+        'suggest_redo' => $v6_suggest_redo,
         'cross_suggest' => '',
         'cross_suggest_links' => $v6_cross_links,
     );
@@ -1386,6 +1368,75 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                                     <p class="gmat-sp-unit__desc"><?php echo esc_html($unit['description']); ?></p>
                                 <?php endif; ?>
                                 <?php
+                                // ── Pre-build suggest box HTML ──
+                                $suggest             = isset($unit['suggest']) ? $unit['suggest'] : '';
+                                $suggest_links       = isset($unit['suggest_links']) ? $unit['suggest_links'] : array();
+                                $cross_suggest       = isset($unit['cross_suggest']) ? $unit['cross_suggest'] : '';
+                                $cross_suggest_links = isset($unit['cross_suggest_links']) ? $unit['cross_suggest_links'] : array();
+                                $suggest_redo        = isset($unit['suggest_redo']) ? $unit['suggest_redo'] : array();
+                                $has_suggest = ($suggest || !empty($suggest_links) || $cross_suggest || !empty($cross_suggest_links) || !empty($suggest_redo));
+                                $suggest_box_html = '';
+
+                                if ($has_suggest) {
+                                    ob_start();
+                                    ?>
+                                    <div class="gmat-sp-suggest">
+                                        <div class="gmat-sp-suggest__icon">
+                                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="#f68525" stroke-width="1.5"/><path d="M10 6v5M10 14h.01" stroke="#f68525" stroke-width="2" stroke-linecap="round"/></svg>
+                                        </div>
+                                        <div class="gmat-sp-suggest__content">
+                                            <strong>Suggested areas of focus</strong>
+                                            <?php if ($suggest) : ?>
+                                                <p><?php echo esc_html($suggest); ?></p>
+                                            <?php endif; ?>
+
+                                            <?php if (!empty($suggest_links)) : ?>
+                                                <p class="gmat-sp-suggest__links">
+                                                    <?php
+                                                    $link_parts = array();
+                                                    foreach ($suggest_links as $slk) {
+                                                        $sl_label = isset($all_keys[$slk]) ? $all_keys[$slk]['label'] : $slk;
+                                                        $link_parts[] = '<a href="#sp-lesson-' . esc_attr($slk) . '" class="gmat-sp-suggest__link gmat-sp-suggest__scroll-link">' . esc_html($sl_label) . '</a>';
+                                                    }
+                                                    echo implode(' &amp; ', $link_parts);
+                                                    ?>
+                                                </p>
+                                            <?php endif; ?>
+
+                                            <?php if (!empty($suggest_redo)) : ?>
+                                                <p class="gmat-sp-suggest__redo">Recommend redoing:
+                                                    <?php
+                                                    $redo_parts = array();
+                                                    foreach ($suggest_redo as $rk) {
+                                                        $rk_label = isset($all_keys[$rk]) ? $all_keys[$rk]['label'] : $rk;
+                                                        $redo_parts[] = '<a href="#sp-lesson-' . esc_attr($rk) . '" class="gmat-sp-suggest__link gmat-sp-suggest__scroll-link">' . esc_html($rk_label) . '</a>';
+                                                    }
+                                                    echo implode(', ', $redo_parts);
+                                                    ?>
+                                                </p>
+                                            <?php endif; ?>
+
+                                            <?php if ($cross_suggest || !empty($cross_suggest_links)) : ?>
+                                                <p class="gmat-sp-suggest__cross"><strong>Also suggested:</strong>
+                                                    <?php if (!empty($cross_suggest_links)) :
+                                                        $cross_parts = array();
+                                                        foreach ($cross_suggest_links as $clk) {
+                                                            $cl_label = isset($all_keys[$clk]) ? $all_keys[$clk]['label'] : $clk;
+                                                            $cross_parts[] = '<a href="#sp-lesson-' . esc_attr($clk) . '" class="gmat-sp-suggest__link gmat-sp-suggest__scroll-link">' . esc_html($cl_label) . '</a>';
+                                                        }
+                                                        echo implode(' &amp; ', $cross_parts);
+                                                    elseif ($cross_suggest) :
+                                                        echo esc_html($cross_suggest);
+                                                    endif; ?>
+                                                </p>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <?php
+                                    $suggest_box_html = ob_get_clean();
+                                }
+
+                                $suggest_box_rendered = false;
                                 $sub_sections = array(
                                     'learn'    => 'Learn',
                                     'practice' => 'Practice',
@@ -1399,6 +1450,14 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                                         <div class="gmat-sp-subsection__badge gmat-sp-subsection__badge--<?php echo $type; ?>">
                                             UNIT <?php echo ($ui + 1); ?> - <?php echo strtoupper($type_label); ?>
                                         </div>
+
+                                        <?php
+                                        // Output suggest box inside review section, above the lesson cards
+                                        if ($type === 'review' && $suggest_box_html && !$suggest_box_rendered) {
+                                            echo $suggest_box_html;
+                                            $suggest_box_rendered = true;
+                                        }
+                                        ?>
 
                                         <div class="gmat-sp-lesson-list">
                                             <?php
@@ -1415,7 +1474,7 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                                                 $card_classes = 'gmat-sp-lesson gmat-sp-lesson--' . $status;
                                                 if ($is_suggested) $card_classes .= ' gmat-sp-lesson--suggested';
                                             ?>
-                                                <div class="<?php echo $card_classes; ?>">
+                                                <div id="sp-lesson-<?php echo esc_attr($lk); ?>" class="<?php echo $card_classes; ?>">
                                                     <div class="gmat-sp-lesson__top-row">
                                                         <div class="gmat-sp-lesson__number-col">
                                                             <span class="gmat-sp-lesson__number gmat-sp-lesson__number--<?php echo $status; ?>"><?php echo $lesson_num; ?></span>
@@ -1469,90 +1528,15 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                                                 $lesson_num++;
                                             endforeach; ?>
                                         </div>
+                                        <?php
+                                        // For units without review: render suggest box inside practice subsection
+                                        if ($type === 'practice' && $suggest_box_html && !$suggest_box_rendered && empty($unit['review'])) {
+                                            echo $suggest_box_html;
+                                            $suggest_box_rendered = true;
+                                        }
+                                        ?>
                                     </div>
-                                <?php endforeach; // sub_sections
-
-                                
-                                // Suggest areas of focus for this unit
-                                $suggest             = isset($unit['suggest']) ? $unit['suggest'] : '';
-                                $suggest_links       = isset($unit['suggest_links']) ? $unit['suggest_links'] : array();
-                                $cross_suggest       = isset($unit['cross_suggest']) ? $unit['cross_suggest'] : '';
-                                $cross_suggest_links = isset($unit['cross_suggest_links']) ? $unit['cross_suggest_links'] : array();
-                                $suggest_redo        = isset($unit['suggest_redo']) ? $unit['suggest_redo'] : array();
-
-                                $has_suggest = ($suggest || !empty($suggest_links) || $cross_suggest || !empty($cross_suggest_links) || !empty($suggest_redo));
-
-                                if ($has_suggest) : ?>
-                                    <div class="gmat-sp-suggest">
-                                        <div class="gmat-sp-suggest__icon">
-                                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="9" stroke="#f68525" stroke-width="1.5"/><path d="M10 6v5M10 14h.01" stroke="#f68525" stroke-width="2" stroke-linecap="round"/></svg>
-                                        </div>
-                                        <div class="gmat-sp-suggest__content">
-                                            <strong>Suggested areas of focus</strong>
-                                            <?php if ($suggest) : ?>
-                                                <p><?php echo esc_html($suggest); ?></p>
-                                            <?php endif; ?>
-
-                                            <?php // Clickable suggest links (e.g. "CR Lesson 8 & CR Exercise 7")
-                                            if (!empty($suggest_links)) : ?>
-                                                <p class="gmat-sp-suggest__links">
-                                                    <?php
-                                                    $link_parts = array();
-                                                    foreach ($suggest_links as $slk) {
-                                                        $sl_label = isset($all_keys[$slk]) ? $all_keys[$slk]['label'] : $slk;
-                                                        $sl_url   = gmat_sp_get_url($slk, $lesson_ids);
-                                                        if ($sl_url && $sl_url !== '#') {
-                                                            $link_parts[] = '<a href="' . esc_url($sl_url) . '" class="gmat-sp-suggest__link">' . esc_html($sl_label) . '</a>';
-                                                        } else {
-                                                            $link_parts[] = esc_html($sl_label);
-                                                        }
-                                                    }
-                                                    echo implode(' &amp; ', $link_parts);
-                                                    ?>
-                                                </p>
-                                            <?php endif; ?>
-
-                                            <?php if (!empty($suggest_redo)) : ?>
-                                                <p class="gmat-sp-suggest__redo">Recommend redoing:
-                                                    <?php
-                                                    $redo_parts = array();
-                                                    foreach ($suggest_redo as $rk) {
-                                                        $rk_label = isset($all_keys[$rk]) ? $all_keys[$rk]['label'] : $rk;
-                                                        $rk_url   = gmat_sp_get_url($rk, $lesson_ids);
-                                                        if ($rk_url && $rk_url !== '#') {
-                                                            $redo_parts[] = '<a href="' . esc_url($rk_url) . '" class="gmat-sp-suggest__link">' . esc_html($rk_label) . '</a>';
-                                                        } else {
-                                                            $redo_parts[] = esc_html($rk_label);
-                                                        }
-                                                    }
-                                                    echo implode(', ', $redo_parts);
-                                                    ?>
-                                                </p>
-                                            <?php endif; ?>
-
-                                            <?php // Cross-suggest with clickable links
-                                            if ($cross_suggest || !empty($cross_suggest_links)) : ?>
-                                                <p class="gmat-sp-suggest__cross"><strong>Also suggested:</strong>
-                                                    <?php if (!empty($cross_suggest_links)) :
-                                                        $cross_parts = array();
-                                                        foreach ($cross_suggest_links as $clk) {
-                                                            $cl_label = isset($all_keys[$clk]) ? $all_keys[$clk]['label'] : $clk;
-                                                            $cl_url   = gmat_sp_get_url($clk, $lesson_ids);
-                                                            if ($cl_url && $cl_url !== '#') {
-                                                                $cross_parts[] = '<a href="' . esc_url($cl_url) . '" class="gmat-sp-suggest__link">' . esc_html($cl_label) . '</a>';
-                                                            } else {
-                                                                $cross_parts[] = esc_html($cl_label);
-                                                            }
-                                                        }
-                                                        echo implode(' &amp; ', $cross_parts);
-                                                    elseif ($cross_suggest) :
-                                                        echo esc_html($cross_suggest);
-                                                    endif; ?>
-                                                </p>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                <?php endif; ?>
+                                <?php endforeach; // sub_sections ?>
 
                               </div><!-- /.gmat-sp-unit__body-inner -->
                             </div><!-- /.gmat-sp-unit__body -->

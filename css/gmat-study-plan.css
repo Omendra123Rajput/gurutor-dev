@@ -141,6 +141,14 @@
     border-radius: 16px;
     border: 1px solid #D5D8DC;
     background: #FFF;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.gmat-sp-breakdown__card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #00409E;
 }
 
 .gmat-sp-breakdown__card-top {
@@ -876,31 +884,30 @@
         padding: 14px 0;
     }
 
-    /* ── Fix: Lesson row stacking on mobile ── */
+    /* ── Lesson cards on mobile ── */
     .gmat-sp-lesson {
         padding: 10px 12px;
     }
 
     .gmat-sp-lesson__top-row {
-        gap: 10px;
+        flex-wrap: wrap;
+        gap: 8px;
     }
 
-    /* Lesson info takes remaining space, truncates if needed */
     .gmat-sp-lesson__info {
         min-width: 0;
+        flex: 1 1 0;
     }
 
     .gmat-sp-lesson__name {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        word-break: break-word;
     }
 
-    /* Actions stack vertically on mobile to prevent overflow */
+    .gmat-sp-lesson__topic {
+        word-break: break-word;
+    }
+
     .gmat-sp-lesson__actions {
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 6px;
         flex-shrink: 0;
     }
 
@@ -913,6 +920,11 @@
         font-size: 11px;
         padding: 6px 14px;
         white-space: nowrap;
+    }
+
+    /* Suggest box text */
+    .gmat-sp-suggest__content {
+        word-break: break-word;
     }
 }
 
@@ -942,13 +954,19 @@
         padding: 16px;
     }
 
-    .gmat-sp-lesson__name {
-        font-size: 13px;
+    /* ── Lesson cards: stack layout vertically ── */
+    .gmat-sp-lesson__top-row {
+        flex-wrap: wrap;
     }
 
-    .gmat-sp-lesson__btn {
-        font-size: 11px;
-        padding: 5px 12px;
+    /* Number + info row: take full width */
+    .gmat-sp-lesson__number-col {
+        padding-left: 10px;
+        flex-shrink: 0;
+    }
+
+    .gmat-sp-lesson__number-col::before {
+        height: 28px;
     }
 
     .gmat-sp-lesson__number {
@@ -957,16 +975,44 @@
         font-size: 12px;
     }
 
-    .gmat-sp-lesson__number-col {
-        padding-left: 10px;
+    .gmat-sp-lesson__info {
+        flex: 1 1 0;
+        min-width: 0;
     }
 
-    .gmat-sp-lesson__number-col::before {
-        height: 28px;
+    .gmat-sp-lesson__name {
+        font-size: 13px;
+        word-break: break-word;
+        white-space: normal;
     }
 
     .gmat-sp-lesson__topic {
         font-size: 11px;
+        word-break: break-word;
+    }
+
+    /* Actions go to their own row */
+    .gmat-sp-lesson__actions {
+        width: 100%;
+        flex-basis: 100%;
+        padding-left: 42px;
+        gap: 6px;
+    }
+
+    .gmat-sp-lesson__btn {
+        font-size: 11px;
+        padding: 5px 12px;
+    }
+
+    /* Expand icon stays inline with actions */
+    .gmat-sp-lesson__expand-icon {
+        position: absolute;
+        right: 12px;
+        top: 12px;
+    }
+
+    .gmat-sp-lesson {
+        position: relative;
     }
 
     .gmat-sp-unit__title {
@@ -984,6 +1030,11 @@
     .gmat-sp-suggest {
         padding: 12px 14px;
         gap: 8px;
+    }
+
+    .gmat-sp-suggest__content {
+        font-size: 12px;
+        word-break: break-word;
     }
 
     .gmat-sp-lesson__desc {
@@ -1021,3 +1072,9 @@
     }
 }
 
+@media (max-width: 480px) {
+    #gmat-study-plan {
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+}

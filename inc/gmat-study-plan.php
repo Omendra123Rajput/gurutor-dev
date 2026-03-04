@@ -1500,7 +1500,7 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                     $sec_pct = $st['total'] > 0 ? round(($st['done'] / $st['total']) * 100) : 0;
                     $bar_color = isset($color_map[$section['section']]) ? $color_map[$section['section']] : '#A855F7';
                 ?>
-                    <div class="gmat-sp-breakdown__card">
+                    <div class="gmat-sp-breakdown__card" data-section="<?php echo esc_attr(sanitize_title($section['section'])); ?>">
                         <div class="gmat-sp-breakdown__card-top">
                             <span class="gmat-sp-breakdown__card-label"><?php echo esc_html($section['section']); ?> Modules Completed</span>
                             <span class="gmat-sp-breakdown__card-count"><?php echo intval($st['done']); ?>/<?php echo intval($st['total']); ?></span>
@@ -1519,7 +1519,7 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
             $sec_label_map = array('Verbal' => 'Verbal Modules', 'Quant' => 'Quant Modules', 'Data Insights' => 'Data Insights Modules');
             $sec_title = isset($sec_label_map[$section['section']]) ? $sec_label_map[$section['section']] : $section['section'] . ' Modules';
         ?>
-            <div class="gmat-sp-section">
+            <div class="gmat-sp-section" id="sp-section-<?php echo esc_attr(sanitize_title($section['section'])); ?>">
                 <h2 class="gmat-sp-section__title"><?php echo esc_html($sec_title); ?></h2>
                 <div class="gmat-sp-section__card">
                     <?php foreach ($section['units'] as $ui => $unit) :

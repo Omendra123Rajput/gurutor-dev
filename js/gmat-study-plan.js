@@ -60,6 +60,17 @@
                 }
             });
 
+            // Breakdown card click — scroll to respective module section
+            this.$wrap.on('click', '.gmat-sp-breakdown__card', function () {
+                var sectionSlug = $(this).data('section');
+                if (!sectionSlug) return;
+                var $target = $('#sp-section-' + sectionSlug);
+                if (!$target.length) return;
+                $('html, body').animate({
+                    scrollTop: $target.offset().top - 20
+                }, 400);
+            });
+
             // Lesson accordion toggle — click on lesson row
             this.$wrap.on('click', '.gmat-sp-lesson', function (e) {
                 // Don't toggle if user clicked a link or button

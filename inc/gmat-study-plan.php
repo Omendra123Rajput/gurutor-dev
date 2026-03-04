@@ -347,7 +347,7 @@ function gmat_sp_get_pass_fail_variable_map() {
         'QRS_Unit4_ALG3_Pass_or_Fail'  => 'quant_review_4',
         'QRS_Unit4_WP3_Pass_or_Fail'   => 'quant_review_4',
         'QRS_Unit4_WP4_Pass_or_Fail'   => 'quant_review_4',
-        'QRS_Unit4_FRP4_Pass_or_Fail'  => 'quant_review_4',
+        'QRS_Unit4_FPR4_Pass_or_Fail'  => 'quant_review_4',
         // Unit 5 QRS
         'QRS_Unit5_ALG4_Pass_or_Fail'  => 'quant_review_5',
         'QRS_Unit5_WP5_Pass_or_Fail'   => 'quant_review_5',
@@ -1473,13 +1473,20 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
     ?>
     <div id="gmat-study-plan">
 
+        <!-- ── Page Header Banner ── -->
+        <div class="gmat-sp-header">
+            <h1 class="gmat-sp-header__title">Gurutor's GMAT Program</h1>
+        </div>
+
         <!-- ── Overall Progress ── -->
         <div class="gmat-sp-overall">
             <div class="gmat-sp-overall__label">GMAT Overall Progress</div>
-            <div class="gmat-sp-overall__bar-wrap">
-                <div class="gmat-sp-overall__bar" style="width: <?php echo $progress_pct; ?>%;"></div>
+            <div class="gmat-sp-overall__bar-row">
+                <div class="gmat-sp-overall__bar-wrap">
+                    <div class="gmat-sp-overall__bar" style="width: <?php echo $progress_pct; ?>%;"></div>
+                </div>
+                <div class="gmat-sp-overall__pct"><?php echo $progress_pct; ?>% Complete</div>
             </div>
-            <div class="gmat-sp-overall__pct"><?php echo $progress_pct; ?>% Complete</div>
         </div>
 
         <!-- ── Course Progress Breakdown (3 cards) ── -->
@@ -1487,11 +1494,11 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
             <h3 class="gmat-sp-breakdown__title">Course Progress Breakdown</h3>
             <div class="gmat-sp-breakdown__cards">
                 <?php
-                $color_map = array('Verbal' => '#22c55e', 'Quant' => '#5b6abf', 'Data Insights' => '#3b82f6');
+                $color_map = array('Verbal' => '#22C55E', 'Quant' => '#A855F7', 'Data Insights' => '#3B82F6');
                 foreach ($plan as $section) :
                     $st = $section_stats[$section['section']];
                     $sec_pct = $st['total'] > 0 ? round(($st['done'] / $st['total']) * 100) : 0;
-                    $bar_color = isset($color_map[$section['section']]) ? $color_map[$section['section']] : '#5b6abf';
+                    $bar_color = isset($color_map[$section['section']]) ? $color_map[$section['section']] : '#A855F7';
                 ?>
                     <div class="gmat-sp-breakdown__card">
                         <div class="gmat-sp-breakdown__card-top">

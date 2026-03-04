@@ -14,11 +14,45 @@
 }
 
 #gmat-study-plan {
-    max-width: 900px;
+    max-width: 1120px;
     margin: 0 auto;
-    padding: 10px 0 60px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    padding: 0 0 60px;
+    font-family: 'Nunito Sans', sans-serif;
     color: #1e293b;
+}
+
+
+/* ============================================================================
+   Page Header — "Gurutor's GMAT Program"
+   ============================================================================ */
+
+.gmat-sp-header {
+    position: relative;
+    padding: 56px 0;
+    margin-bottom: 28px;
+}
+
+.gmat-sp-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    background: #00409E;
+    z-index: 0;
+}
+
+.gmat-sp-header__title {
+    position: relative;
+    z-index: 1;
+    color: #FFF;
+    font-family: 'Nunito Sans', sans-serif;
+    font-size: 46px;
+    font-weight: 900;
+    line-height: 57.5px;
+    margin: 0;
 }
 
 
@@ -27,19 +61,28 @@
    ============================================================================ */
 
 .gmat-sp-overall {
-    margin-bottom: 28px;
+    margin-bottom: 20px;
 }
 
 .gmat-sp-overall__label {
-    font-size: 15px;
-    font-weight: 600;
+    margin-bottom: 16px;
     color: #00409E;
-    margin-bottom: 10px;
+    font-family: "Nunito Sans";
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+}
+
+.gmat-sp-overall__bar-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
 }
 
 .gmat-sp-overall__bar-wrap {
-    width: 100%;
-    height: 10px;
+    flex: 1;
+    height: 12px;
     background: #e2e8f0;
     border-radius: 6px;
     overflow: hidden;
@@ -54,11 +97,14 @@
 }
 
 .gmat-sp-overall__pct {
-    text-align: right;
-    font-size: 13px;
-    font-weight: 600;
-    color: #00409E;
-    margin-top: 6px;
+    color: #09B900;
+    font-family: "Nunito Sans";
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 24px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 
@@ -67,58 +113,68 @@
    ============================================================================ */
 
 .gmat-sp-breakdown {
-    margin-bottom: 40px;
+    margin-bottom: 32px;
 }
 
 .gmat-sp-breakdown__title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #00409E;
-    margin: 0 0 14px;
+    color: #00409E !important;
+    font-family: "Nunito Sans" !important;
+    font-size: 18px !important;
+    font-style: normal !important;
+    font-weight: 700 !important;
+    line-height: normal !important;
+    margin: 0 0 10px;
 }
 
 .gmat-sp-breakdown__cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
     gap: 16px;
 }
 
 .gmat-sp-breakdown__card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 16px 18px;
+    display: flex;
+    padding: 24px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    flex: 1 0 0;
+    border-radius: 16px;
+    border: 1px solid #D5D8DC;
+    background: #FFF;
 }
 
 .gmat-sp-breakdown__card-top {
     display: flex;
-    align-items: flex-start;
+    align-items: baseline;
     justify-content: space-between;
-    margin-bottom: 10px;
+    width: 100%;
 }
 
 .gmat-sp-breakdown__card-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: #475569;
-    line-height: 1.3;
+    color: #222;
+    font-family: 'Nunito Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: normal;
 }
 
 .gmat-sp-breakdown__card-count {
-    font-size: 14px;
+    color: #222;
+    font-family: "Nunito Sans";
+    font-size: 16px;
+    font-style: normal;
     font-weight: 700;
-    color: #1e293b;
+    line-height: normal;
     white-space: nowrap;
     margin-left: 8px;
 }
 
 .gmat-sp-breakdown__card-bar-wrap {
     width: 100%;
-    height: 6px;
+    height: 10px;
     background: #e2e8f0;
     border-radius: 4px;
     overflow: hidden;
-    margin-bottom: 8px;
 }
 
 .gmat-sp-breakdown__card-bar {
@@ -129,8 +185,10 @@
 }
 
 .gmat-sp-breakdown__card-pct {
-    font-size: 13px;
-    font-weight: 600;
+    font-family: 'Nunito Sans', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: normal;
 }
 
 
@@ -143,18 +201,20 @@
 }
 
 .gmat-sp-section__title {
-    font-size: 24px;
-    font-weight: 700;
-    color: #1e3a5f;
+    color: #00409E !important;
+    font-family: "Nunito Sans" !important;
+    font-size: 38px !important;
+    font-style: normal;
+    font-weight: 900 !important;
+    line-height: 57.5px !important;
     margin: 0 0 16px;
-    /* font-style: italic; */
 }
 
 .gmat-sp-section__card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
+    background: #FFF;
+    border-radius: 8px;
     padding: 16px;
+    box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.15);
 }
 
 
@@ -379,7 +439,7 @@
     width: 4px;
     height: 36px;
     border-radius: 2px;
-    background: #5b6abf;
+    background: #4F80FF;
     transition: background 0.2s ease;
 }
 
@@ -406,7 +466,7 @@
 }
 
 .gmat-sp-lesson__number--not-started {
-    background: #5b6abf;
+    background: #4F80FF;
     color: #fff;
 }
 
@@ -437,7 +497,7 @@
 }
 
 .gmat-sp-lesson--completed .gmat-sp-lesson__name {
-    color: #64748b;
+    color: #222;
 }
 
 .gmat-sp-lesson__topic {
@@ -462,7 +522,7 @@
     align-items: center;
     padding: 4px 12px;
     border-radius: 16px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -489,7 +549,7 @@
     text-decoration: none;
     cursor: pointer;
     transition: all 0.2s ease;
-    background: #5b6abf;
+    background: #4F80FF;
     color: #fff;
     border: none;
     white-space: nowrap;
@@ -601,8 +661,9 @@
    ============================================================================ */
 
 .gmat-sp-unit__desc {
-    font-size: 13px;
-    color: #475569;
+    font-size: 14px;
+    color: #222;
+    font-weight: 600;
     line-height: 1.5;
     margin: 0 0 16px;
     padding: 0 0 12px;
@@ -641,7 +702,7 @@
     transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     padding: 0 16px 0 50px;
     font-size: 13px;
-    color: #475569;
+    color: #222;
     line-height: 1.6;
     box-sizing: border-box;
 }
@@ -766,11 +827,25 @@
 
 @media (max-width: 767px) {
     #gmat-study-plan {
-        padding: 8px 10px 40px;
+        padding: 0 10px 40px;
+    }
+
+    .gmat-sp-header {
+        padding: 20px 0;
+    }
+
+    .gmat-sp-header__title {
+        font-size: 28px;
+        line-height: 36px;
     }
 
     .gmat-sp-breakdown__cards {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .gmat-sp-breakdown__card {
+        padding: 18px;
     }
 
     .gmat-sp-section__title {
@@ -842,6 +917,31 @@
 }
 
 @media (max-width: 480px) {
+    .gmat-sp-header {
+        padding: 16px 0;
+    }
+
+    .gmat-sp-header__title {
+        font-size: 22px;
+        line-height: 30px;
+    }
+
+    .gmat-sp-breakdown__card-pct {
+        font-size: 16px;
+    }
+
+    .gmat-sp-breakdown__card-label {
+        font-size: 14px;
+    }
+
+    .gmat-sp-section__title {
+        font-size: 18px;
+    }
+
+    .gmat-sp-breakdown__card {
+        padding: 16px;
+    }
+
     .gmat-sp-lesson__name {
         font-size: 13px;
     }
@@ -906,3 +1006,18 @@
         font-size: 12px;
     }
 }
+
+@media (max-width: 1024px) {
+    #gmat-study-plan {
+        padding-right: 35px;
+        padding-left: 35px;
+    }
+}
+
+@media (max-width: 768px) {
+    #gmat-study-plan {
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+}
+

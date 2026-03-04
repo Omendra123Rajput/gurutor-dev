@@ -347,7 +347,7 @@ function gmat_sp_get_pass_fail_variable_map() {
         'QRS_Unit4_ALG3_Pass_or_Fail'  => 'quant_review_4',
         'QRS_Unit4_WP3_Pass_or_Fail'   => 'quant_review_4',
         'QRS_Unit4_WP4_Pass_or_Fail'   => 'quant_review_4',
-        'QRS_Unit4_FRP4_Pass_or_Fail'  => 'quant_review_4',
+        'QRS_Unit4_FPR4_Pass_or_Fail'  => 'quant_review_4',
         // Unit 5 QRS
         'QRS_Unit5_ALG4_Pass_or_Fail'  => 'quant_review_5',
         'QRS_Unit5_WP5_Pass_or_Fail'   => 'quant_review_5',

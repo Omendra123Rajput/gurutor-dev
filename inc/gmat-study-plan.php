@@ -711,7 +711,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
-        'review_suggest' => ($cr4_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'review_suggest' => ($cr4_result === 'fail') ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $v4_suggest_redo,
     );
 
@@ -730,7 +730,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
-        'review_suggest' => ($cr5_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'review_suggest' => ($cr5_result === 'fail') ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $v5_suggest_redo,
     );
 
@@ -748,7 +748,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
-        'review_suggest' => ($cr6_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'review_suggest' => ($cr6_result === 'fail') ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $v6_suggest_redo,
     );
 
@@ -780,7 +780,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'learn' => $q2_learn,
         'practice' => array('quant_exercise_1'),
         'review' => array(),
-        'suggest' => !empty($q2_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q2_all_redo) ? 'Before completing the Quant Exercise, we suggest that you revisit the following lessons to reinforce the skills that the Exercise tests.' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q2_all_redo,
     );
@@ -788,11 +788,8 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     // Quant Unit 3 — Structure, Estimation, and Multi-Step Reasoning
     $q3_learn = array('pss_lesson_2', 'number_props_2', 'algebra_2', 'word_problems_2', 'fprs_1');
     $q3_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
-    // Review extra: previous unit's learn + exercise failures (above Unit 2 Quant Review Set)
-    $q3_review_extra = array_values(array_unique(array_merge(
-        gmat_sp_get_learn_lesson_failures($user_id, $q2_learn),
-        gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids)
-    )));
+    // Review extra: previous unit's exercise failures only (above Unit 2 Quant Review Set)
+    $q3_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
     $q3_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q3_learn);
     $q3_all_redo = array_values(array_unique(array_merge($q3_learn_failures, $q3_exercise_failures)));
     // Verbal cross-suggest — only show when explicit pass/fail signal exists
@@ -809,10 +806,10 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'learn' => $q3_learn,
         'practice' => array('quant_exercise_2'),
         'review' => array('quant_review_2'),
-        'suggest' => !empty($q3_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q3_all_redo) ? 'Before completing the Quant Exercise, we suggest that you revisit the following lessons to reinforce the skills that the Exercise tests.' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q3_all_redo,
-        'review_suggest' => !empty($q3_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest' => !empty($q3_review_extra) ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $q3_review_extra,
         'cross_suggest' => '',
         'cross_suggest_links' => $q3_cross_links,
@@ -821,11 +818,8 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     // Quant Unit 4 — Advanced Word Problems and Abstraction
     $q4_learn = array('fprs_2', 'algebra_3', 'word_problems_3', 'word_problems_4');
     $q4_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
-    // Review extra: previous unit's learn + exercise failures
-    $q4_review_extra = array_values(array_unique(array_merge(
-        gmat_sp_get_learn_lesson_failures($user_id, $q3_learn),
-        gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids)
-    )));
+    // Review extra: previous unit's exercise failures only (above Unit 3 Quant Review Set)
+    $q4_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
     $q4_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q4_learn);
     $q4_all_redo = array_values(array_unique(array_merge($q4_learn_failures, $q4_exercise_failures)));
     $q4_cross_links = array();
@@ -841,10 +835,10 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'learn' => $q4_learn,
         'practice' => array('quant_exercise_3'),
         'review' => array('quant_review_3'),
-        'suggest' => !empty($q4_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q4_all_redo) ? 'Before completing the Quant Exercise, we suggest that you revisit the following lessons to reinforce the skills that the Exercise tests.' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q4_all_redo,
-        'review_suggest' => !empty($q4_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest' => !empty($q4_review_extra) ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $q4_review_extra,
         'cross_suggest' => '',
         'cross_suggest_links' => $q4_cross_links,
@@ -853,11 +847,8 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     // Quant Unit 5 — Systems, Probability, and Weighted Reasoning
     $q5_learn = array('algebra_4', 'word_problems_5', 'word_problems_6');
     $q5_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
-    // Review extra: previous unit's learn + exercise failures
-    $q5_review_extra = array_values(array_unique(array_merge(
-        gmat_sp_get_learn_lesson_failures($user_id, $q4_learn),
-        gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids)
-    )));
+    // Review extra: previous unit's exercise failures only (above Unit 4 Quant Review Set)
+    $q5_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
     $q5_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q5_learn);
     $q5_all_redo = array_values(array_unique(array_merge($q5_learn_failures, $q5_exercise_failures)));
     $q5_cross_links = array();
@@ -873,10 +864,10 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'learn' => $q5_learn,
         'practice' => array('quant_exercise_4'),
         'review' => array('quant_review_4'),
-        'suggest' => !empty($q5_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q5_all_redo) ? 'Before completing the Quant Exercise, we suggest that you revisit the following lessons to reinforce the skills that the Exercise tests.' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q5_all_redo,
-        'review_suggest' => !empty($q5_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest' => !empty($q5_review_extra) ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $q5_review_extra,
         'cross_suggest' => '',
         'cross_suggest_links' => $q5_cross_links,
@@ -885,11 +876,8 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     // Quant Unit 6 — Patterns, Constraints, and Edge Cases
     $q6_learn = array('number_props_3', 'word_problems_7', 'algebra_5');
     $q6_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 5, $q6_learn, $ids);
-    // Review extra: previous unit's learn + exercise failures
-    $q6_review_extra = array_values(array_unique(array_merge(
-        gmat_sp_get_learn_lesson_failures($user_id, $q5_learn),
-        gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids)
-    )));
+    // Review extra: previous unit's exercise failures only (above Unit 5 Quant Review Set)
+    $q6_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
     $q6_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q6_learn);
     $q6_all_redo = array_values(array_unique(array_merge($q6_learn_failures, $q6_exercise_failures)));
     $q6_cross_links = array();
@@ -905,10 +893,10 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'learn' => $q6_learn,
         'practice' => array('quant_exercise_5'),
         'review' => array('quant_review_5'),
-        'suggest' => !empty($q6_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q6_all_redo) ? 'Before completing the Quant Exercise, we suggest that you revisit the following lessons to reinforce the skills that the Exercise tests.' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q6_all_redo,
-        'review_suggest' => !empty($q6_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest' => !empty($q6_review_extra) ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $q6_review_extra,
         'cross_suggest' => '',
         'cross_suggest_links' => $q6_cross_links,
@@ -920,15 +908,19 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     $di_units = array();
 
     // DI Unit 1 — Data Sufficiency and Logical Control
+    // Review extra: Unit 6 exercise 5 failures only (above Unit 6 Quant Review Set)
+    $di1_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 5, $q6_learn, $ids);
     $di_units[] = array(
         'title' => 'Unit 1 – Data Sufficiency and Logical Control',
         'description' => 'This unit builds mastery of Data Sufficiency by teaching structured evaluation methods, rephrasing, and logical testing strategies. You\'ll learn how to determine sufficiency confidently without unnecessary calculation, while reinforcing core reasoning skills.',
         'learn' => array('intro_di', 'di_lesson_1', 'di_lesson_2', 'di_lesson_3'),
         'practice' => array(),
-        'review' => array(),
+        'review' => array('quant_review_6'),
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
+        'review_suggest' => !empty($di1_review_extra) ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
+        'review_suggest_redo' => $di1_review_extra,
     );
 
     // DI Unit 2 — Interpreting Visual and Tabular Data
@@ -994,7 +986,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'learn' => $q2_learn,
         'practice' => array('quant_exercise_1'),
         'review' => array(),
-        'suggest' => !empty($q2_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q2_all_redo) ? 'Before completing the Quant Exercise, we suggest that you revisit the following lessons to reinforce the skills that the Exercise tests.' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q2_all_redo,
     );
@@ -1002,11 +994,8 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     // Quant Unit 3 — Structure, Estimation, and Multi-Step Reasoning
     $q3_learn = array('pss_lesson_2', 'number_props_2', 'algebra_2', 'word_problems_2', 'fprs_1');
     $q3_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
-    // Review extra: previous unit's learn + exercise failures (above Unit 2 Quant Review Set)
-    $q3_review_extra = array_values(array_unique(array_merge(
-        gmat_sp_get_learn_lesson_failures($user_id, $q2_learn),
-        gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids)
-    )));
+    // Review extra: previous unit's exercise failures only (above Unit 2 Quant Review Set)
+    $q3_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 1, $q2_learn, $ids);
     $q3_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q3_learn);
     $q3_all_redo = array_values(array_unique(array_merge($q3_learn_failures, $q3_exercise_failures)));
     $quant_units[] = array(
@@ -1015,21 +1004,18 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'learn' => $q3_learn,
         'practice' => array('quant_exercise_2'),
         'review' => array('quant_review_2'),
-        'suggest' => !empty($q3_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q3_all_redo) ? 'Before completing the Quant Exercise, we suggest that you revisit the following lessons to reinforce the skills that the Exercise tests.' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q3_all_redo,
-        'review_suggest' => !empty($q3_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest' => !empty($q3_review_extra) ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $q3_review_extra,
     );
 
     // Quant Unit 4 — Advanced Word Problems and Abstraction
     $q4_learn = array('fprs_2', 'algebra_3', 'word_problems_3', 'word_problems_4');
     $q4_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
-    // Review extra: previous unit's learn + exercise failures
-    $q4_review_extra = array_values(array_unique(array_merge(
-        gmat_sp_get_learn_lesson_failures($user_id, $q3_learn),
-        gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids)
-    )));
+    // Review extra: previous unit's exercise failures only (above Unit 3 Quant Review Set)
+    $q4_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
     $q4_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q4_learn);
     $q4_all_redo = array_values(array_unique(array_merge($q4_learn_failures, $q4_exercise_failures)));
     $quant_units[] = array(
@@ -1038,21 +1024,18 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'learn' => $q4_learn,
         'practice' => array('quant_exercise_3'),
         'review' => array('quant_review_3'),
-        'suggest' => !empty($q4_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q4_all_redo) ? 'Before completing the Quant Exercise, we suggest that you revisit the following lessons to reinforce the skills that the Exercise tests.' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q4_all_redo,
-        'review_suggest' => !empty($q4_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest' => !empty($q4_review_extra) ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $q4_review_extra,
     );
 
     // Quant Unit 5 — Systems, Probability, and Weighted Reasoning
     $q5_learn = array('algebra_4', 'word_problems_5', 'word_problems_6');
     $q5_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
-    // Review extra: previous unit's learn + exercise failures
-    $q5_review_extra = array_values(array_unique(array_merge(
-        gmat_sp_get_learn_lesson_failures($user_id, $q4_learn),
-        gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids)
-    )));
+    // Review extra: previous unit's exercise failures only (above Unit 4 Quant Review Set)
+    $q5_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
     $q5_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q5_learn);
     $q5_all_redo = array_values(array_unique(array_merge($q5_learn_failures, $q5_exercise_failures)));
     $quant_units[] = array(
@@ -1061,21 +1044,18 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'learn' => $q5_learn,
         'practice' => array('quant_exercise_4'),
         'review' => array('quant_review_4'),
-        'suggest' => !empty($q5_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q5_all_redo) ? 'Before completing the Quant Exercise, we suggest that you revisit the following lessons to reinforce the skills that the Exercise tests.' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q5_all_redo,
-        'review_suggest' => !empty($q5_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest' => !empty($q5_review_extra) ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $q5_review_extra,
     );
 
     // Quant Unit 6 — Patterns, Constraints, and Edge Cases
     $q6_learn = array('number_props_3', 'word_problems_7', 'algebra_5');
     $q6_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 5, $q6_learn, $ids);
-    // Review extra: previous unit's learn + exercise failures
-    $q6_review_extra = array_values(array_unique(array_merge(
-        gmat_sp_get_learn_lesson_failures($user_id, $q5_learn),
-        gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids)
-    )));
+    // Review extra: previous unit's exercise failures only (above Unit 5 Quant Review Set)
+    $q6_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 4, $q5_learn, $ids);
     $q6_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q6_learn);
     $q6_all_redo = array_values(array_unique(array_merge($q6_learn_failures, $q6_exercise_failures)));
     $quant_units[] = array(
@@ -1084,10 +1064,10 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'learn' => $q6_learn,
         'practice' => array('quant_exercise_5'),
         'review' => array('quant_review_5'),
-        'suggest' => !empty($q6_all_redo) ? 'You need to improve your understanding/planning/solving' : '',
+        'suggest' => !empty($q6_all_redo) ? 'Before completing the Quant Exercise, we suggest that you revisit the following lessons to reinforce the skills that the Exercise tests.' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q6_all_redo,
-        'review_suggest' => !empty($q6_review_extra) ? 'You need to improve your understanding/planning/solving' : '',
+        'review_suggest' => !empty($q6_review_extra) ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $q6_review_extra,
     );
 
@@ -1097,15 +1077,19 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     $verbal_units = array();
 
     // Verbal Unit 1 — Foundations of GMAT Reasoning
+    // Review extra: Unit 6 exercise 5 failures only (above Unit 6 Quant Review Set)
+    $v1_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 5, $q6_learn, $ids);
     $verbal_units[] = array(
         'title' => 'Unit 1 – Foundations of GMAT Reasoning',
         'description' => 'This unit builds the foundation for GMAT Verbal by teaching how Critical Reasoning and Reading Comprehension are structured and tested. You\'ll learn how to deconstruct arguments, identify question types, and read passages strategically so you can focus on reasoning instead of getting overwhelmed by content.',
         'learn' => array('intro_verbal', 'cr_lesson_1', 'cr_lesson_2', 'rc_lesson_1'),
         'practice' => array('cr_exercise_1', 'cr_exercise_2'),
-        'review' => array(),
+        'review' => array('quant_review_6'),
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
+        'review_suggest' => !empty($v1_review_extra) ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
+        'review_suggest_redo' => $v1_review_extra,
     );
 
     // Verbal Unit 2 — Core Argument and Reading Skills
@@ -1168,7 +1152,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
-        'review_suggest' => ($cr4_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'review_suggest' => ($cr4_result === 'fail') ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $v4_suggest_redo,
         'cross_suggest' => '',
         'cross_suggest_links' => $v4_cross_links,
@@ -1198,7 +1182,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
-        'review_suggest' => ($cr5_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'review_suggest' => ($cr5_result === 'fail') ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $v5_suggest_redo,
         'cross_suggest' => '',
         'cross_suggest_links' => $v5_cross_links,
@@ -1227,7 +1211,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
-        'review_suggest' => ($cr6_result === 'fail') ? 'You need to improve: identifying, extracting key info, targeting, eliminating' : '',
+        'review_suggest' => ($cr6_result === 'fail') ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
         'review_suggest_redo' => $v6_suggest_redo,
         'cross_suggest' => '',
         'cross_suggest_links' => $v6_cross_links,

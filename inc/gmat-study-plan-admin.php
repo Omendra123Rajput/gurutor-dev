@@ -164,6 +164,7 @@ function gmat_sp_get_default_ids() {
         'quant_review_3'    => 8198,
         'quant_review_4'    => 8211,
         'quant_review_5'    => 8227,
+        'quant_review_6'    => 8896,
 
         // DI Lessons
         'di_lesson_1'       => 8191,
@@ -378,6 +379,9 @@ function gmat_sp_get_lesson_keys() {
         'quant_review_5'  => array('label' => 'Unit 5 Quant Review Set', 'section' => 'Quant Reviews', 'xapi_slug' => 'quant-practice-set-1-unit-5-copy',
             'topic' => 'Review Unit 5 Quant Concepts',
             'desc' => "\tApply Unit 5 quant concepts under exam-like timing and difficulty to reinforce accuracy and decision-making\nSkills Covered\n\tAlgebra: Inequalities, Quadratics\n\tWord Problems: Statistics - Weighted Averages & Standard Deviation, Overlapping Sets - Three Overlapping Sets, Combinatorics, Probability, Unit Conversions"),
+        'quant_review_6'  => array('label' => 'Unit 6 Quant Review Set', 'section' => 'Quant Reviews', 'xapi_slug' => 'quant-review-set-unit-6-copy',
+            'topic' => 'Review Unit 6 Quant Concepts',
+            'desc' => "\tApply Unit 6 quant concepts under exam-like timing and difficulty to reinforce accuracy and decision-making\nSkills Covered\n\tAlgebra: Inequalities, Quadratics\n\tWord Problems: Statistics - Weighted Averages & Standard Deviation, Overlapping Sets - Three Overlapping Sets, Combinatorics, Probability, Unit Conversions"),
 
         // ── Data Insights (DI) Lessons ──
         // di_lesson_1 = DI Lesson 1 (DS Intro) — has xAPI URL

@@ -3951,19 +3951,25 @@ function redirect_non_logged_users_from_free_trial() {
         $my_account_url = home_url( '/my-account/' );
     }
     
-    // Add the query parameter
+    // Add the query parameter for free trial redirect
     $redirect_url = add_query_arg( 'type_subs', 'free', $my_account_url );
-    
+
+    // Check if we're on the paid course page (ID: 8112) — redirect to login
+    if ( is_singular( 'sfwd-courses' ) && get_the_ID() === 8112 ) {
+        wp_redirect( $my_account_url );
+        exit;
+    }
+
     // Check if we're on the Free Trial course page (ID: 7472)
     if ( is_singular( 'sfwd-courses' ) && get_the_ID() === 7472 ) {
         // Redirect to my account page with type_subs parameter
         wp_redirect( $redirect_url );
         exit;
     }
-    
-    // Also check for lessons/topics that belong to the Free Trial course
+
+    // Also check for lessons/topics that belong to courses
     if ( is_singular( array( 'sfwd-lessons', 'sfwd-topic' ) ) ) {
-        
+
         $current_id = get_the_ID();
 
         // Check if accessing specific lesson IDs directly
@@ -3975,9 +3981,15 @@ function redirect_non_logged_users_from_free_trial() {
             exit;
 
         }
-        
+
         $course_id = learndash_get_course_id( $current_id );
-        
+
+        // If this lesson/topic belongs to paid course (ID: 8112), redirect to login
+        if ( $course_id === 8112 ) {
+            wp_redirect( $my_account_url );
+            exit;
+        }
+
         // If this lesson/topic belongs to Free Trial course (ID: 7472), redirect
         if ( $course_id === 7472 ) {
             wp_redirect( $redirect_url );
@@ -3991,6 +4003,72 @@ function redirect_non_logged_users_from_free_trial() {
         }
 
     }
+}
+
+
+// ============================================================================
+// "Back to Course" CTA on all LearnDash lesson/topic pages
+// ============================================================================
+
+add_action('wp_footer', 'gurutor_back_to_course_cta');
+function gurutor_back_to_course_cta() {
+    if ( !is_singular( array( 'sfwd-lessons', 'sfwd-topic' ) ) ) return;
+
+    $course_id = function_exists('learndash_get_course_id')
+        ? learndash_get_course_id( get_the_ID() )
+        : 0;
+    if ( !$course_id ) return;
+
+    $course_url   = get_permalink( $course_id );
+    $course_title = get_the_title( $course_id );
+    if ( !$course_url ) return;
+    ?>
+    <style>
+    .gurutor-back-to-course {
+        max-width: 1140px;
+        margin: 0 auto 16px;
+        padding: 0 15px;
+    }
+    .gurutor-back-to-course__link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 18px;
+        background: #00409E;
+        color: #fff;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+    .gurutor-back-to-course__link:hover {
+        background: #002b6b;
+        color: #fff;
+        text-decoration: none;
+    }
+    .gurutor-back-to-course__link svg {
+        width: 16px;
+        height: 16px;
+        fill: currentColor;
+    }
+    </style>
+    <script>
+    (function() {
+        var wrapper = document.querySelector('.learndash_post_sfwd-topic, .learndash_post_sfwd-lessons');
+        if (!wrapper) return;
+
+        var cta = document.createElement('div');
+        cta.className = 'gurutor-back-to-course';
+        cta.innerHTML = '<a class="gurutor-back-to-course__link" href="<?php echo esc_url( $course_url ); ?>">' +
+            '<svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>' +
+            'Back to Course' +
+            '</a>';
+
+        wrapper.parentNode.insertBefore(cta, wrapper);
+    })();
+    </script>
+    <?php
 }
 
 

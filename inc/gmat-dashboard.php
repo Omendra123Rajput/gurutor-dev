@@ -40,6 +40,83 @@ add_action('wp_enqueue_scripts', 'gmat_dash_enqueue_assets');
 
 
 // ============================================================================
+// LESSON TIME ESTIMATES (from PDF completion data)
+// ============================================================================
+
+function gmat_dashboard_get_lesson_times() {
+    return array(
+        // Quant
+        'intro_quant'       =>   5,
+        'pss_lesson_1'      =>  45,
+        'algebra_1'         =>  48,
+        'word_problems_1'   =>  25,
+        'number_props_1'    =>  26,
+        'quant_exercise_1'  => 122,
+        'pss_lesson_2'      =>  15,
+        'algebra_2'         =>  26,
+        'word_problems_2'   =>  58,
+        'number_props_2'    =>  15,
+        'fprs_1'            =>  48,
+        'quant_exercise_2'  => 138,
+        'quant_review_2'    => 100,
+        'algebra_3'         =>  37,
+        'fprs_2'            =>  22,
+        'word_problems_3'   =>  54,
+        'word_problems_4'   =>  29,
+        'quant_exercise_3'  => 150,
+        'quant_review_3'    =>  92,
+        'algebra_4'         =>  21,
+        'word_problems_5'   =>  37,
+        'word_problems_6'   =>  55,
+        'quant_exercise_4'  =>  98,
+        'quant_review_4'    => 100,
+        'algebra_5'         =>  10,
+        'number_props_3'    =>  21,
+        'word_problems_7'   =>  36,
+        'quant_exercise_5'  =>  76,
+        'quant_review_5'    =>  72,
+        'quant_review_6'    =>  56,
+        // Verbal
+        'intro_verbal'      =>   5,
+        'cr_lesson_1'       =>   5,
+        'cr_lesson_2'       =>   7,
+        'rc_lesson_1'       =>   7,
+        'cr_exercise_1'     =>  20,
+        'cr_exercise_2'     =>  12,
+        'cr_lesson_3'       =>  25,
+        'cr_lesson_4'       =>  12,
+        'rc_lesson_2'       =>   6,
+        'rc_lesson_3'       =>  12,
+        'cr_exercise_3'     =>  15,
+        'rc_exercise_1'     =>  74,
+        'cr_lesson_5'       =>  43,
+        'cr_exercise_4'     =>  68,
+        'verbal_review_2'   =>  63,
+        'cr_lesson_6'       =>  43,
+        'cr_exercise_5'     =>  68,
+        'verbal_review_3'   => 122,
+        'cr_lesson_7'       =>  48,
+        'cr_exercise_6'     =>  68,
+        'verbal_review_4'   => 134,
+        'cr_lesson_8'       =>  15,
+        'cr_lesson_9'       =>  25,
+        'cr_exercise_7'     =>  30,
+        'cr_exercise_8'     =>  40,
+        'verbal_review_5'   => 138,
+        // Data Insights
+        'intro_di'          =>   5,
+        'di_lesson_1'       =>  20,
+        'di_lesson_2'       =>  40,
+        'di_lesson_3'       =>  50,
+        'di_lesson_4'       =>  20,
+        'di_lesson_5'       =>  20,
+        'di_lesson_6'       =>  25,
+        'di_lesson_7'       =>  36,
+    );
+}
+
+
+// ============================================================================
 // SHORTCODE: [gmat_dashboard]
 // ============================================================================
 
@@ -96,6 +173,9 @@ function gmat_dashboard_shortcode() {
     $section_stats   = array();
     $total_items     = 0;
     $completed_items = 0;
+    $lesson_times    = gmat_dashboard_get_lesson_times();
+    $total_course_minutes = 0;
+    $completed_minutes    = 0;
 
     foreach ($plan as $section) {
         $sec_total = 0;
@@ -105,9 +185,12 @@ function gmat_dashboard_shortcode() {
                 foreach ($unit[$type] as $lk) {
                     $sec_total++;
                     $total_items++;
+                    $lk_time = isset($lesson_times[$lk]) ? $lesson_times[$lk] : 40;
+                    $total_course_minutes += $lk_time;
                     if (function_exists('gmat_sp_is_complete') && gmat_sp_is_complete($user_id, $lk, $lesson_ids)) {
                         $sec_done++;
                         $completed_items++;
+                        $completed_minutes += $lk_time;
                     }
                 }
             }
@@ -155,9 +238,6 @@ function gmat_dashboard_shortcode() {
         $score_improvement = 0;
     }
 
-    // ── Total Course Content (estimated minutes) ──
-    $total_course_minutes = $total_items * 40; // ~40 min per item
-
     // ── Required Practice Tests ──
     // Baseline: 3 practice tests
     // Add 1 practice test for every 50 points beyond the first 100 points of improvement
@@ -176,9 +256,7 @@ function gmat_dashboard_shortcode() {
         $weekly_minutes = intval($weekly_hours) * 60;
 
         // Weeks to complete remaining course content
-        $remaining_minutes = ($total_items > 0 && $completed_items < $total_items)
-            ? ($total_items - $completed_items) * 40
-            : 0;
+        $remaining_minutes = $total_course_minutes - $completed_minutes;
 
         if ($remaining_minutes > 0) {
             $weeks_for_content = ceil($remaining_minutes / $weekly_minutes);

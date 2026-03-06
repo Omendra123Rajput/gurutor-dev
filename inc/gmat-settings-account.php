@@ -247,10 +247,14 @@ function gmat_settings_save_handler() {
 
     // --- GMAT Scores fields ---
     $score_date    = isset($_POST['score_date'])    ? sanitize_text_field($_POST['score_date'])    : '';
-    $score_overall = isset($_POST['score_overall']) ? intval($_POST['score_overall'])               : '';
-    $score_quant   = isset($_POST['score_quant'])   ? intval($_POST['score_quant'])                 : '';
-    $score_verbal  = isset($_POST['score_verbal'])  ? intval($_POST['score_verbal'])                : '';
-    $score_di      = isset($_POST['score_di'])      ? intval($_POST['score_di'])                    : '';
+    $score_overall_raw = isset($_POST['score_overall']) ? trim($_POST['score_overall']) : '';
+    $score_overall = $score_overall_raw !== '' ? intval($score_overall_raw) : '';
+    $score_quant_raw   = isset($_POST['score_quant'])   ? trim($_POST['score_quant'])   : '';
+    $score_quant   = $score_quant_raw !== '' ? intval($score_quant_raw) : '';
+    $score_verbal_raw  = isset($_POST['score_verbal'])  ? trim($_POST['score_verbal'])  : '';
+    $score_verbal  = $score_verbal_raw !== '' ? intval($score_verbal_raw) : '';
+    $score_di_raw      = isset($_POST['score_di'])      ? trim($_POST['score_di'])      : '';
+    $score_di      = $score_di_raw !== '' ? intval($score_di_raw) : '';
 
     // Validate desired score
     if ($desired_score && ($desired_score < 205 || $desired_score > 805)) {
@@ -276,16 +280,16 @@ function gmat_settings_save_handler() {
     }
 
     // Validate section scores
-    if ($score_overall && ($score_overall < 205 || $score_overall > 805)) {
+    if ($score_overall !== '' && ($score_overall < 205 || $score_overall > 805)) {
         wp_send_json_error(array('message' => 'Overall score must be between 205 and 805.'));
     }
-    if ($score_quant && ($score_quant < 60 || $score_quant > 90)) {
+    if ($score_quant !== '' && ($score_quant < 60 || $score_quant > 90)) {
         wp_send_json_error(array('message' => 'Quant score must be between 60 and 90.'));
     }
-    if ($score_verbal && ($score_verbal < 60 || $score_verbal > 90)) {
+    if ($score_verbal !== '' && ($score_verbal < 60 || $score_verbal > 90)) {
         wp_send_json_error(array('message' => 'Verbal score must be between 60 and 90.'));
     }
-    if ($score_di && ($score_di < 60 || $score_di > 90)) {
+    if ($score_di !== '' && ($score_di < 60 || $score_di > 90)) {
         wp_send_json_error(array('message' => 'Data Insights score must be between 60 and 90.'));
     }
 

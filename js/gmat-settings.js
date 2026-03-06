@@ -118,7 +118,7 @@
             var hasAnyScore = overallVal || quantVal || verbalVal || diVal;
 
             if (hasAnyScore) {
-                if (overallVal) {
+                if (overallVal !== '') {
                     var overall = parseInt(overallVal, 10);
                     if (isNaN(overall) || overall < 205 || overall > 805) {
                         return { msg: 'Overall Score must be between 205 and 805.', field: '#gmat-s-score-overall' };

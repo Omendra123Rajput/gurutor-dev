@@ -4025,47 +4025,53 @@ function gurutor_back_to_course_cta() {
     ?>
     <style>
     .gurutor-back-to-course {
-        max-width: 1140px;
-        margin: 0 auto 16px;
+        text-align: center;
+        margin: 24px auto 16px;
         padding: 0 15px;
     }
     .gurutor-back-to-course__link {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        padding: 8px 18px;
-        background: #00409E;
-        color: #fff;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 600;
+        justify-content: center;
+        padding: 12px 24px;
+        font-size: 16px;
+        line-height: 24px;
+        font-weight: 700;
+        color: #ffffff;
+        background: #4F80FF;
+        border-radius: 50px;
         text-decoration: none;
-        transition: background 0.2s;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
     }
     .gurutor-back-to-course__link:hover {
-        background: #002b6b;
+        background-color: #FBB03B;
         color: #fff;
         text-decoration: none;
     }
-    .gurutor-back-to-course__link svg {
-        width: 16px;
-        height: 16px;
-        fill: currentColor;
+    @media (max-width: 768px) {
+        .gurutor-back-to-course__link {
+            font-size: 14px;
+            padding: 10px 20px;
+        }
     }
     </style>
     <script>
     (function() {
-        var wrapper = document.querySelector('.learndash_post_sfwd-topic, .learndash_post_sfwd-lessons');
-        if (!wrapper) return;
+        var iframe = document.querySelector('.grassblade iframe.grassblade_iframe');
+        if (!iframe) return;
+
+        var grassbladeContainer = iframe.closest('.grassblade');
+        if (!grassbladeContainer) return;
 
         var cta = document.createElement('div');
         cta.className = 'gurutor-back-to-course';
         cta.innerHTML = '<a class="gurutor-back-to-course__link" href="<?php echo esc_url( $course_url ); ?>">' +
-            '<svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>' +
-            'Back to Course' +
-            '</a>';
+            'Back to Course</a>';
 
-        wrapper.parentNode.insertBefore(cta, wrapper);
+        grassbladeContainer.parentNode.insertBefore(cta, grassbladeContainer.nextSibling);
     })();
     </script>
     <?php

@@ -205,9 +205,10 @@ function gmat_sp_fetch_xapi_data($user_id) {
                     }
                     if (is_array($pf_data)) {
                         foreach ($pf_data as $var_name => $value) {
+                            $var_name = trim($var_name);
                             if (strpos($var_name, '_Pass_or_Fail') !== false) {
                                 // Store the most recent signal (statements come newest first)
-                                // Trim the value to handle trailing whitespace from xAPI data
+                                // Trim both key and value to handle whitespace from xAPI data
                                 if (!isset($pass_fail_signals[$var_name])) {
                                     $pass_fail_signals[$var_name] = trim($value);
                                 }
@@ -421,7 +422,7 @@ function gmat_sp_get_quant_exercise_failures($user_id, $exercise_num, $learn_key
 
     foreach ($var_map as $var_name => $mapped_key) {
         if (strpos($var_name, $prefix) !== 0) continue;
-        if (isset($pf_map[$var_name]) && $pf_map[$var_name] === 'Fail') {
+        if (isset($pf_map[$var_name]) && trim($pf_map[$var_name]) === 'Fail') {
             $failed_keys[] = $mapped_key;
         }
     }
@@ -430,13 +431,13 @@ function gmat_sp_get_quant_exercise_failures($user_id, $exercise_num, $learn_key
 }
 
 /**
- * Get the list of learn lesson keys that have a direct Fail signal.
- * Only checks direct lesson pass/fail variables (contain '_Lesson_' in name),
- * NOT granular exercise signals (QLE_*) or review signals (QRS_*).
+ * Get the list of learn lesson keys that have a Fail signal.
+ * Checks all pass/fail variables that map to learn keys,
+ * excluding granular exercise signals (QLE_*) and review signals (QRS_*).
  *
  * @param int   $user_id
  * @param array $learn_keys  The lesson keys from this unit's learn section
- * @return array  Lesson keys that failed (empty if no direct fail signals)
+ * @return array  Lesson keys that failed (empty if no fail signals)
  */
 function gmat_sp_get_learn_lesson_failures($user_id, $learn_keys) {
     $pf_map  = gmat_sp_get_pass_fail_map($user_id);
@@ -445,9 +446,10 @@ function gmat_sp_get_learn_lesson_failures($user_id, $learn_keys) {
     $failed_keys = array();
 
     foreach ($var_map as $var_name => $mapped_key) {
-        if (strpos($var_name, '_Lesson_') === false) continue;
+        if (strpos($var_name, 'QLE_') === 0) continue;
+        if (strpos($var_name, 'QRS_') === 0) continue;
         if (!in_array($mapped_key, $learn_keys, true)) continue;
-        if (isset($pf_map[$var_name]) && $pf_map[$var_name] === 'Fail') {
+        if (isset($pf_map[$var_name]) && trim($pf_map[$var_name]) === 'Fail') {
             $failed_keys[] = $mapped_key;
         }
     }
@@ -503,7 +505,7 @@ function gmat_sp_get_quant_review_failures($user_id, $review_num) {
 
     foreach ($pf_map as $var_name => $value) {
         if (strpos($var_name, $prefix) !== 0) continue;
-        if ($value !== 'Fail') continue;
+        if (trim($value) !== 'Fail') continue;
 
         // Extract topic suffix: QRS_Unit2_ALG1_Pass_or_Fail → ALG1
         $suffix_part = substr($var_name, strlen($prefix));

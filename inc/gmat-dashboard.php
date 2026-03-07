@@ -380,7 +380,7 @@ function gmat_dashboard_shortcode() {
 
                     <div class="gmat-dash-metric-card">
                         <span class="gmat-dash-metric-card__label">Total Course Content</span>
-                        <span class="gmat-dash-metric-card__value"><?php echo number_format($total_course_minutes); ?> minutes</span>
+                        <span class="gmat-dash-metric-card__value"><?php echo number_format($total_course_minutes / 60, 1); ?> hours</span>
                     </div>
 
                     <div class="gmat-dash-metric-card">

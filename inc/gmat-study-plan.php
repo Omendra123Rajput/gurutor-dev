@@ -725,7 +725,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
     $cr6_result = gmat_sp_get_exercise_result($user_id, 'cr_exercise_6');
     $verbal_units[] = array(
         'title' => 'Unit 5 – Explanation-Based Reasoning',
-        'description' => 'This unit builds mastery of explanation arguments by teaching you how to recognize observation-and-explanation reasoning and the specific thought patterns that correct answers consistently address. You\'ll then reinforce the concepts from Unit 4 by completing a Unit 4 Verbal Review Set under exam-like conditions.',
+        'description' => 'This unit builds mastery of explanation arguments by teaching you how to recognize observation-and-explanation reasoning and the specific thought patterns that correct answers consistently address. You\'ll then reinforce the concepts from Unit 4 by completing a Unit 4 Verbal Review Set under exam-like conditions, so you can apply the approach quickly and accurately when it counts.',
         'learn' => array('cr_lesson_7'),
         'practice' => array('cr_exercise_6'),
         'review' => array('verbal_review_4'),
@@ -1177,7 +1177,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     }
     $verbal_units[] = array(
         'title' => 'Unit 5 – Explanation-Based Reasoning',
-        'description' => 'This unit builds mastery of explanation arguments by teaching you how to recognize observation-and-explanation reasoning and the specific thought patterns that correct answers consistently address. You\'ll then reinforce the concepts from Unit 4 by completing a Unit 4 Verbal Review Set under exam-like conditions.',
+        'description' => 'This unit builds mastery of explanation arguments by teaching you how to recognize observation-and-explanation reasoning and the specific thought patterns that correct answers consistently address. You\'ll then reinforce the concepts from Unit 4 by completing a Unit 4 Verbal Review Set under exam-like conditions, so you can apply the approach quickly and accurately when it counts.',
         'learn' => array('cr_lesson_7'),
         'practice' => array('cr_exercise_6'),
         'review' => array('verbal_review_4'),

@@ -41,6 +41,40 @@
                 }, 0);
             });
 
+            // Calendar picker: click icon → open hidden date input's native picker
+            $('#gmat-settings-page').on('click', '.gmat-date-picker-btn', function (e) {
+                e.preventDefault();
+                var $hidden = $(this).siblings('.gmat-date-picker-hidden');
+                if ($hidden.length && $hidden[0].showPicker) {
+                    $hidden[0].showPicker();
+                } else if ($hidden.length) {
+                    $hidden[0].click();
+                }
+            });
+
+            // Calendar picker: when user picks a date, convert YYYY-MM-DD → MM/DD/YYYY
+            $('#gmat-settings-page').on('change', '.gmat-date-picker-hidden', function () {
+                var ymd = this.value;
+                if (ymd) {
+                    var parts = ymd.split('-');
+                    var target = $(this).data('target');
+                    $(target).val(parts[1] + '/' + parts[2] + '/' + parts[0]);
+                }
+            });
+
+            // Auto-format date inputs (MM/DD/YYYY) — insert slashes as user types
+            $('#gmat-settings-page').on('input', '#gmat-s-test-date, #gmat-s-score-date', function () {
+                var val = this.value.replace(/[^\d]/g, '');
+                if (val.length > 8) val = val.substring(0, 8);
+                if (val.length >= 5) {
+                    this.value = val.substring(0, 2) + '/' + val.substring(2, 4) + '/' + val.substring(4);
+                } else if (val.length >= 3) {
+                    this.value = val.substring(0, 2) + '/' + val.substring(2);
+                } else {
+                    this.value = val;
+                }
+            });
+
             // Weekly hours: click on the readonly text input → show the hidden <select>
             $('#gmat-s-weekly-hours').on('click focus', function () {
                 $(this).hide();
@@ -96,19 +130,19 @@
             // --- GMAT Settings section ---
             if (!desiredVal) return { msg: 'Please enter your Desired Score.', field: '#gmat-s-desired-score' };
             var desired = parseInt(desiredVal, 10);
-            if (isNaN(desired) || desired < 205 || desired > 805) {
-                return { msg: 'Desired Score must be between 205 and 805.', field: '#gmat-s-desired-score' };
+            if (isNaN(desired) || desired < 205 || desired > 805 || (desired - 205) % 10 !== 0) {
+                return { msg: 'Desired Score must be between 205 and 805 in increments of 10.', field: '#gmat-s-desired-score' };
             }
 
-            // Test Date — must be today or in the future
+            // Test Date — must be today or in the future (MM/DD/YYYY format)
             var testDateVal = $.trim($('#gmat-s-test-date').val());
             if (testDateVal) {
+                var selected = this.parseDateMDY(testDateVal);
+                if (!selected) {
+                    return { msg: 'Please enter a valid test date (MM/DD/YYYY).', field: '#gmat-s-test-date' };
+                }
                 var today = new Date();
                 today.setHours(0, 0, 0, 0);
-                var selected = new Date(testDateVal + 'T00:00:00');
-                if (isNaN(selected.getTime())) {
-                    return { msg: 'Please enter a valid test date.', field: '#gmat-s-test-date' };
-                }
                 if (selected < today) {
                     return { msg: 'Test date must be today or in the future.', field: '#gmat-s-test-date' };
                 }
@@ -120,8 +154,8 @@
             if (hasAnyScore) {
                 if (overallVal !== '') {
                     var overall = parseInt(overallVal, 10);
-                    if (isNaN(overall) || overall < 205 || overall > 805) {
-                        return { msg: 'Overall Score must be between 205 and 805.', field: '#gmat-s-score-overall' };
+                    if (isNaN(overall) || overall < 205 || overall > 805 || (overall - 205) % 10 !== 0) {
+                        return { msg: 'Overall Score must be between 205 and 805 in increments of 10.', field: '#gmat-s-score-overall' };
                     }
                 }
                 if (quantVal) {
@@ -144,7 +178,30 @@
                 }
             }
 
+            // Validate score date format if filled
+            var scoreDateVal = $.trim($('#gmat-s-score-date').val());
+            if (scoreDateVal && !this.parseDateMDY(scoreDateVal)) {
+                return { msg: 'Please enter a valid score date (MM/DD/YYYY).', field: '#gmat-s-score-date' };
+            }
+
             return null; // All valid
+        },
+
+        /**
+         * Parse MM/DD/YYYY string to Date object, returns null if invalid
+         */
+        parseDateMDY: function (str) {
+            if (!str) return null;
+            var parts = str.split('/');
+            if (parts.length !== 3) return null;
+            var m = parseInt(parts[0], 10);
+            var d = parseInt(parts[1], 10);
+            var y = parseInt(parts[2], 10);
+            if (isNaN(m) || isNaN(d) || isNaN(y)) return null;
+            if (m < 1 || m > 12 || d < 1 || d > 31 || y < 1900) return null;
+            var date = new Date(y, m - 1, d);
+            if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+            return date;
         },
 
         // ==================================================================

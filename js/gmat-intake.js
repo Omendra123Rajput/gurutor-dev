@@ -58,6 +58,7 @@
             }
 
             this.bindEvents();
+            this.convertExistingDates(); // convert Y-m-d dates to MM/DD/YYYY for display
             this.goToStep(this.currentStep, false); // no animation on first load
             this.renderScoreList('official');
             this.renderScoreList('practice');
@@ -88,6 +89,40 @@
                         input.value = cleaned;
                     }
                 }, 0);
+            });
+
+            // Calendar picker: click icon → open hidden date input's native picker
+            $('#gmat-intake-wizard').on('click', '.gmat-date-picker-btn', function (e) {
+                e.preventDefault();
+                var $hidden = $(this).siblings('.gmat-date-picker-hidden');
+                if ($hidden.length && $hidden[0].showPicker) {
+                    $hidden[0].showPicker();
+                } else if ($hidden.length) {
+                    $hidden[0].click();
+                }
+            });
+
+            // Calendar picker: when user picks a date, convert YYYY-MM-DD → MM/DD/YYYY
+            $('#gmat-intake-wizard').on('change', '.gmat-date-picker-hidden', function () {
+                var ymd = this.value; // YYYY-MM-DD
+                if (ymd) {
+                    var parts = ymd.split('-');
+                    var target = $(this).data('target');
+                    $(target).val(parts[1] + '/' + parts[2] + '/' + parts[0]);
+                }
+            });
+
+            // Auto-format date inputs (MM/DD/YYYY) — insert slashes as user types
+            $('#gmat-intake-wizard').on('input', '#gmat-score-date, #gmat-next-test-date', function () {
+                var val = this.value.replace(/[^\d]/g, '');
+                if (val.length > 8) val = val.substring(0, 8);
+                if (val.length >= 5) {
+                    this.value = val.substring(0, 2) + '/' + val.substring(2, 4) + '/' + val.substring(4);
+                } else if (val.length >= 3) {
+                    this.value = val.substring(0, 2) + '/' + val.substring(2);
+                } else {
+                    this.value = val;
+                }
             });
 
             // Step navigation buttons
@@ -337,7 +372,7 @@
                     if (!goalVal || goalVal.trim() === '') return 'Please enter your desired GMAT score.';
                     var goal = parseInt(goalVal, 10);
                     if (isNaN(goal))          return 'Please enter a valid number.';
-                    if (goal < 205 || goal > 805) return 'Score must be between 205 and 805.';
+                    if (!this.isValidOverallScore(goal)) return 'Score must be between 205 and 805 in increments of 10.';
                     return null;
 
                 case 3:
@@ -345,12 +380,12 @@
                     return null;
 
                 case 4:
-                    var dateVal = $('#gmat-next-test-date').val();
-                    if (!dateVal) return 'Please select your next test date.';
+                    var dateVal = $.trim($('#gmat-next-test-date').val());
+                    if (!dateVal) return 'Please enter your next test date (MM/DD/YYYY).';
+                    var selected = this.parseDateMDY(dateVal);
+                    if (!selected) return 'Please enter a valid date in MM/DD/YYYY format.';
                     var today = new Date();
                     today.setHours(0, 0, 0, 0);
-                    var selected = new Date(dateVal + 'T00:00:00');
-                    if (isNaN(selected.getTime())) return 'Please enter a valid date.';
                     if (selected < today) return 'Test date must be today or in the future.';
                     return null;
 
@@ -502,8 +537,9 @@
             var verbal  = parseInt($('#gmat-score-verbal').val(), 10);
             var di      = parseInt($('#gmat-score-di').val(), 10);
 
-            if (!date) return 'Please select a date.';
-            if (!overall || overall < 205 || overall > 805) return 'Overall score must be between 205 and 805.';
+            if (!date) return 'Please enter a date (MM/DD/YYYY).';
+            if (!this.parseDateMDY(date)) return 'Please enter a valid date in MM/DD/YYYY format.';
+            if (!overall || !this.isValidOverallScore(overall)) return 'Overall score must be between 205 and 805 in increments of 10.';
             if (!quant || quant < 60 || quant > 90) return 'Quant score must be between 60 and 90.';
             if (!verbal || verbal < 60 || verbal > 90) return 'Verbal score must be between 60 and 90.';
             if (!di || di < 60 || di > 90) return 'Data Insights score must be between 60 and 90.';
@@ -643,6 +679,71 @@
             var div = document.createElement('div');
             div.appendChild(document.createTextNode(text));
             return div.innerHTML;
+        },
+
+        /**
+         * Convert Y-m-d to MM/DD/YYYY
+         */
+        toDisplayDate: function (ymd) {
+            if (!ymd) return '';
+            var parts = ymd.split('-');
+            if (parts.length === 3 && parts[0].length === 4) {
+                return parts[1] + '/' + parts[2] + '/' + parts[0];
+            }
+            return ymd; // already in display format or unknown
+        },
+
+        /**
+         * Convert MM/DD/YYYY to Y-m-d
+         */
+        toStorageDate: function (mdy) {
+            if (!mdy) return '';
+            var parts = mdy.split('/');
+            if (parts.length === 3 && parts[2].length === 4) {
+                return parts[2] + '-' + parts[0].replace(/^(\d)$/, '0$1') + '-' + parts[1].replace(/^(\d)$/, '0$1');
+            }
+            return mdy; // already in storage format or unknown
+        },
+
+        /**
+         * Parse MM/DD/YYYY string to Date object, returns null if invalid
+         */
+        parseDateMDY: function (str) {
+            if (!str) return null;
+            var parts = str.split('/');
+            if (parts.length !== 3) return null;
+            var m = parseInt(parts[0], 10);
+            var d = parseInt(parts[1], 10);
+            var y = parseInt(parts[2], 10);
+            if (isNaN(m) || isNaN(d) || isNaN(y)) return null;
+            if (m < 1 || m > 12 || d < 1 || d > 31 || y < 1900) return null;
+            var date = new Date(y, m - 1, d);
+            // Verify the date didn't roll over (e.g. Feb 30 → Mar 2)
+            if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+            return date;
+        },
+
+        /**
+         * Validate overall score is a valid GMAT increment (205-805, step 10)
+         */
+        isValidOverallScore: function (score) {
+            return score >= 205 && score <= 805 && (score - 205) % 10 === 0;
+        },
+
+        /**
+         * Convert existing score dates from Y-m-d to MM/DD/YYYY for display
+         */
+        convertExistingDates: function () {
+            var self = this;
+            var convertScores = function (arr) {
+                for (var i = 0; i < arr.length; i++) {
+                    if (arr[i].date) {
+                        arr[i].date = self.toDisplayDate(arr[i].date);
+                    }
+                }
+            };
+            convertScores(this.officialScores);
+            convertScores(this.practiceScores);
         }
     };
 

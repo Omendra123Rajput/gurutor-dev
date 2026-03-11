@@ -90,12 +90,23 @@ function gmat_settings_endpoint_content() {
         $latest_score = end($practice_scores);
     }
 
-    // Format the test date for display (mm/dd/yyyy)
+    // Format the test date for display (MM/DD/YYYY)
     $test_date_display = '';
     if ($next_test_date) {
         $date_obj = DateTime::createFromFormat('Y-m-d', $next_test_date);
         if ($date_obj) {
-            $test_date_display = $next_test_date; // Keep Y-m-d for <input type="date">
+            $test_date_display = $date_obj->format('m/d/Y');
+        }
+    }
+
+    // Format score date for display (MM/DD/YYYY)
+    $score_date_display = '';
+    if ($latest_score && !empty($latest_score['date'])) {
+        $sd_obj = DateTime::createFromFormat('Y-m-d', $latest_score['date']);
+        if ($sd_obj) {
+            $score_date_display = $sd_obj->format('m/d/Y');
+        } else {
+            $score_date_display = $latest_score['date'];
         }
     }
 
@@ -111,6 +122,50 @@ function gmat_settings_endpoint_content() {
         };
     </script>
 
+    <style>
+    .gmat-date-input-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+    .gmat-date-input-wrap input[type="text"] {
+        padding-right: 38px;
+        width: 100%;
+    }
+    .gmat-date-picker-hidden {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+        overflow: hidden;
+    }
+    .gmat-date-picker-btn {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        color: #00409E;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+    .gmat-date-picker-btn:hover,
+    .gmat-date-picker-btn:focus,
+    .gmat-date-picker-btn:active {
+        color: #002b6b;
+        background: none;
+        background-color: transparent;
+        outline: none;
+        box-shadow: none;
+    }
+    </style>
+
     <div id="gmat-settings-page">
 
         <!-- GMAT Settings Section -->
@@ -120,11 +175,17 @@ function gmat_settings_endpoint_content() {
             <div class="gmat-settings-row">
                 <div class="gmat-settings-field">
                     <label for="gmat-s-desired-score">Desired Score</label>
-                    <input type="number" id="gmat-s-desired-score" class="gmat-settings-input" min="205" max="805" step="5" value="<?php echo esc_attr($goal_score); ?>" placeholder="Enter score">
+                    <input type="number" id="gmat-s-desired-score" class="gmat-settings-input" min="205" max="805" step="10" value="<?php echo esc_attr($goal_score); ?>" placeholder="Enter score">
                 </div>
                 <div class="gmat-settings-field">
                     <label for="gmat-s-test-date">Test Date</label>
-                    <input type="date" id="gmat-s-test-date" class="gmat-settings-input" min="<?php echo esc_attr(date('Y-m-d')); ?>" value="<?php echo esc_attr($test_date_display); ?>">
+                    <div class="gmat-date-input-wrap">
+                        <input type="text" id="gmat-s-test-date" class="gmat-settings-input" placeholder="MM/DD/YYYY" maxlength="10" autocomplete="off" value="<?php echo esc_attr($test_date_display); ?>">
+                        <input type="date" class="gmat-date-picker-hidden" data-target="#gmat-s-test-date" min="<?php echo esc_attr(date('Y-m-d')); ?>" tabindex="-1" aria-hidden="true">
+                        <button type="button" class="gmat-date-picker-btn" data-target="#gmat-s-test-date" title="Open calendar" aria-label="Open calendar">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -156,11 +217,17 @@ function gmat_settings_endpoint_content() {
             <div class="gmat-settings-row">
                 <div class="gmat-settings-field">
                     <label for="gmat-s-score-date">Test Date</label>
-                    <input type="date" id="gmat-s-score-date" class="gmat-settings-input" value="<?php echo $latest_score && !empty($latest_score['date']) ? esc_attr($latest_score['date']) : ''; ?>">
+                    <div class="gmat-date-input-wrap">
+                        <input type="text" id="gmat-s-score-date" class="gmat-settings-input" placeholder="MM/DD/YYYY" maxlength="10" autocomplete="off" value="<?php echo esc_attr($score_date_display); ?>">
+                        <input type="date" class="gmat-date-picker-hidden" data-target="#gmat-s-score-date" tabindex="-1" aria-hidden="true">
+                        <button type="button" class="gmat-date-picker-btn" data-target="#gmat-s-score-date" title="Open calendar" aria-label="Open calendar">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="gmat-settings-field">
                     <label for="gmat-s-score-overall">Overall Score</label>
-                    <input type="number" id="gmat-s-score-overall" class="gmat-settings-input" min="205" max="805" step="5" value="<?php echo $latest_score && !empty($latest_score['overall']) ? esc_attr($latest_score['overall']) : ''; ?>" placeholder="Enter score">
+                    <input type="number" id="gmat-s-score-overall" class="gmat-settings-input" min="205" max="805" step="10" value="<?php echo $latest_score && !empty($latest_score['overall']) ? esc_attr($latest_score['overall']) : ''; ?>" placeholder="Enter score">
                 </div>
             </div>
 
@@ -256,17 +323,22 @@ function gmat_settings_save_handler() {
     $score_di_raw      = isset($_POST['score_di'])      ? trim($_POST['score_di'])      : '';
     $score_di      = $score_di_raw !== '' ? intval($score_di_raw) : '';
 
-    // Validate desired score
-    if ($desired_score && ($desired_score < 205 || $desired_score > 805)) {
-        wp_send_json_error(array('message' => 'Desired score must be between 205 and 805.'));
+    // Validate desired score (must be 205-805 in increments of 10)
+    if ($desired_score && ($desired_score < 205 || $desired_score > 805 || ($desired_score - 205) % 10 !== 0)) {
+        wp_send_json_error(array('message' => 'Desired score must be between 205 and 805 in increments of 10.'));
     }
 
-    // Validate test date
+    // Validate test date — accept MM/DD/YYYY, convert to Y-m-d
     if ($test_date) {
-        $date_obj = DateTime::createFromFormat('Y-m-d', $test_date);
-        if (!$date_obj || $date_obj->format('Y-m-d') !== $test_date) {
-            wp_send_json_error(array('message' => 'Please enter a valid test date.'));
+        $date_obj = DateTime::createFromFormat('m/d/Y', $test_date);
+        if (!$date_obj || $date_obj->format('m/d/Y') !== $test_date) {
+            // Fallback: try Y-m-d
+            $date_obj = DateTime::createFromFormat('Y-m-d', $test_date);
+            if (!$date_obj || $date_obj->format('Y-m-d') !== $test_date) {
+                wp_send_json_error(array('message' => 'Please enter a valid test date (MM/DD/YYYY).'));
+            }
         }
+        $test_date = $date_obj->format('Y-m-d');
     }
 
     // Validate weekly hours
@@ -279,9 +351,9 @@ function gmat_settings_save_handler() {
         wp_send_json_error(array('message' => 'Study module must be Quant or Verbal.'));
     }
 
-    // Validate section scores
-    if ($score_overall !== '' && ($score_overall < 205 || $score_overall > 805)) {
-        wp_send_json_error(array('message' => 'Overall score must be between 205 and 805.'));
+    // Validate section scores (overall must be in increments of 10)
+    if ($score_overall !== '' && ($score_overall < 205 || $score_overall > 805 || ($score_overall - 205) % 10 !== 0)) {
+        wp_send_json_error(array('message' => 'Overall score must be between 205 and 805 in increments of 10.'));
     }
     if ($score_quant !== '' && ($score_quant < 60 || $score_quant > 90)) {
         wp_send_json_error(array('message' => 'Quant score must be between 60 and 90.'));
@@ -308,6 +380,20 @@ function gmat_settings_save_handler() {
     }
 
     // --- Save score entry (replace or add to the official scores array) ---
+    // Convert score_date from MM/DD/YYYY to Y-m-d for storage
+    if ($score_date) {
+        $sd_obj = DateTime::createFromFormat('m/d/Y', $score_date);
+        if ($sd_obj) {
+            $score_date = $sd_obj->format('Y-m-d');
+        } else {
+            // Try Y-m-d fallback
+            $sd_obj = DateTime::createFromFormat('Y-m-d', $score_date);
+            if ($sd_obj) {
+                $score_date = $sd_obj->format('Y-m-d');
+            }
+        }
+    }
+
     if ($score_date || $score_overall || $score_quant || $score_verbal || $score_di) {
         $new_score = array(
             'date'    => $score_date,

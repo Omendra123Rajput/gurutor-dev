@@ -115,9 +115,21 @@ function gmat_intake_sanitize_scores($scores) {
     $sanitized = array();
     foreach ($scores as $score) {
         if (!is_array($score)) continue;
+
+        // Clamp overall to valid range then snap to nearest valid increment
+        $overall_raw = max(205, min(805, intval(isset($score['overall']) ? $score['overall'] : 0)));
+        $overall = round(($overall_raw - 205) / 10) * 10 + 205;
+        $overall = max(205, min(805, $overall));
+
+        // Convert date from MM/DD/YYYY to Y-m-d if needed
+        $date_str = sanitize_text_field(isset($score['date']) ? $score['date'] : '');
+        if (preg_match('#^(\d{1,2})/(\d{1,2})/(\d{4})$#', $date_str, $m)) {
+            $date_str = sprintf('%04d-%02d-%02d', $m[3], $m[1], $m[2]);
+        }
+
         $sanitized[] = array(
-            'date'    => sanitize_text_field(isset($score['date']) ? $score['date'] : ''),
-            'overall' => max(205, min(805, intval(isset($score['overall']) ? $score['overall'] : 0))),
+            'date'    => $date_str,
+            'overall' => $overall,
             'quant'   => max(60, min(90, intval(isset($score['quant']) ? $score['quant'] : 0))),
             'verbal'  => max(60, min(90, intval(isset($score['verbal']) ? $score['verbal'] : 0))),
             'di'      => max(60, min(90, intval(isset($score['di']) ? $score['di'] : 0))),
@@ -230,11 +242,63 @@ function gmat_intake_form_shortcode($atts) {
                 practiceScores: <?php echo $practice_scores ? $practice_scores : '[]'; ?>,
                 goalScore: <?php echo $goal_score ? intval($goal_score) : 'null'; ?>,
                 weeklyHours: <?php echo $weekly_hours ? intval($weekly_hours) : 'null'; ?>,
-                nextTestDate: <?php echo $next_test_date ? wp_json_encode($next_test_date) : 'null'; ?>,
+                nextTestDate: <?php
+                    if ($next_test_date) {
+                        // Convert Y-m-d to MM/DD/YYYY for JS display
+                        $dt = DateTime::createFromFormat('Y-m-d', $next_test_date);
+                        echo wp_json_encode($dt ? $dt->format('m/d/Y') : $next_test_date);
+                    } else {
+                        echo 'null';
+                    }
+                ?>,
                 sectionPreference: <?php echo $section_preference ? wp_json_encode($section_preference) : 'null'; ?>
             }
         };
     </script>
+
+    <style>
+    .gmat-date-input-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+    .gmat-date-input-wrap input[type="text"] {
+        padding-right: 38px;
+        width: 100%;
+    }
+    .gmat-date-picker-hidden {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+        overflow: hidden;
+    }
+    .gmat-date-picker-btn {
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        color: #00409E;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+    .gmat-date-picker-btn:hover,
+    .gmat-date-picker-btn:focus,
+    .gmat-date-picker-btn:active {
+        color: #002b6b;
+        background: none;
+        background-color: transparent;
+        outline: none;
+        box-shadow: none;
+    }
+    </style>
 
     <!-- Minimal logo bar (header/footer hidden on intake page) -->
     <div class="gmat-intake-logo-bar">
@@ -348,11 +412,17 @@ function gmat_intake_form_shortcode($atts) {
                             <div class="gmat-score-form__fields row">
                                 <div class="col-md-2">
                                     <label for="gmat-score-date">Date</label>
-                                    <input type="date" id="gmat-score-date" placeholder="Select Date">
+                                    <div class="gmat-date-input-wrap">
+                                        <input type="text" id="gmat-score-date" placeholder="MM/DD/YYYY" maxlength="10" autocomplete="off">
+                                        <input type="date" class="gmat-date-picker-hidden" data-target="#gmat-score-date" tabindex="-1" aria-hidden="true">
+                                        <button type="button" class="gmat-date-picker-btn" data-target="#gmat-score-date" title="Open calendar" aria-label="Open calendar">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="col-md-2">
                                     <label for="gmat-score-overall">Overall Score</label>
-                                    <input type="number" id="gmat-score-overall" placeholder="Enter Overall Score" min="205" max="805" step="5">
+                                    <input type="number" id="gmat-score-overall" placeholder="Enter Overall Score" min="205" max="805" step="10">
                                 </div>
                                 <div class="col-md-2">
                                     <label for="gmat-score-quant">Quant Score</label>
@@ -392,7 +462,7 @@ function gmat_intake_form_shortcode($atts) {
                         <div class="gmat-goal-card">
                             <h3 class="gmat-goal-card__title">Desired Goal Score</h3>
                             <label for="gmat-goal-score" class="gmat-field-label">Desired Score</label>
-                            <input type="number" id="gmat-goal-score" class="gmat-input" placeholder="Enter Your Desired Score here" min="205" max="805" step="5" value="<?php echo $goal_score ? esc_attr($goal_score) : ''; ?>">
+                            <input type="number" id="gmat-goal-score" class="gmat-input" placeholder="Enter Your Desired Score here" min="205" max="805" step="10" value="<?php echo $goal_score ? esc_attr($goal_score) : ''; ?>">
                             <p class="gmat-goal-card__note">You can change your GMAT score later from your Settings.</p>
                         </div>
                     </div>
@@ -464,7 +534,18 @@ function gmat_intake_form_shortcode($atts) {
                 <div class="gmat-date-card">
                     <h3 class="gmat-date-card__title">Next Test Date</h3>
                     <label for="gmat-next-test-date" class="gmat-field-label">Enter Date</label>
-                    <input type="date" id="gmat-next-test-date" class="gmat-input" min="<?php echo esc_attr(date('Y-m-d')); ?>" value="<?php echo $next_test_date ? esc_attr($next_test_date) : ''; ?>">
+                    <div class="gmat-date-input-wrap">
+                        <input type="text" id="gmat-next-test-date" class="gmat-input" placeholder="MM/DD/YYYY" maxlength="10" autocomplete="off" value="<?php
+                            if ($next_test_date) {
+                                $dt = DateTime::createFromFormat('Y-m-d', $next_test_date);
+                                echo $dt ? esc_attr($dt->format('m/d/Y')) : esc_attr($next_test_date);
+                            }
+                        ?>">
+                        <input type="date" class="gmat-date-picker-hidden" data-target="#gmat-next-test-date" min="<?php echo esc_attr(date('Y-m-d')); ?>" tabindex="-1" aria-hidden="true">
+                        <button type="button" class="gmat-date-picker-btn" data-target="#gmat-next-test-date" title="Open calendar" aria-label="Open calendar">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        </button>
+                    </div>
                     <p class="gmat-date-card__note">You can adjust this later if your plans change.</p>
                 </div>
 
@@ -573,8 +654,8 @@ function gmat_intake_save_goal_handler() {
     $user_id = get_current_user_id();
     $goal_score = intval($_POST['goal_score']);
 
-    if ($goal_score < 205 || $goal_score > 805) {
-        wp_send_json_error(array('message' => 'Score must be between 205 and 805.'));
+    if ($goal_score < 205 || $goal_score > 805 || ($goal_score - 205) % 10 !== 0) {
+        wp_send_json_error(array('message' => 'Score must be between 205 and 805 in increments of 10.'));
     }
 
     update_user_meta($user_id, '_gmat_intake_goal_score', $goal_score);
@@ -621,10 +702,14 @@ function gmat_intake_save_test_date_handler() {
     $user_id = get_current_user_id();
     $test_date = sanitize_text_field($_POST['test_date']);
 
-    // Validate date format
-    $date_obj = DateTime::createFromFormat('Y-m-d', $test_date);
-    if (!$date_obj || $date_obj->format('Y-m-d') !== $test_date) {
-        wp_send_json_error(array('message' => 'Please enter a valid date.'));
+    // Accept MM/DD/YYYY from client, convert to Y-m-d for storage
+    $date_obj = DateTime::createFromFormat('m/d/Y', $test_date);
+    if (!$date_obj || $date_obj->format('m/d/Y') !== $test_date) {
+        // Fallback: try Y-m-d format
+        $date_obj = DateTime::createFromFormat('Y-m-d', $test_date);
+        if (!$date_obj || $date_obj->format('Y-m-d') !== $test_date) {
+            wp_send_json_error(array('message' => 'Please enter a valid date in MM/DD/YYYY format.'));
+        }
     }
 
     // Validate date is not in the past
@@ -633,7 +718,8 @@ function gmat_intake_save_test_date_handler() {
         wp_send_json_error(array('message' => 'Test date must be today or in the future.'));
     }
 
-    update_user_meta($user_id, '_gmat_intake_next_test_date', $test_date);
+    $store_date = $date_obj->format('Y-m-d');
+    update_user_meta($user_id, '_gmat_intake_next_test_date', $store_date);
 
     wp_send_json_success(array('message' => 'Test date saved'));
 }

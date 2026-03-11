@@ -2784,7 +2784,13 @@ function gurutor_user_has_active_paid_access($user_id = null) {
         }
         $user_id = get_current_user_id();
     }
-    
+
+    // Admins always have access
+    $user = get_userdata($user_id);
+    if ($user && in_array('administrator', (array) $user->roles)) {
+        return true;
+    }
+
     $paid_product_ids = array(7008, 7009); // Month to Month and 6-month Package
     
     // ONLY check WooCommerce Subscriptions for ACTIVE subscriptions

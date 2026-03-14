@@ -2791,6 +2791,15 @@ function gurutor_user_has_active_paid_access($user_id = null) {
         return true;
     }
 
+    // TEMPORARY: Grant access to "customer" role users enrolled in the paid course (8112)
+    // This allows manually-enrolled beta testers/existing users to see the new experience
+    // TODO: Remove this once these users have proper subscriptions
+    if ($user && in_array('customer', (array) $user->roles)) {
+        if (function_exists('sfwd_lms_has_access') && sfwd_lms_has_access(8112, $user_id)) {
+            return true;
+        }
+    }
+
     $paid_product_ids = array(7008, 7009); // Month to Month and 6-month Package
     
     // ONLY check WooCommerce Subscriptions for ACTIVE subscriptions

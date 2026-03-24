@@ -1552,13 +1552,10 @@ function grassblade_study_plan_focus_shortcode( $atts ) {
 
     ob_start();
 
-    // No focus value: diagnostic not completed yet
+    // No focus value: diagnostic not completed yet — return empty string
+    // so the Elementor wrapper has no content and no padding is applied
     if ( empty( $focus ) ) {
-        echo '<div class="grassblade-study-plan-notice" style="display:none">';
-        echo '<h3>Get Your Personalized Study Plan</h3>';
-        echo '<p>Complete the diagnostic test to receive a customized study plan.</p>';
-        echo '</div>';
-        return ob_get_clean();
+        return '';
     }
 
     // Map focus to lessons

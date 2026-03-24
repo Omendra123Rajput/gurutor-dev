@@ -1351,6 +1351,283 @@ add_shortcode('grassblade_study_plan', 'grassblade_study_plan_shortcode');
 
 
 /**
+ * ============================================================================
+ * NEW Study Plan Focus System (replaces bucket-based logic for new diagnostic)
+ * ============================================================================
+ *
+ * After completing Free Trial Diagnostic Test 1, the LRS returns a single
+ * Study_Plan_Focus value (DP, FPR, ER, TRN, CR, or DI) embedded in the
+ * xAPI statement's object ID/name. This maps directly to 2-3 predefined lessons.
+ */
+
+/**
+ * Get the lesson mapping for each Study_Plan_Focus value.
+ *
+ * Each focus value maps to a title (focus area name) and an ordered array
+ * of lessons with their LearnDash post IDs and frontend display names.
+ *
+ * @return array Associative array keyed by focus value.
+ */
+function grassblade_get_focus_lesson_map() {
+    return array(
+        'DP' => array(
+            'title'   => 'Divisibility & Primes',
+            'lessons' => array(
+                array( 'lesson_id' => 9628, 'lesson_name' => 'Rethinking Division through Prime Factorization' ),
+                array( 'lesson_id' => 9629, 'lesson_name' => 'Applying Your Skills with Step-by-Step Support' ),
+            ),
+        ),
+        'FPR' => array(
+            'title'   => 'Problem Solving Strategies',
+            'lessons' => array(
+                array( 'lesson_id' => 9630, 'lesson_name' => 'Smart Numbers - How and When to Use Them' ),
+                array( 'lesson_id' => 9631, 'lesson_name' => 'Working Backwards - Finding the Right Answer in Fewer Steps' ),
+                array( 'lesson_id' => 9632, 'lesson_name' => 'Applying Your Skills with Step-by-Step Support' ),
+            ),
+        ),
+        'ER' => array(
+            'title'   => 'Exponents & Roots',
+            'lessons' => array(
+                array( 'lesson_id' => 9626, 'lesson_name' => 'Exponents and Roots - The Two Key Techniques and When to Use Them' ),
+                array( 'lesson_id' => 9627, 'lesson_name' => 'Applying Your Skills with Step-by-Step Support' ),
+            ),
+        ),
+        'TRN' => array(
+            'title'   => 'Translations',
+            'lessons' => array(
+                array( 'lesson_id' => 9633, 'lesson_name' => 'Translations - Recognizing Common Setups and Converting Them to Math' ),
+                array( 'lesson_id' => 9634, 'lesson_name' => 'Applying Your Skills with Step-by-Step Support' ),
+            ),
+        ),
+        'CR' => array(
+            'title'   => 'Critical Reasoning',
+            'lessons' => array(
+                array( 'lesson_id' => 9638, 'lesson_name' => 'CR Plan Arguments - How to Recognize and Deconstruct Them' ),
+                array( 'lesson_id' => 9635, 'lesson_name' => 'Guided Practice - Solving Plan Argument Questions with Step-by-Step Support' ),
+            ),
+        ),
+        'DI' => array(
+            'title'   => 'Data Insights',
+            'lessons' => array(
+                array( 'lesson_id' => 9636, 'lesson_name' => 'Data Sufficiency - The Core Process for Working Through Questions' ),
+                array( 'lesson_id' => 9637, 'lesson_name' => 'Data Sufficiency Strategies - Rephrasing and Counting Variables and Equations' ),
+            ),
+        ),
+    );
+}
+
+/**
+ * Fetch the Study_Plan_Focus value from the GrassBlade LRS for a user.
+ *
+ * Queries completed statements for the free-trial-quant-diagnostic activity
+ * and extracts the Study_Plan_Focus value from the object ID or object name
+ * JSON string. Returns the latest result by timestamp.
+ *
+ * @param string $email User email address.
+ * @return string|null Focus value (e.g. 'DP', 'FPR', 'CR') or null if not found.
+ */
+function grassblade_get_study_plan_focus( $email ) {
+    if ( empty( $email ) ) {
+        return null;
+    }
+
+    // Targeted fetch: only completed statements for the diagnostic activity
+    $data = grassblade_fetch_statements( array(
+        'agent_email'        => $email,
+        'activity_id'        => 'http://www.uniqueurl.com/free-trial-quant-diagnostic',
+        'verb'               => 'http://adlnet.gov/expapi/verbs/completed',
+        'related_activities' => true,
+        'limit'              => 0,
+    ) );
+
+    if ( is_wp_error( $data ) || empty( $data['statements'] ) || ! is_array( $data['statements'] ) ) {
+        return null;
+    }
+
+    $results = array();
+
+    foreach ( $data['statements'] as $statement ) {
+        $focus_value = null;
+
+        // Try extracting Study_Plan_Focus from object ID
+        $object_id = isset( $statement['object']['id'] ) ? $statement['object']['id'] : '';
+        if ( strpos( $object_id, 'free-trial-quant-diagnostic' ) !== false && strpos( $object_id, '{' ) !== false ) {
+            $json_part = substr( $object_id, strpos( $object_id, '{' ) );
+            $json_part = rtrim( $json_part, ',' );
+            if ( substr( $json_part, -1 ) !== '}' ) {
+                $json_part .= '}';
+            }
+
+            $parsed = json_decode( $json_part, true );
+            if ( json_last_error() !== JSON_ERROR_NONE ) {
+                $parsed = json_decode( stripslashes( $json_part ), true );
+            }
+            if ( is_array( $parsed ) && isset( $parsed['Study_Plan_Focus'] ) ) {
+                $focus_value = trim( $parsed['Study_Plan_Focus'] );
+            }
+        }
+
+        // Fallback: check object name
+        if ( ! $focus_value ) {
+            $object_name = isset( $statement['object']['definition']['name']['en-US'] )
+                ? $statement['object']['definition']['name']['en-US']
+                : '';
+            if ( strpos( $object_name, 'Study_Plan_Focus' ) !== false ) {
+                $parsed = json_decode( $object_name, true );
+                if ( json_last_error() !== JSON_ERROR_NONE ) {
+                    $parsed = json_decode( stripslashes( $object_name ), true );
+                }
+                if ( is_array( $parsed ) && isset( $parsed['Study_Plan_Focus'] ) ) {
+                    $focus_value = trim( $parsed['Study_Plan_Focus'] );
+                }
+            }
+        }
+
+        if ( $focus_value ) {
+            $timestamp = isset( $statement['timestamp'] ) ? $statement['timestamp'] : '';
+            $results[] = array(
+                'focus'     => $focus_value,
+                'timestamp' => $timestamp,
+            );
+        }
+    }
+
+    if ( empty( $results ) ) {
+        return null;
+    }
+
+    // Sort by timestamp descending, return latest
+    usort( $results, function( $a, $b ) {
+        return strtotime( $b['timestamp'] ) - strtotime( $a['timestamp'] );
+    } );
+
+    return $results[0]['focus'];
+}
+
+/**
+ * Display personalized study plan based on Study_Plan_Focus value.
+ *
+ * New simplified system: a single diagnostic test returns one focus value
+ * that maps directly to 2-3 predefined lessons.
+ *
+ * Usage: [grassblade_study_plan_focus]
+ *
+ * @param array $atts Shortcode attributes (unused).
+ * @return string HTML output.
+ */
+function grassblade_study_plan_focus_shortcode( $atts ) {
+    if ( ! is_user_logged_in() ) {
+        return '<div class="grassblade-study-plan-notice">
+            <p>Please log in to view your personalized study plan.</p>
+        </div>';
+    }
+
+    $current_user = wp_get_current_user();
+    $user_id      = $current_user->ID;
+
+    // Trial expiry check (same logic as existing shortcode)
+    global $MY_TRIAL_COURSE_ID;
+    $trial_course_id = isset( $MY_TRIAL_COURSE_ID ) ? intval( $MY_TRIAL_COURSE_ID ) : 7472;
+    $trial_expired   = false;
+    $user_has_access = false;
+
+    if ( function_exists( 'sfwd_lms_has_access' ) ) {
+        $user_has_access = sfwd_lms_has_access( $trial_course_id, $user_id );
+    }
+
+    if ( function_exists( 'ld_course_access_expires_on' ) ) {
+        $expiry_ts = intval( ld_course_access_expires_on( $trial_course_id, $user_id ) );
+        $now_ts    = current_time( 'timestamp' );
+
+        if ( $expiry_ts && $expiry_ts <= $now_ts ) {
+            $trial_expired = true;
+        }
+        if ( ! $expiry_ts && ! $user_has_access ) {
+            $trial_expired = true;
+        }
+    }
+
+    // Fetch Study_Plan_Focus value
+    $focus = grassblade_get_study_plan_focus( $current_user->user_email );
+
+    ob_start();
+
+    // No focus value: diagnostic not completed yet
+    if ( empty( $focus ) ) {
+        echo '<div class="grassblade-study-plan-notice" style="display:none">';
+        echo '<h3>Get Your Personalized Study Plan</h3>';
+        echo '<p>Complete the diagnostic test to receive a customized study plan.</p>';
+        echo '</div>';
+        return ob_get_clean();
+    }
+
+    // Map focus to lessons
+    $focus_map   = grassblade_get_focus_lesson_map();
+    $focus_upper = strtoupper( $focus );
+
+    if ( ! isset( $focus_map[ $focus_upper ] ) ) {
+        error_log( 'Gurutor: Unrecognized Study_Plan_Focus value "' . esc_html( $focus ) . '" for user ' . $current_user->user_email );
+        echo '<div class="grassblade-study-plan-notice">';
+        echo '<p>We could not determine your study plan focus. Please retake the diagnostic test or contact support.</p>';
+        echo '</div>';
+        return ob_get_clean();
+    }
+
+    $plan = $focus_map[ $focus_upper ];
+
+    // Render the study plan (matches old shortcode HTML structure exactly)
+    ?>
+    <div class="grassblade-study-plan heading">
+
+        <h2>🎯 Your Personalized Study Plan</h2>
+
+        <div class="priority-section">
+            <div class="priority-header">
+                <span class="priority-badge">Focus Area</span>
+                <h3 class="priority-title"><?php echo esc_html( $plan['title'] ); ?></h3>
+            </div>
+
+            <ul class="lesson-list">
+                <?php
+                $counter = 1;
+                foreach ( $plan['lessons'] as $lesson ) :
+                    $lesson_url = get_permalink( $lesson['lesson_id'] );
+                    $tooltip_id = 'ld-lesson__row-tooltip--' . $lesson['lesson_id'];
+                ?>
+                    <li class="lesson-item <?php echo $trial_expired ? 'lesson-locked' : ''; ?>">
+                        <span class="lesson-number"><?php echo $counter; ?></span>
+                        <div class="lesson-info">
+                            <p class="lesson-name"><?php echo esc_html( $lesson['lesson_name'] ); ?></p>
+                            <p class="lesson-topic">Topic: <?php echo esc_html( $plan['title'] ); ?></p>
+                        </div>
+                        <?php if ( $lesson_url ) : ?>
+                            <div class="lesson-link-wrapper">
+                                <?php if ( $trial_expired ) : ?>
+                                    <span class="lesson-link disabled">Start Lesson &rarr;</span>
+                                    <div class="ld-tooltip__text" id="<?php echo esc_attr( $tooltip_id ); ?>" role="tooltip">
+                                        You don't currently have access to this content
+                                    </div>
+                                <?php else : ?>
+                                    <a href="<?php echo esc_url( $lesson_url ); ?>" class="lesson-link">Start Lesson &rarr;</a>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </li>
+                <?php
+                    $counter++;
+                endforeach;
+                ?>
+            </ul>
+        </div>
+    </div>
+    <?php
+
+    return ob_get_clean();
+}
+add_shortcode( 'grassblade_study_plan_focus', 'grassblade_study_plan_focus_shortcode' );
+
+
+/**
  * Display personalized study plan based on diagnostic test 2 results
  * Usage: [grassblade_study_plan_test2]
  */
@@ -1519,7 +1796,11 @@ function grassblade_diagnostic_test_section_handler() {
     // Check if user has bucket data (completed diagnostic test 1)
     $latest_buckets = grassblade_get_latest_bucket_data($current_user->user_email);
     $has_completed_test = !empty($latest_buckets);
-    
+
+    // Also check for new Study_Plan_Focus completion (new diagnostic format)
+    $study_plan_focus = grassblade_get_study_plan_focus($current_user->user_email);
+    $has_completed_test = $has_completed_test || !empty($study_plan_focus);
+
     // Check if user has bucket data (completed diagnostic test 2)
     $latest_buckets_test2 = grassblade_get_latest_bucket_data_test2($current_user->user_email);
     $has_completed_test2 = !empty($latest_buckets_test2);
@@ -3116,17 +3397,23 @@ function gurutor_redirect_paid_users_from_free_trial() {
     if (is_admin()) {
         return;
     }
-    
+
     // Don't redirect AJAX requests
     if (wp_doing_ajax()) {
         return;
     }
-    
+
     // Check if user is logged in
     if (!is_user_logged_in()) {
         return;
     }
-    
+
+    // Skip redirect for administrators so they can access the free trial page
+    $current_user = wp_get_current_user();
+    if (in_array('administrator', (array) $current_user->roles)) {
+        return;
+    }
+
     // Check if user has active paid access
     if (!gurutor_user_has_active_paid_access()) {
         return;
@@ -3428,7 +3715,13 @@ function gurutor_js_redirect_for_paid_users() {
     if (!is_user_logged_in()) {
         return;
     }
-    
+
+    // Skip redirect for administrators so they can access the free trial page
+    $current_user = wp_get_current_user();
+    if (in_array('administrator', (array) $current_user->roles)) {
+        return;
+    }
+
     // Check if user has active paid access
     if (!gurutor_user_has_active_paid_access()) {
         return;

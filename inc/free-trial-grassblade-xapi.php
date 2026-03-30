@@ -1417,6 +1417,153 @@ function grassblade_get_focus_lesson_map() {
 }
 
 /**
+ * Get the xAPI unique URL for a free trial lesson post ID.
+ *
+ * Maps LearnDash lesson post IDs to their GrassBlade xAPI activity IDs
+ * (unique URLs used in xAPI statements).
+ *
+ * @return array Post ID => xAPI activity URL.
+ */
+function grassblade_get_free_trial_xapi_url_map() {
+    return array(
+        9626 => 'http://www.uniqueurl.com/algebra-lesson-1-trial-part-1',
+        9627 => 'http://www.uniqueurl.com/algebra-lesson-1-trial-part-2',
+        9628 => 'http://www.uniqueurl.com/number-properties-lesson-1-trial-part-1',
+        9629 => 'http://www.uniqueurl.com/number-properties-lesson-1-trial-part-2',
+        9630 => 'http://www.uniqueurl.com/problem-solving-strategies-lesson-1-trial-sn',
+        9631 => 'http://www.uniqueurl.com/problem-solving-strategies-lesson-1-trial-wb',
+        9632 => 'http://www.uniqueurl.com/problem-solving-strategies-lesson-1-trial-mixed-practice',
+        9633 => 'http://www.uniqueurl.com/word-problems-lesson-1-trial-part-1',
+        9634 => 'http://www.uniqueurl.com/word-problems-lesson-1-trial-part-2',
+        9635 => 'http://www.uniqueurl.com/cr-lesson-5-plan-arguments-trial',
+        9636 => 'http://www.uniqueurl.com/di-lesson-1-ds-methods-trial',
+        9637 => 'http://www.uniqueurl.com/di-lesson-2-ds-strategies-1-trial',
+        9638 => 'http://www.uniqueurl.com/free-trial-plan-arguments',
+    );
+}
+
+/**
+ * Fetch and cache xAPI status map for free trial lessons.
+ *
+ * Queries the GrassBlade LRS for completed and attempted statements,
+ * builds a map of xAPI activity URL => 'completed' | 'in-progress'.
+ * Cached per user per page load (static variable).
+ *
+ * @param int $user_id WordPress user ID.
+ * @return array activity_url => status string.
+ */
+function grassblade_get_free_trial_xapi_status_map( $user_id ) {
+    static $cache = array();
+
+    if ( isset( $cache[ $user_id ] ) ) {
+        return $cache[ $user_id ];
+    }
+
+    $status_map = array();
+
+    $user = get_userdata( $user_id );
+    if ( ! $user || empty( $user->user_email ) ) {
+        $cache[ $user_id ] = $status_map;
+        return $status_map;
+    }
+
+    if ( ! function_exists( 'grassblade_fetch_statements' ) ) {
+        $cache[ $user_id ] = $status_map;
+        return $status_map;
+    }
+
+    $email = $user->user_email;
+
+    // Fetch COMPLETED statements
+    $completed_result = grassblade_fetch_statements( array(
+        'agent_email' => $email,
+        'verb'        => 'http://adlnet.gov/expapi/verbs/completed',
+        'limit'       => 500,
+    ) );
+
+    if ( ! is_wp_error( $completed_result ) && is_array( $completed_result ) ) {
+        $statements = isset( $completed_result['statements'] ) ? $completed_result['statements'] : $completed_result;
+        if ( is_array( $statements ) ) {
+            foreach ( $statements as $stmt ) {
+                if ( ! isset( $stmt['object']['id'] ) ) continue;
+                $activity_id = $stmt['object']['id'];
+
+                $is_completed = false;
+                if ( isset( $stmt['result']['completion'] ) && $stmt['result']['completion'] === true ) {
+                    $is_completed = true;
+                }
+                if ( isset( $stmt['result']['success'] ) && $stmt['result']['success'] === true ) {
+                    $is_completed = true;
+                }
+                if ( ! isset( $stmt['result'] ) || empty( $stmt['result'] ) ) {
+                    $is_completed = true;
+                }
+
+                if ( $is_completed ) {
+                    $status_map[ $activity_id ] = 'completed';
+                }
+            }
+        }
+    }
+
+    // Fetch ATTEMPTED statements
+    $attempted_result = grassblade_fetch_statements( array(
+        'agent_email' => $email,
+        'verb'        => 'http://adlnet.gov/expapi/verbs/attempted',
+        'limit'       => 500,
+    ) );
+
+    if ( ! is_wp_error( $attempted_result ) && is_array( $attempted_result ) ) {
+        $statements = isset( $attempted_result['statements'] ) ? $attempted_result['statements'] : $attempted_result;
+        if ( is_array( $statements ) ) {
+            foreach ( $statements as $stmt ) {
+                if ( ! isset( $stmt['object']['id'] ) ) continue;
+                $activity_id = $stmt['object']['id'];
+
+                // Only set in-progress if NOT already completed
+                if ( ! isset( $status_map[ $activity_id ] ) ) {
+                    $status_map[ $activity_id ] = 'in-progress';
+                }
+            }
+        }
+    }
+
+    $cache[ $user_id ] = $status_map;
+    return $status_map;
+}
+
+/**
+ * Get the progress status of a free trial lesson for a user.
+ *
+ * Checks xAPI statements from GrassBlade LRS by mapping the lesson's
+ * post ID to its xAPI unique URL and looking up the cached status.
+ *
+ * @param int $user_id   WordPress user ID.
+ * @param int $lesson_id LearnDash lesson post ID.
+ * @return string 'completed', 'in-progress', or 'not-started'.
+ */
+function grassblade_get_free_trial_lesson_status( $user_id, $lesson_id ) {
+    if ( ! $user_id || ! $lesson_id ) {
+        return 'not-started';
+    }
+
+    $url_map    = grassblade_get_free_trial_xapi_url_map();
+    $status_map = grassblade_get_free_trial_xapi_status_map( $user_id );
+
+    if ( ! isset( $url_map[ $lesson_id ] ) ) {
+        return 'not-started';
+    }
+
+    $xapi_url = $url_map[ $lesson_id ];
+
+    if ( isset( $status_map[ $xapi_url ] ) ) {
+        return $status_map[ $xapi_url ];
+    }
+
+    return 'not-started';
+}
+
+/**
  * Fetch the Study_Plan_Focus value from the GrassBlade LRS for a user.
  *
  * Queries completed statements for the free-trial-quant-diagnostic activity
@@ -1572,8 +1719,75 @@ function grassblade_study_plan_focus_shortcode( $atts ) {
 
     $plan = $focus_map[ $focus_upper ];
 
-    // Render the study plan (matches old shortcode HTML structure exactly)
+    // Render the study plan (matches old shortcode HTML structure + progress states)
     ?>
+    <style>
+    /* Lesson progress states — left border + number circle colors */
+    .grassblade-study-plan .lesson-item--in-progress {
+        border-left-color: #f68525 !important;
+    }
+    .grassblade-study-plan .lesson-item--in-progress .lesson-number {
+        background: #f68525 !important;
+    }
+    .grassblade-study-plan .lesson-item--completed {
+        border-left-color: #22c55e !important;
+    }
+    .grassblade-study-plan .lesson-item--completed .lesson-number {
+        background: #22c55e !important;
+    }
+    /* Status badges */
+    .grassblade-study-plan .lesson-status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        margin-right: 10px;
+    }
+    .grassblade-study-plan .lesson-status-badge--completed {
+        background: #dcfce7;
+        color: #166534;
+    }
+    .grassblade-study-plan .lesson-status-badge--progress {
+        background: #00409E;
+        color: #fff;
+    }
+    /* Button variants — continue (orange) and review (green) */
+    .grassblade-study-plan .lesson-link--continue {
+        background-color: #f68525 !important;
+    }
+    .grassblade-study-plan .lesson-link--continue:hover {
+        background-color: #e5741a !important;
+    }
+    .grassblade-study-plan .lesson-link--review {
+        background-color: #22c55e !important;
+    }
+    .grassblade-study-plan .lesson-link--review:hover {
+        background-color: #16a34a !important;
+    }
+    /* Mobile fixes for focus badge and progress states */
+    @media (max-width: 480px) {
+        .grassblade-study-plan .priority-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .grassblade-study-plan .priority-badge {
+            margin-bottom: 4px;
+        }
+        .grassblade-study-plan .lesson-status-badge {
+            margin-right: 0;
+            margin-bottom: 6px;
+        }
+        .grassblade-study-plan .lesson-link-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+    }
+    </style>
     <div class="grassblade-study-plan heading">
 
         <h2>🎯 Your Personalized Study Plan</h2>
@@ -1590,8 +1804,17 @@ function grassblade_study_plan_focus_shortcode( $atts ) {
                 foreach ( $plan['lessons'] as $lesson ) :
                     $lesson_url = get_permalink( $lesson['lesson_id'] );
                     $tooltip_id = 'ld-lesson__row-tooltip--' . $lesson['lesson_id'];
+                    $status     = grassblade_get_free_trial_lesson_status( $user_id, $lesson['lesson_id'] );
+
+                    // Build lesson-item classes
+                    $item_classes = 'lesson-item';
+                    if ( $trial_expired ) {
+                        $item_classes .= ' lesson-locked';
+                    } elseif ( $status !== 'not-started' ) {
+                        $item_classes .= ' lesson-item--' . $status;
+                    }
                 ?>
-                    <li class="lesson-item <?php echo $trial_expired ? 'lesson-locked' : ''; ?>">
+                    <li class="<?php echo esc_attr( $item_classes ); ?>">
                         <span class="lesson-number"><?php echo $counter; ?></span>
                         <div class="lesson-info">
                             <p class="lesson-name"><?php echo esc_html( $lesson['lesson_name'] ); ?></p>
@@ -1604,6 +1827,12 @@ function grassblade_study_plan_focus_shortcode( $atts ) {
                                     <div class="ld-tooltip__text" id="<?php echo esc_attr( $tooltip_id ); ?>" role="tooltip">
                                         You don't currently have access to this content
                                     </div>
+                                <?php elseif ( $status === 'completed' ) : ?>
+                                    <span class="lesson-status-badge lesson-status-badge--completed">Completed</span>
+                                    <a href="<?php echo esc_url( $lesson_url ); ?>" class="lesson-link lesson-link--review">Review</a>
+                                <?php elseif ( $status === 'in-progress' ) : ?>
+                                    <span class="lesson-status-badge lesson-status-badge--progress">In Progress</span>
+                                    <a href="<?php echo esc_url( $lesson_url ); ?>" class="lesson-link lesson-link--continue">Continue</a>
                                 <?php else : ?>
                                     <a href="<?php echo esc_url( $lesson_url ); ?>" class="lesson-link">Start Lesson &rarr;</a>
                                 <?php endif; ?>

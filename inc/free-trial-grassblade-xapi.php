@@ -1382,7 +1382,6 @@ function grassblade_get_focus_lesson_map() {
             'lessons' => array(
                 array( 'lesson_id' => 9630, 'lesson_name' => 'Smart Numbers - How and When to Use Them' ),
                 array( 'lesson_id' => 9631, 'lesson_name' => 'Working Backwards - Finding the Right Answer in Fewer Steps' ),
-                array( 'lesson_id' => 9632, 'lesson_name' => 'Applying Your Skills with Step-by-Step Support' ),
             ),
         ),
         'ER' => array(

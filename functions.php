@@ -1256,12 +1256,7 @@ function direct_hubspot_apply_tags($contact_id, $tag_ids, $api_key) {
  */
 add_action('woocommerce_created_customer', 'handle_free_trial_registration_immediate', 10, 3);
 function handle_free_trial_registration_immediate($customer_id, $new_customer_data, $password_generated) {
-    
-    // Only for free trial registrations
-    if (!isset($_GET['type_subs']) || $_GET['type_subs'] !== 'free') {
-        return;
-    }
-    
+
     $user = get_userdata($customer_id);
     if (!$user) {
         return;

@@ -1351,6 +1351,508 @@ add_shortcode('grassblade_study_plan', 'grassblade_study_plan_shortcode');
 
 
 /**
+ * ============================================================================
+ * NEW Study Plan Focus System (replaces bucket-based logic for new diagnostic)
+ * ============================================================================
+ *
+ * After completing Free Trial Diagnostic Test 1, the LRS returns a single
+ * Study_Plan_Focus value (DP, FPR, ER, TRN, CR, or DI) embedded in the
+ * xAPI statement's object ID/name. This maps directly to 2-3 predefined lessons.
+ */
+
+/**
+ * Get the lesson mapping for each Study_Plan_Focus value.
+ *
+ * Each focus value maps to a title (focus area name) and an ordered array
+ * of lessons with their LearnDash post IDs and frontend display names.
+ *
+ * @return array Associative array keyed by focus value.
+ */
+function grassblade_get_focus_lesson_map() {
+    return array(
+        'DP' => array(
+            'title'   => 'Divisibility & Primes',
+            'lessons' => array(
+                array( 'lesson_id' => 9628, 'lesson_name' => 'Rethinking Division through Prime Factorization' ),
+                array( 'lesson_id' => 9629, 'lesson_name' => 'Applying Your Skills with Step-by-Step Support' ),
+            ),
+        ),
+        'FPR' => array(
+            'title'   => 'Problem Solving Strategies',
+            'lessons' => array(
+                array( 'lesson_id' => 9630, 'lesson_name' => 'Smart Numbers - How and When to Use Them' ),
+                array( 'lesson_id' => 9631, 'lesson_name' => 'Working Backwards - Finding the Right Answer in Fewer Steps' ),
+            ),
+        ),
+        'ER' => array(
+            'title'   => 'Exponents & Roots',
+            'lessons' => array(
+                array( 'lesson_id' => 9626, 'lesson_name' => 'Exponents and Roots - The Two Key Techniques and When to Use Them' ),
+                array( 'lesson_id' => 9627, 'lesson_name' => 'Applying Your Skills with Step-by-Step Support' ),
+            ),
+        ),
+        'TRN' => array(
+            'title'   => 'Translations',
+            'lessons' => array(
+                array( 'lesson_id' => 9633, 'lesson_name' => 'Translations - Recognizing Common Setups and Converting Them to Math' ),
+                array( 'lesson_id' => 9634, 'lesson_name' => 'Applying Your Skills with Step-by-Step Support' ),
+            ),
+        ),
+        'CR' => array(
+            'title'   => 'Critical Reasoning',
+            'lessons' => array(
+                array( 'lesson_id' => 9638, 'lesson_name' => 'CR Plan Arguments - How to Recognize and Deconstruct Them' ),
+                array( 'lesson_id' => 9635, 'lesson_name' => 'Guided Practice - Solving Plan Argument Questions with Step-by-Step Support' ),
+            ),
+        ),
+        'DI' => array(
+            'title'   => 'Data Insights',
+            'lessons' => array(
+                array( 'lesson_id' => 9636, 'lesson_name' => 'Data Sufficiency - The Core Process for Working Through Questions' ),
+                array( 'lesson_id' => 9637, 'lesson_name' => 'Data Sufficiency Strategies - Rephrasing and Counting Variables and Equations' ),
+            ),
+        ),
+    );
+}
+
+/**
+ * Get the xAPI unique URL for a free trial lesson post ID.
+ *
+ * Maps LearnDash lesson post IDs to their GrassBlade xAPI activity IDs
+ * (unique URLs used in xAPI statements).
+ *
+ * @return array Post ID => xAPI activity URL.
+ */
+function grassblade_get_free_trial_xapi_url_map() {
+    return array(
+        9626 => 'http://www.uniqueurl.com/algebra-lesson-1-trial-part-1',
+        9627 => 'http://www.uniqueurl.com/algebra-lesson-1-trial-part-2',
+        9628 => 'http://www.uniqueurl.com/number-properties-lesson-1-trial-part-1',
+        9629 => 'http://www.uniqueurl.com/number-properties-lesson-1-trial-part-2',
+        9630 => 'http://www.uniqueurl.com/problem-solving-strategies-lesson-1-trial-sn',
+        9631 => 'http://www.uniqueurl.com/problem-solving-strategies-lesson-1-trial-wb',
+        9632 => 'http://www.uniqueurl.com/problem-solving-strategies-lesson-1-trial-mixed-practice',
+        9633 => 'http://www.uniqueurl.com/word-problems-lesson-1-trial-part-1',
+        9634 => 'http://www.uniqueurl.com/word-problems-lesson-1-trial-part-2',
+        9635 => 'http://www.uniqueurl.com/cr-lesson-5-plan-arguments-trial',
+        9636 => 'http://www.uniqueurl.com/di-lesson-1-ds-methods-trial',
+        9637 => 'http://www.uniqueurl.com/di-lesson-2-ds-strategies-1-trial',
+        9638 => 'http://www.uniqueurl.com/free-trial-plan-arguments',
+    );
+}
+
+/**
+ * Fetch and cache xAPI status map for free trial lessons.
+ *
+ * Queries the GrassBlade LRS for completed and attempted statements,
+ * builds a map of xAPI activity URL => 'completed' | 'in-progress'.
+ * Cached per user per page load (static variable).
+ *
+ * @param int $user_id WordPress user ID.
+ * @return array activity_url => status string.
+ */
+function grassblade_get_free_trial_xapi_status_map( $user_id ) {
+    static $cache = array();
+
+    if ( isset( $cache[ $user_id ] ) ) {
+        return $cache[ $user_id ];
+    }
+
+    $status_map = array();
+
+    $user = get_userdata( $user_id );
+    if ( ! $user || empty( $user->user_email ) ) {
+        $cache[ $user_id ] = $status_map;
+        return $status_map;
+    }
+
+    if ( ! function_exists( 'grassblade_fetch_statements' ) ) {
+        $cache[ $user_id ] = $status_map;
+        return $status_map;
+    }
+
+    $email = $user->user_email;
+
+    // Fetch COMPLETED statements
+    $completed_result = grassblade_fetch_statements( array(
+        'agent_email' => $email,
+        'verb'        => 'http://adlnet.gov/expapi/verbs/completed',
+        'limit'       => 500,
+    ) );
+
+    if ( ! is_wp_error( $completed_result ) && is_array( $completed_result ) ) {
+        $statements = isset( $completed_result['statements'] ) ? $completed_result['statements'] : $completed_result;
+        if ( is_array( $statements ) ) {
+            foreach ( $statements as $stmt ) {
+                if ( ! isset( $stmt['object']['id'] ) ) continue;
+                $activity_id = $stmt['object']['id'];
+
+                $is_completed = false;
+                if ( isset( $stmt['result']['completion'] ) && $stmt['result']['completion'] === true ) {
+                    $is_completed = true;
+                }
+                if ( isset( $stmt['result']['success'] ) && $stmt['result']['success'] === true ) {
+                    $is_completed = true;
+                }
+                if ( ! isset( $stmt['result'] ) || empty( $stmt['result'] ) ) {
+                    $is_completed = true;
+                }
+
+                if ( $is_completed ) {
+                    $status_map[ $activity_id ] = 'completed';
+                }
+            }
+        }
+    }
+
+    // Fetch ATTEMPTED statements
+    $attempted_result = grassblade_fetch_statements( array(
+        'agent_email' => $email,
+        'verb'        => 'http://adlnet.gov/expapi/verbs/attempted',
+        'limit'       => 500,
+    ) );
+
+    if ( ! is_wp_error( $attempted_result ) && is_array( $attempted_result ) ) {
+        $statements = isset( $attempted_result['statements'] ) ? $attempted_result['statements'] : $attempted_result;
+        if ( is_array( $statements ) ) {
+            foreach ( $statements as $stmt ) {
+                if ( ! isset( $stmt['object']['id'] ) ) continue;
+                $activity_id = $stmt['object']['id'];
+
+                // Only set in-progress if NOT already completed
+                if ( ! isset( $status_map[ $activity_id ] ) ) {
+                    $status_map[ $activity_id ] = 'in-progress';
+                }
+            }
+        }
+    }
+
+    $cache[ $user_id ] = $status_map;
+    return $status_map;
+}
+
+/**
+ * Get the progress status of a free trial lesson for a user.
+ *
+ * Checks xAPI statements from GrassBlade LRS by mapping the lesson's
+ * post ID to its xAPI unique URL and looking up the cached status.
+ *
+ * @param int $user_id   WordPress user ID.
+ * @param int $lesson_id LearnDash lesson post ID.
+ * @return string 'completed', 'in-progress', or 'not-started'.
+ */
+function grassblade_get_free_trial_lesson_status( $user_id, $lesson_id ) {
+    if ( ! $user_id || ! $lesson_id ) {
+        return 'not-started';
+    }
+
+    $url_map    = grassblade_get_free_trial_xapi_url_map();
+    $status_map = grassblade_get_free_trial_xapi_status_map( $user_id );
+
+    if ( ! isset( $url_map[ $lesson_id ] ) ) {
+        return 'not-started';
+    }
+
+    $xapi_url = $url_map[ $lesson_id ];
+
+    if ( isset( $status_map[ $xapi_url ] ) ) {
+        return $status_map[ $xapi_url ];
+    }
+
+    return 'not-started';
+}
+
+/**
+ * Fetch the Study_Plan_Focus value from the GrassBlade LRS for a user.
+ *
+ * Queries completed statements for the free-trial-quant-diagnostic activity
+ * and extracts the Study_Plan_Focus value from the object ID or object name
+ * JSON string. Returns the latest result by timestamp.
+ *
+ * @param string $email User email address.
+ * @return string|null Focus value (e.g. 'DP', 'FPR', 'CR') or null if not found.
+ */
+function grassblade_get_study_plan_focus( $email ) {
+    if ( empty( $email ) ) {
+        return null;
+    }
+
+    // Targeted fetch: only completed statements for the diagnostic activity
+    $data = grassblade_fetch_statements( array(
+        'agent_email'        => $email,
+        'activity_id'        => 'http://www.uniqueurl.com/free-trial-quant-diagnostic',
+        'verb'               => 'http://adlnet.gov/expapi/verbs/completed',
+        'related_activities' => true,
+        'limit'              => 0,
+    ) );
+
+    if ( is_wp_error( $data ) || empty( $data['statements'] ) || ! is_array( $data['statements'] ) ) {
+        return null;
+    }
+
+    $results = array();
+
+    foreach ( $data['statements'] as $statement ) {
+        $focus_value = null;
+
+        // Try extracting Study_Plan_Focus from object ID
+        $object_id = isset( $statement['object']['id'] ) ? $statement['object']['id'] : '';
+        if ( strpos( $object_id, 'free-trial-quant-diagnostic' ) !== false && strpos( $object_id, '{' ) !== false ) {
+            $json_part = substr( $object_id, strpos( $object_id, '{' ) );
+            $json_part = rtrim( $json_part, ',' );
+            if ( substr( $json_part, -1 ) !== '}' ) {
+                $json_part .= '}';
+            }
+
+            $parsed = json_decode( $json_part, true );
+            if ( json_last_error() !== JSON_ERROR_NONE ) {
+                $parsed = json_decode( stripslashes( $json_part ), true );
+            }
+            if ( is_array( $parsed ) && isset( $parsed['Study_Plan_Focus'] ) ) {
+                $focus_value = trim( $parsed['Study_Plan_Focus'] );
+            }
+        }
+
+        // Fallback: check object name
+        if ( ! $focus_value ) {
+            $object_name = isset( $statement['object']['definition']['name']['en-US'] )
+                ? $statement['object']['definition']['name']['en-US']
+                : '';
+            if ( strpos( $object_name, 'Study_Plan_Focus' ) !== false ) {
+                $parsed = json_decode( $object_name, true );
+                if ( json_last_error() !== JSON_ERROR_NONE ) {
+                    $parsed = json_decode( stripslashes( $object_name ), true );
+                }
+                if ( is_array( $parsed ) && isset( $parsed['Study_Plan_Focus'] ) ) {
+                    $focus_value = trim( $parsed['Study_Plan_Focus'] );
+                }
+            }
+        }
+
+        if ( $focus_value ) {
+            $timestamp = isset( $statement['timestamp'] ) ? $statement['timestamp'] : '';
+            $results[] = array(
+                'focus'     => $focus_value,
+                'timestamp' => $timestamp,
+            );
+        }
+    }
+
+    if ( empty( $results ) ) {
+        return null;
+    }
+
+    // Sort by timestamp descending, return latest
+    usort( $results, function( $a, $b ) {
+        return strtotime( $b['timestamp'] ) - strtotime( $a['timestamp'] );
+    } );
+
+    return $results[0]['focus'];
+}
+
+/**
+ * Display personalized study plan based on Study_Plan_Focus value.
+ *
+ * New simplified system: a single diagnostic test returns one focus value
+ * that maps directly to 2-3 predefined lessons.
+ *
+ * Usage: [grassblade_study_plan_focus]
+ *
+ * @param array $atts Shortcode attributes (unused).
+ * @return string HTML output.
+ */
+function grassblade_study_plan_focus_shortcode( $atts ) {
+    if ( ! is_user_logged_in() ) {
+        return '<div class="grassblade-study-plan-notice">
+            <p>Please log in to view your personalized study plan.</p>
+        </div>';
+    }
+
+    $current_user = wp_get_current_user();
+    $user_id      = $current_user->ID;
+
+    // Trial expiry check (same logic as existing shortcode)
+    global $MY_TRIAL_COURSE_ID;
+    $trial_course_id = isset( $MY_TRIAL_COURSE_ID ) ? intval( $MY_TRIAL_COURSE_ID ) : 7472;
+    $trial_expired   = false;
+    $user_has_access = false;
+
+    if ( function_exists( 'sfwd_lms_has_access' ) ) {
+        $user_has_access = sfwd_lms_has_access( $trial_course_id, $user_id );
+    }
+
+    if ( function_exists( 'ld_course_access_expires_on' ) ) {
+        $expiry_ts = intval( ld_course_access_expires_on( $trial_course_id, $user_id ) );
+        $now_ts    = current_time( 'timestamp' );
+
+        if ( $expiry_ts && $expiry_ts <= $now_ts ) {
+            $trial_expired = true;
+        }
+        if ( ! $expiry_ts && ! $user_has_access ) {
+            $trial_expired = true;
+        }
+    }
+
+    // Fetch Study_Plan_Focus value
+    $focus = grassblade_get_study_plan_focus( $current_user->user_email );
+
+    ob_start();
+
+    // No focus value: diagnostic not completed yet — return empty string
+    // so the Elementor wrapper has no content and no padding is applied
+    if ( empty( $focus ) ) {
+        return '';
+    }
+
+    // Map focus to lessons
+    $focus_map   = grassblade_get_focus_lesson_map();
+    $focus_upper = strtoupper( $focus );
+
+    if ( ! isset( $focus_map[ $focus_upper ] ) ) {
+        error_log( 'Gurutor: Unrecognized Study_Plan_Focus value "' . esc_html( $focus ) . '" for user ' . $current_user->user_email );
+        echo '<div class="grassblade-study-plan-notice">';
+        echo '<p>We could not determine your study plan focus. Please retake the diagnostic test or contact support.</p>';
+        echo '</div>';
+        return ob_get_clean();
+    }
+
+    $plan = $focus_map[ $focus_upper ];
+
+    // Render the study plan (matches old shortcode HTML structure + progress states)
+    ?>
+    <style>
+    /* Lesson progress states — left border + number circle colors */
+    .grassblade-study-plan .lesson-item--in-progress {
+        border-left-color: #f68525 !important;
+    }
+    .grassblade-study-plan .lesson-item--in-progress .lesson-number {
+        background: #f68525 !important;
+    }
+    .grassblade-study-plan .lesson-item--completed {
+        border-left-color: #22c55e !important;
+    }
+    .grassblade-study-plan .lesson-item--completed .lesson-number {
+        background: #22c55e !important;
+    }
+    /* Status badges */
+    .grassblade-study-plan .lesson-status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        margin-right: 10px;
+    }
+    .grassblade-study-plan .lesson-status-badge--completed {
+        background: #dcfce7;
+        color: #166534;
+    }
+    .grassblade-study-plan .lesson-status-badge--progress {
+        background: #00409E;
+        color: #fff;
+    }
+    /* Button variants — continue (orange) and review (green) */
+    .grassblade-study-plan .lesson-link--continue {
+        background-color: #f68525 !important;
+    }
+    .grassblade-study-plan .lesson-link--continue:hover {
+        background-color: #e5741a !important;
+    }
+    .grassblade-study-plan .lesson-link--review {
+        background-color: #22c55e !important;
+    }
+    .grassblade-study-plan .lesson-link--review:hover {
+        background-color: #16a34a !important;
+    }
+    /* Mobile fixes for focus badge and progress states */
+    @media (max-width: 480px) {
+        .grassblade-study-plan .priority-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .grassblade-study-plan .priority-badge {
+            margin-bottom: 4px;
+        }
+        .grassblade-study-plan .lesson-status-badge {
+            margin-right: 0;
+            margin-bottom: 6px;
+        }
+        .grassblade-study-plan .lesson-link-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+    }
+    </style>
+    <div class="grassblade-study-plan heading">
+
+        <h2>🎯 Your Personalized Study Plan</h2>
+
+        <div class="priority-section">
+            <div class="priority-header">
+                <span class="priority-badge">Focus Area</span>
+                <h3 class="priority-title"><?php echo esc_html( $plan['title'] ); ?></h3>
+            </div>
+
+            <ul class="lesson-list">
+                <?php
+                $counter = 1;
+                foreach ( $plan['lessons'] as $lesson ) :
+                    $lesson_url = get_permalink( $lesson['lesson_id'] );
+                    $tooltip_id = 'ld-lesson__row-tooltip--' . $lesson['lesson_id'];
+                    $status     = grassblade_get_free_trial_lesson_status( $user_id, $lesson['lesson_id'] );
+
+                    // Build lesson-item classes
+                    $item_classes = 'lesson-item';
+                    if ( $trial_expired ) {
+                        $item_classes .= ' lesson-locked';
+                    } elseif ( $status !== 'not-started' ) {
+                        $item_classes .= ' lesson-item--' . $status;
+                    }
+                ?>
+                    <li class="<?php echo esc_attr( $item_classes ); ?>">
+                        <span class="lesson-number"><?php echo $counter; ?></span>
+                        <div class="lesson-info">
+                            <p class="lesson-name"><?php echo esc_html( $lesson['lesson_name'] ); ?></p>
+                            <p class="lesson-topic">Topic: <?php echo esc_html( $plan['title'] ); ?></p>
+                        </div>
+                        <?php if ( $lesson_url ) : ?>
+                            <div class="lesson-link-wrapper">
+                                <?php if ( $trial_expired ) : ?>
+                                    <span class="lesson-link disabled">Start Lesson &rarr;</span>
+                                    <div class="ld-tooltip__text" id="<?php echo esc_attr( $tooltip_id ); ?>" role="tooltip">
+                                        You don't currently have access to this content
+                                    </div>
+                                <?php elseif ( $status === 'completed' ) : ?>
+                                    <span class="lesson-status-badge lesson-status-badge--completed">Completed</span>
+                                    <a href="<?php echo esc_url( $lesson_url ); ?>" class="lesson-link lesson-link--review">Review</a>
+                                <?php elseif ( $status === 'in-progress' ) : ?>
+                                    <span class="lesson-status-badge lesson-status-badge--progress">In Progress</span>
+                                    <a href="<?php echo esc_url( $lesson_url ); ?>" class="lesson-link lesson-link--continue">Continue</a>
+                                <?php else : ?>
+                                    <a href="<?php echo esc_url( $lesson_url ); ?>" class="lesson-link">Start Lesson &rarr;</a>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </li>
+                <?php
+                    $counter++;
+                endforeach;
+                ?>
+            </ul>
+        </div>
+    </div>
+    <?php
+
+    return ob_get_clean();
+}
+add_shortcode( 'grassblade_study_plan_focus', 'grassblade_study_plan_focus_shortcode' );
+
+
+/**
  * Display personalized study plan based on diagnostic test 2 results
  * Usage: [grassblade_study_plan_test2]
  */
@@ -1519,7 +2021,11 @@ function grassblade_diagnostic_test_section_handler() {
     // Check if user has bucket data (completed diagnostic test 1)
     $latest_buckets = grassblade_get_latest_bucket_data($current_user->user_email);
     $has_completed_test = !empty($latest_buckets);
-    
+
+    // Also check for new Study_Plan_Focus completion (new diagnostic format)
+    $study_plan_focus = grassblade_get_study_plan_focus($current_user->user_email);
+    $has_completed_test = $has_completed_test || !empty($study_plan_focus);
+
     // Check if user has bucket data (completed diagnostic test 2)
     $latest_buckets_test2 = grassblade_get_latest_bucket_data_test2($current_user->user_email);
     $has_completed_test2 = !empty($latest_buckets_test2);
@@ -2791,6 +3297,15 @@ function gurutor_user_has_active_paid_access($user_id = null) {
         return true;
     }
 
+    // TEMPORARY: Grant access to "customer" role users enrolled in the paid course (8112)
+    // This allows manually-enrolled beta testers/existing users to see the new experience
+    // TODO: Remove this once these users have proper subscriptions
+    if ($user && in_array('customer', (array) $user->roles)) {
+        if (function_exists('sfwd_lms_has_access') && sfwd_lms_has_access(8112, $user_id)) {
+            return true;
+        }
+    }
+
     $paid_product_ids = array(7008, 7009); // Month to Month and 6-month Package
     
     // ONLY check WooCommerce Subscriptions for ACTIVE subscriptions
@@ -3107,17 +3622,23 @@ function gurutor_redirect_paid_users_from_free_trial() {
     if (is_admin()) {
         return;
     }
-    
+
     // Don't redirect AJAX requests
     if (wp_doing_ajax()) {
         return;
     }
-    
+
     // Check if user is logged in
     if (!is_user_logged_in()) {
         return;
     }
-    
+
+    // Skip redirect for administrators so they can access the free trial page
+    $current_user = wp_get_current_user();
+    if (in_array('administrator', (array) $current_user->roles)) {
+        return;
+    }
+
     // Check if user has active paid access
     if (!gurutor_user_has_active_paid_access()) {
         return;
@@ -3419,7 +3940,13 @@ function gurutor_js_redirect_for_paid_users() {
     if (!is_user_logged_in()) {
         return;
     }
-    
+
+    // Skip redirect for administrators so they can access the free trial page
+    $current_user = wp_get_current_user();
+    if (in_array('administrator', (array) $current_user->roles)) {
+        return;
+    }
+
     // Check if user has active paid access
     if (!gurutor_user_has_active_paid_access()) {
         return;

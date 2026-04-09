@@ -316,7 +316,7 @@
                     message:    message,
                     session_id: self.sessionId,
                 },
-                timeout: 35000, // Slightly longer than server-side timeout
+                timeout: 60000, // Slightly longer than server-side timeout
                 success: function (response) {
                     self.hideTyping();
                     self.isSending = false;

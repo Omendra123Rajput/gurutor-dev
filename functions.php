@@ -4073,6 +4073,54 @@ function gurutor_back_to_course_cta() {
 }
 
 
+// ============================================================================
+// Lectora mobile init-overlay fix
+// On touch devices Lectora shows a grey "#initClickDiv" overlay before audio
+// unlocks. We re-style it with Gurutor branding so it doesn't look broken.
+// Works because the GrassBlade iframe is same-origin; CSS injected into the
+// iframe head applies to elements added later by Lectora's JS.
+// ============================================================================
+
+add_action( 'wp_footer', 'gurutor_lectora_mobile_init_fix' );
+function gurutor_lectora_mobile_init_fix() {
+    if ( ! is_singular( array( 'sfwd-lessons', 'sfwd-topic' ) ) ) return;
+    ?>
+    <script>
+    (function() {
+        if ( ! ( 'ontouchstart' in window ) ) return;
+
+        var iframe = document.querySelector( '.grassblade iframe.grassblade_iframe' );
+        if ( ! iframe ) return;
+
+        function autoClick( doc ) {
+            if ( ! doc || ! doc.body ) return;
+
+            var btn = doc.getElementById( 'initClickBtn' );
+            if ( btn ) { btn.click(); return; }
+
+            var obs = new MutationObserver( function( mutations, observer ) {
+                var btn = doc.getElementById( 'initClickBtn' );
+                if ( btn ) { observer.disconnect(); btn.click(); }
+            } );
+            obs.observe( doc.body, { childList: true, subtree: true } );
+        }
+
+        iframe.addEventListener( 'load', function() {
+            try { autoClick( iframe.contentDocument || iframe.contentWindow.document ); } catch ( e ) {}
+        } );
+
+        // Handle already-loaded iframe (e.g. back-forward cache)
+        try {
+            if ( iframe.contentDocument && iframe.contentDocument.readyState === 'complete' ) {
+                autoClick( iframe.contentDocument );
+            }
+        } catch ( e ) {}
+    })();
+    </script>
+    <?php
+}
+
+
 add_filter('woocommerce_add_error', 'decode_html_in_checkout_errors');
 function decode_html_in_checkout_errors($error) {
     // Decode HTML entities in error messages

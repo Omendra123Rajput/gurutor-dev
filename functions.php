@@ -27,6 +27,7 @@ $custom_includes = array(
     'inc/gmat-study-plan-admin.php',                // GMAT Study Plan — Admin lesson ID config
     'inc/gmat-study-plan.php',                      // GMAT Study Plan — Dynamic course page
     'inc/gmat-dashboard.php',                       // GMAT Dashboard — Paid user home page
+    'inc/gmat-analyse-ai.php',                      // GMAT Analyse with AI — Lesson page CTA
 );
 
 foreach ($custom_includes as $file) {

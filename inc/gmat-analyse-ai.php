@@ -199,25 +199,26 @@ function gmat_analyse_ai_send_data() {
         'lrs_statements' => $statements,
     );
 
-    // Send to external API (if configured)
+    // Send to external AI API (URL and key from wp-config.php)
     if (!defined('GMAT_ANALYSE_AI_API_URL') || empty(GMAT_ANALYSE_AI_API_URL)) {
-        // API not configured yet — log payload and return success for testing
-        error_log('GMAT Analyse AI: API URL not configured. Payload lesson_key=' . $meta['lesson_key'] . ', statements_count=' . count($statements));
-        wp_send_json_success(array(
-            'sent'             => false,
-            'message'          => 'Analysis data captured. AI service not yet configured.',
-            'statements_count' => count($statements),
-        ));
+        error_log('GMAT Analyse AI: GMAT_ANALYSE_AI_API_URL not defined in wp-config.php');
+        wp_send_json_error(array('message' => 'AI service not configured.'), 500);
+    }
+
+    if (!defined('GMAT_ANALYSE_AI_API_KEY') || empty(GMAT_ANALYSE_AI_API_KEY)) {
+        error_log('GMAT Analyse AI: GMAT_ANALYSE_AI_API_KEY not defined in wp-config.php');
+        wp_send_json_error(array('message' => 'AI service not configured.'), 500);
     }
 
     $response = wp_remote_post(GMAT_ANALYSE_AI_API_URL, array(
         'headers' => array(
             'Content-Type' => 'application/json',
             'Accept'       => 'application/json',
+            'x-api-key'   => GMAT_ANALYSE_AI_API_KEY,
         ),
         'body'      => wp_json_encode($payload),
         'timeout'   => GMAT_ANALYSE_AI_API_TIMEOUT,
-        'sslverify' => true,
+        'sslverify' => false, // ngrok tunnel
     ));
 
     if (is_wp_error($response)) {

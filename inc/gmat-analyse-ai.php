@@ -214,7 +214,7 @@ function gmat_analyse_ai_send_data() {
         'headers' => array(
             'Content-Type' => 'application/json',
             'Accept'       => 'application/json',
-            'x-api-key'   => GMAT_ANALYSE_AI_API_KEY,
+            'Authorization' => 'Bearer ' . GMAT_ANALYSE_AI_API_KEY,
         ),
         'body'      => wp_json_encode($payload),
         'timeout'   => GMAT_ANALYSE_AI_API_TIMEOUT,

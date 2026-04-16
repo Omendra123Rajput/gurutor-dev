@@ -48,6 +48,7 @@ gurutor_user_has_active_paid_access($user_id = null)
 | **AI Chatbox** | `inc/gmat-chatbox.php` | `js/gmat-chatbox.js` | `css/gmat-chatbox.css` | `wp_footer` hook on course 8112 only |
 | **GMAT Settings** | `inc/gmat-settings-account.php` | `js/gmat-settings.js` | `css/gmat-settings.css` | WooCommerce My Account endpoint `/my-account/gmat-settings/` |
 | **Free Trial/xAPI** | `inc/free-trial-grassblade-xapi.php` | — | — | Various hooks |
+| **Analyse with AI** | `inc/gmat-analyse-ai.php` | `js/gmat-analyse-ai.js` | `css/gmat-analyse-ai.css` | `wp_enqueue_scripts` hook on course 8112 lesson pages |
 
 ### Active Includes (functions.php)
 
@@ -117,6 +118,10 @@ All includes are in `functions.php` lines 21-30. Some may be commented out durin
 | `GMAT_CHATBOX_RATE_LIMIT` | 20 msg/60s | Per-user rate limit (transient key: `gmat_cb_rate_{user_id}`) |
 | `GMAT_CHATBOX_API_TIMEOUT` | 30s | External API request timeout |
 | `GMAT_CHATBOX_MAX_MSG_LENGTH` | 2000 chars | Max user message length |
+| `GMAT_ANALYSE_AI_API_URL` | wp-config.php | External AI analysis endpoint (ngrok/production) |
+| `GMAT_ANALYSE_AI_API_KEY` | wp-config.php | Shared secret sent as `x-api-key` header |
+| `GMAT_ANALYSE_AI_COURSE_ID` | 8112 | Course whose lessons show the Analyse button |
+| `GMAT_ANALYSE_AI_API_TIMEOUT` | 30s | External API request timeout |
 
 ## User Meta Keys Reference
 

@@ -170,22 +170,33 @@ function gmat_analyse_ai_send_data() {
         wp_send_json_error(array('message' => 'Lesson not found.'), 404);
     }
 
-    // Fetch all completed statements for this activity
+    // Fetch all statements for this activity (completed + answered)
     $user = wp_get_current_user();
-    $lrs_result = grassblade_fetch_statements(array(
+    $base_filters = array(
         'agent_email'        => $user->user_email,
         'activity_id'        => $meta['activity_url'],
-        'verb'               => 'http://adlnet.gov/expapi/verbs/completed',
         'related_activities' => true,
         'limit'              => 200,
-    ));
+    );
 
-    if (is_wp_error($lrs_result)) {
-        error_log('GMAT Analyse AI: LRS fetch error — ' . $lrs_result->get_error_message());
+    // Completed statements (completion/duration data)
+    $completed_result = grassblade_fetch_statements(array_merge($base_filters, array(
+        'verb' => 'http://adlnet.gov/expapi/verbs/completed',
+    )));
+
+    // Answered statements (scores, answers, per-question data)
+    $answered_result = grassblade_fetch_statements(array_merge($base_filters, array(
+        'verb' => 'http://adlnet.gov/expapi/verbs/answered',
+    )));
+
+    if (is_wp_error($completed_result) && is_wp_error($answered_result)) {
+        error_log('GMAT Analyse AI: LRS fetch error — ' . $completed_result->get_error_message());
         wp_send_json_error(array('message' => 'Failed to fetch exercise data.'), 502);
     }
 
-    $statements = isset($lrs_result['statements']) ? $lrs_result['statements'] : array();
+    $completed_stmts = (!is_wp_error($completed_result) && isset($completed_result['statements'])) ? $completed_result['statements'] : array();
+    $answered_stmts  = (!is_wp_error($answered_result) && isset($answered_result['statements']))   ? $answered_result['statements']  : array();
+    $statements = array_merge($completed_stmts, $answered_stmts);
 
     if (empty($statements)) {
         wp_send_json_error(array('message' => 'No completion data found.'), 404);

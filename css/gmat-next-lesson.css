@@ -1,0 +1,51 @@
+/**
+ * GMAT Next Lesson button styles.
+ * Matches the existing "Back to Course" CTA so both sit side-by-side.
+ */
+
+.gmat-next-lesson-wrap {
+    text-align: center;
+    margin: 8px auto 24px;
+    padding: 0 15px;
+}
+
+.gmat-next-lesson__link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 24px;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    background: #00409E;
+    border-radius: 50px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: opacity 0.35s ease, transform 0.25s ease, background-color 0.2s ease;
+    border: none;
+    cursor: pointer;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.gmat-next-lesson__link:hover {
+    background-color: #FBB03B;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.gmat-next-lesson__link--hidden {
+    opacity: 0;
+    transform: translateY(6px);
+    pointer-events: none;
+    visibility: hidden;
+}
+
+@media (max-width: 768px) {
+    .gmat-next-lesson__link {
+        font-size: 14px;
+        padding: 10px 20px;
+    }
+}

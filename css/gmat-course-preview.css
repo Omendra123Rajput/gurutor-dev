@@ -1,0 +1,86 @@
+/**
+ * GMAT Course Preview — locked state overrides.
+ * Layers on top of css/gmat-study-plan.css.
+ */
+
+.gmat-study-plan--preview {
+    max-width: 960px;
+    margin: 40px auto;
+    padding: 0 15px;
+}
+
+.gmat-sp-preview-intro {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.gmat-sp-preview-intro__title {
+    color: #00409E;
+    font-size: 28px;
+    line-height: 1.2;
+    font-weight: 800;
+    margin: 0 0 8px;
+}
+
+.gmat-sp-preview-intro__sub {
+    color: #475569;
+    font-size: 16px;
+    margin: 0;
+}
+
+/* Disable any navigation affordance on lesson rows */
+.gmat-sp-lesson--locked {
+    cursor: default;
+}
+
+.gmat-sp-lesson--locked .gmat-sp-lesson__top-row {
+    cursor: default;
+}
+
+.gmat-sp-lesson--locked .gmat-sp-lesson__info {
+    opacity: 0.85;
+}
+
+/* Locked pill button */
+.gmat-sp-lesson__btn--locked {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 50px;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.gmat-sp-lesson__btn--locked svg {
+    flex-shrink: 0;
+}
+
+/* Hide expand-icon + desc content inside preview (nothing to expand at lesson level) */
+.gmat-study-plan--preview .gmat-sp-lesson__expand-icon,
+.gmat-study-plan--preview .gmat-sp-lesson__desc {
+    display: none;
+}
+
+/* Visually suppress any status/suggest badges if a builder accidentally adds one */
+.gmat-study-plan--preview .gmat-sp-lesson__status-badge,
+.gmat-study-plan--preview .gmat-sp-lesson__suggested-badge {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .gmat-sp-preview-intro__title {
+        font-size: 22px;
+    }
+    .gmat-sp-lesson__btn--locked {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+}

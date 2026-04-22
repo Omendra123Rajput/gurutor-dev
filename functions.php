@@ -28,6 +28,9 @@ $custom_includes = array(
     'inc/gmat-study-plan.php',                      // GMAT Study Plan — Dynamic course page
     'inc/gmat-dashboard.php',                       // GMAT Dashboard — Paid user home page
     'inc/gmat-analyse-ai.php',                      // GMAT Analyse with AI — Lesson page CTA
+    'inc/gmat-next-lesson.php',                     // GMAT External Next Lesson button
+    'inc/gmat-course-preview.php',                  // GMAT Course Preview (locked) — /packages/ shortcode
+    'inc/gmat-checkout-coupon.php',                 // GMAT Checkout Coupon — URL auto-apply + polish
 );
 
 foreach ($custom_includes as $file) {
@@ -1396,16 +1399,59 @@ function create_pending_free_trial_subscription() {
  * Fix End
  */
 
-// 1. Add Terms & Conditions checkbox to registration form
+// 1. Add Name, Phone and Terms & Conditions checkbox to registration form
+add_action('woocommerce_register_form_start', 'gurutor_add_name_phone_to_registration_form');
+function gurutor_add_name_phone_to_registration_form() {
+    $first_name = isset($_POST['billing_first_name']) ? wp_unslash($_POST['billing_first_name']) : '';
+    $last_name  = isset($_POST['billing_last_name'])  ? wp_unslash($_POST['billing_last_name'])  : '';
+    $phone      = isset($_POST['billing_phone'])      ? wp_unslash($_POST['billing_phone'])      : '';
+    ?>
+    <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
+        <label for="reg_billing_first_name"><?php esc_html_e('First name', 'woocommerce'); ?>&nbsp;<span class="required">*</span></label>
+        <input type="text"
+               class="woocommerce-Input woocommerce-Input--text input-text"
+               name="billing_first_name"
+               id="reg_billing_first_name"
+               autocomplete="given-name"
+               pattern="[A-Za-z\s\-]+"
+               value="<?php echo esc_attr($first_name); ?>"
+               required aria-required="true" />
+    </p>
+    <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
+        <label for="reg_billing_last_name"><?php esc_html_e('Last name', 'woocommerce'); ?>&nbsp;<span class="required">*</span></label>
+        <input type="text"
+               class="woocommerce-Input woocommerce-Input--text input-text"
+               name="billing_last_name"
+               id="reg_billing_last_name"
+               autocomplete="family-name"
+               pattern="[A-Za-z\s\-]+"
+               value="<?php echo esc_attr($last_name); ?>"
+               required aria-required="true" />
+    </p>
+    <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
+        <label for="reg_billing_phone"><?php esc_html_e('Phone', 'woocommerce'); ?>&nbsp;<span class="required">*</span></label>
+        <input type="tel"
+               class="woocommerce-Input woocommerce-Input--text input-text"
+               name="billing_phone"
+               id="reg_billing_phone"
+               autocomplete="tel"
+               placeholder="+14155551234"
+               pattern="\+?[1-9][0-9]{6,14}"
+               value="<?php echo esc_attr($phone); ?>"
+               required aria-required="true" />
+    </p>
+    <?php
+}
+
 add_action('woocommerce_register_form', 'add_terms_to_registration_form',20);
 function add_terms_to_registration_form() {
     ?>
     <p class="form-row form-row-wide">
         <label class="woocommerce-form__label woocommerce-form__label-for-checkbox">
-            <input class="woocommerce-form__input woocommerce-form__input-checkbox input-checkbox" 
+            <input class="woocommerce-form__input woocommerce-form__input-checkbox input-checkbox"
                    name="terms" type="checkbox" id="terms" />
             <span>
-                I have read and accept the 
+                I have read and accept the
                 <a href="/terms-and-conditions" target="_blank" style="text-decoration: underline;">
                     Terms & Conditions
                 </a>
@@ -1415,13 +1461,80 @@ function add_terms_to_registration_form() {
     <?php
 }
 
-// 2. Validate checkbox is checked
+// 2. Validate name, phone and T&C checkbox
 add_action('woocommerce_register_post', 'validate_terms_checkbox', 10, 3);
 function validate_terms_checkbox($username, $email, $validation_errors) {
+    $first_name = isset($_POST['billing_first_name']) ? sanitize_text_field(wp_unslash($_POST['billing_first_name'])) : '';
+    $last_name  = isset($_POST['billing_last_name'])  ? sanitize_text_field(wp_unslash($_POST['billing_last_name']))  : '';
+    $phone      = isset($_POST['billing_phone'])      ? sanitize_text_field(wp_unslash($_POST['billing_phone']))      : '';
+
+    if ('' === $first_name) {
+        $validation_errors->add('billing_first_name_required', __('First name is required.', 'woocommerce'));
+    } elseif (!preg_match('/^[a-zA-Z\s\-]+$/', $first_name)) {
+        $validation_errors->add('billing_first_name_invalid', __('First name can only contain letters, spaces, and hyphens.', 'woocommerce'));
+    }
+
+    if ('' === $last_name) {
+        $validation_errors->add('billing_last_name_required', __('Last name is required.', 'woocommerce'));
+    } elseif (!preg_match('/^[a-zA-Z\s\-]+$/', $last_name)) {
+        $validation_errors->add('billing_last_name_invalid', __('Last name can only contain letters, spaces, and hyphens.', 'woocommerce'));
+    }
+
+    if ('' === $phone) {
+        $validation_errors->add('billing_phone_required', __('Phone number is required.', 'woocommerce'));
+    } elseif (!preg_match('/^\+?[1-9][0-9]{6,14}$/', $phone)) {
+        $validation_errors->add('billing_phone_invalid', __('Please enter a valid phone number (7–15 digits, e.g. +14155551234).', 'woocommerce'));
+    }
+
     if (!isset($_POST['terms'])) {
         $validation_errors->add('terms_error', __('You must accept the Terms & Conditions to register.', 'woocommerce'));
     }
     return $validation_errors;
+}
+
+// 3. Persist registration name/phone as WP + WooCommerce billing meta
+add_action('woocommerce_created_customer', 'gurutor_save_registration_name_phone', 10, 3);
+function gurutor_save_registration_name_phone($customer_id, $new_customer_data, $password_generated) {
+    if (empty($customer_id)) {
+        return;
+    }
+    if (!empty($_POST['billing_first_name'])) {
+        $first_name = sanitize_text_field(wp_unslash($_POST['billing_first_name']));
+        update_user_meta($customer_id, 'first_name', $first_name);
+        update_user_meta($customer_id, 'billing_first_name', $first_name);
+    }
+    if (!empty($_POST['billing_last_name'])) {
+        $last_name = sanitize_text_field(wp_unslash($_POST['billing_last_name']));
+        update_user_meta($customer_id, 'last_name', $last_name);
+        update_user_meta($customer_id, 'billing_last_name', $last_name);
+    }
+    if (!empty($_POST['billing_phone'])) {
+        $phone = sanitize_text_field(wp_unslash($_POST['billing_phone']));
+        update_user_meta($customer_id, 'billing_phone', $phone);
+    }
+}
+
+// 4. Client-side input sanitisation on registration fields
+add_action('wp_footer', 'gurutor_registration_field_js');
+function gurutor_registration_field_js() {
+    if (!is_account_page() || is_user_logged_in()) {
+        return;
+    }
+    ?>
+    <script type="text/javascript">
+        jQuery(function($){
+            $('#reg_billing_first_name, #reg_billing_last_name').on('input', function(){
+                this.value = this.value.replace(/[^a-zA-Z\s\-]/g, '');
+            });
+            $('#reg_billing_phone').on('input', function(){
+                var v = this.value.replace(/[^0-9+]/g, '');
+                if (v.indexOf('+') > 0) { v = v.replace(/\+/g, ''); }
+                if (v.length > 16) { v = v.substring(0, 16); }
+                this.value = v;
+            });
+        });
+    </script>
+    <?php
 }
 
 function custom_elementor_layout_css_only() {

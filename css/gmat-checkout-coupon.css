@@ -1,0 +1,109 @@
+/**
+ * GMAT Checkout Coupon — polish for native WooCommerce coupon UI.
+ * Loaded only on the checkout page.
+ */
+
+.woocommerce-form-coupon-toggle {
+    margin-bottom: 16px;
+}
+
+.woocommerce-form-coupon-toggle .woocommerce-info {
+    background: #eef3fb;
+    color: #00409E;
+    border-top-color: #00409E;
+    padding: 12px 16px;
+    font-size: 14px;
+}
+
+.woocommerce-form-coupon-toggle .woocommerce-info a,
+.woocommerce-form-coupon-toggle .showcoupon {
+    color: #f68525;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.woocommerce-form-coupon-toggle .woocommerce-info a:hover,
+.woocommerce-form-coupon-toggle .showcoupon:hover {
+    color: #00409E;
+    text-decoration: underline;
+}
+
+.checkout_coupon {
+    margin-bottom: 24px;
+    padding: 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.checkout_coupon p {
+    margin: 0 0 12px;
+    color: #475569;
+    font-size: 14px;
+}
+
+.checkout_coupon .form-row-first input[type="text"],
+.checkout_coupon #coupon_code {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 15px;
+    line-height: 1.4;
+    background: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.checkout_coupon #coupon_code:focus {
+    border-color: #00409E;
+    box-shadow: 0 0 0 3px rgba(0, 64, 158, 0.15);
+    outline: none;
+}
+
+.checkout_coupon .button[name="apply_coupon"] {
+    background: #00409E;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.checkout_coupon .button[name="apply_coupon"]:hover,
+.checkout_coupon .button[name="apply_coupon"]:focus {
+    background: #f68525;
+    color: #fff;
+}
+
+/* Applied-coupon row in the order review */
+.cart-discount th,
+.cart-discount td {
+    color: #00409E;
+}
+
+.cart-discount td .woocommerce-remove-coupon {
+    color: #f68525;
+    font-size: 12px;
+    margin-left: 8px;
+    text-decoration: none;
+}
+
+.cart-discount td .woocommerce-remove-coupon:hover {
+    color: #00409E;
+    text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+    .checkout_coupon .form-row-first,
+    .checkout_coupon .form-row-last {
+        width: 100%;
+        margin-right: 0;
+    }
+    .checkout_coupon .button[name="apply_coupon"] {
+        width: 100%;
+        margin-top: 8px;
+    }
+}

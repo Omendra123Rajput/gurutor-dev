@@ -109,19 +109,21 @@ function gmat_course_preview_shortcode( $atts = array() ) {
 
 function gmat_course_preview_render( $plan, $lesson_ids, $atts ) {
     $all_keys = gmat_sp_get_lesson_keys();
+
+    $heading    = ! empty( $atts['heading'] )
+        ? $atts['heading']
+        : __( 'Preview: Paid Course Study Plan', 'gurutor' );
+    $subheading = ! empty( $atts['subheading'] )
+        ? $atts['subheading']
+        : __( 'Below is the complete study plan you unlock with a paid subscription. All lessons are locked here — subscribe to start learning.', 'gurutor' );
     ?>
     <div id="gmat-study-plan" class="gmat-study-plan gmat-study-plan--preview">
 
-        <?php if ( ! empty( $atts['heading'] ) || ! empty( $atts['subheading'] ) ) : ?>
-            <div class="gmat-sp-preview-intro">
-                <?php if ( ! empty( $atts['heading'] ) ) : ?>
-                    <h2 class="gmat-sp-preview-intro__title"><?php echo esc_html( $atts['heading'] ); ?></h2>
-                <?php endif; ?>
-                <?php if ( ! empty( $atts['subheading'] ) ) : ?>
-                    <p class="gmat-sp-preview-intro__sub"><?php echo esc_html( $atts['subheading'] ); ?></p>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
+        <div class="gmat-sp-preview-intro">
+            <span class="gmat-sp-preview-intro__eyebrow"><?php esc_html_e( 'Course Preview', 'gurutor' ); ?></span>
+            <h2 class="gmat-sp-preview-intro__title"><?php echo esc_html( $heading ); ?></h2>
+            <p class="gmat-sp-preview-intro__sub"><?php echo esc_html( $subheading ); ?></p>
+        </div>
 
         <?php foreach ( $plan as $si => $section ) :
             $sec_label_map = array(

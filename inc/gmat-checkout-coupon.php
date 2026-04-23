@@ -121,7 +121,9 @@ function gmat_checkout_cart_total_html() {
         return '<span class="gmat-cart-total"></span>';
     }
 
-    $cart->calculate_totals();
+    // Do NOT call $cart->calculate_totals() here — update_checkout has already
+    // done it, and recalculating inside the fragment filter flushes the
+    // "Coupon applied successfully" notice from the session before WC prints it.
 
     $total_html    = $cart->get_total();
     $discount_html = '';
@@ -208,6 +210,29 @@ function gmat_checkout_coupon_toggle_fragment($fragments) {
 }
 
 /**
+ * Drop stale success notices only on USER-INITIATED coupon removal via the
+ * wc-ajax=remove_coupon endpoint. Scoped so side-effect removals (individual
+ * use, etc.) during apply do not nuke the "Coupon applied successfully" notice.
+ */
+add_action('woocommerce_removed_coupon', 'gmat_clear_success_notices_on_remove');
+function gmat_clear_success_notices_on_remove() {
+    if (!function_exists('WC') || !WC()->session) {
+        return;
+    }
+    $is_user_remove =
+        ( defined('DOING_AJAX') && DOING_AJAX && isset($_REQUEST['wc-ajax']) && 'remove_coupon' === $_REQUEST['wc-ajax'] )
+        || ( isset($_GET['remove_coupon']) && '' !== $_GET['remove_coupon'] );
+    if (!$is_user_remove) {
+        return;
+    }
+    $notices = WC()->session->get('wc_notices', array());
+    if (is_array($notices) && isset($notices['success'])) {
+        unset($notices['success']);
+        WC()->session->set('wc_notices', $notices);
+    }
+}
+
+/**
  * Localize remove-coupon nonce + wc-ajax URL for the inline remover script.
  */
 add_action('wp_enqueue_scripts', 'gmat_checkout_coupon_remover_inline', 20);
@@ -226,16 +251,45 @@ function gmat_checkout_coupon_remover_inline() {
 
     $inline = <<<JS
 jQuery(function($){
+    var LOADER_SELECTOR = '.gmat-cart-total, .woocommerce-form-coupon-toggle, form.checkout_coupon';
+
+    function showSkeleton() {
+        $(LOADER_SELECTOR).addClass('gmat-is-loading');
+    }
+    function hideSkeleton() {
+        $(LOADER_SELECTOR).removeClass('gmat-is-loading');
+    }
+
+    // WC fires these during any order-review refresh (apply, remove, address change).
+    $(document.body).on('updating_checkout update_checkout', showSkeleton);
+    $(document.body).on('updated_checkout', hideSkeleton);
+
+    // Extra coverage for the apply button (fires before updating_checkout).
+    $(document).on('click', 'button[name="apply_coupon"], input[name="apply_coupon"]', function(){
+        var code = $('#coupon_code').val();
+        if (code && code.length) {
+            showSkeleton();
+        }
+    });
+
+    // Remove button -> wc-ajax remove_coupon -> update_checkout
     $(document.body).on('click', '.gmat-coupon-applied__remove', function(e){
         e.preventDefault();
-        var code = $(this).data('coupon');
+        var \$btn = $(this);
+        \$btn.blur();
+        var code = \$btn.data('coupon');
         if (!code || !window.gmatCouponRemove) return;
+
+        showSkeleton();
+
         $.ajax({
             type: 'POST',
             url: gmatCouponRemove.ajax,
             data: { security: gmatCouponRemove.nonce, coupon: code },
             dataType: 'html'
         }).always(function(){
+            // Drop stale "applied" notices client-side so they don't linger past the remove.
+            $('.woocommerce-NoticeGroup-checkout, .woocommerce-message, .woocommerce-error').remove();
             $(document.body).trigger('update_checkout');
         });
     });

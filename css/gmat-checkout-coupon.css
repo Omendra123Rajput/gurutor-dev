@@ -63,10 +63,19 @@
 }
 
 .gmat-coupon-applied__remove:hover,
-.gmat-coupon-applied__remove:focus {
+.gmat-coupon-applied__remove:focus-visible {
     background: #f68525;
     color: #fff;
     text-decoration: none;
+}
+
+.gmat-coupon-applied__remove:focus {
+    outline: none;
+}
+
+.gmat-coupon-applied__remove:focus:not(:focus-visible) {
+    background: #fff4e6;
+    color: #f68525;
 }
 
 .woocommerce-form-coupon-toggle .woocommerce-info a,
@@ -83,17 +92,17 @@
 }
 
 .checkout_coupon {
-    margin-bottom: 24px;
-    padding: 16px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    background: #f8fafc;
+    margin-bottom: 24px !important;
+    padding: 16px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    background: #f8fafc !important;
 }
 
 .checkout_coupon p {
-    margin: 0 0 12px;
-    color: #475569;
-    font-size: 14px;
+    margin: 0 0 12px !important;
+    color: #475569 !important;
+    font-size: 14px !important;
 }
 
 .checkout_coupon .form-row-first input[type="text"],
@@ -152,6 +161,7 @@
 
 /* Live cart total shortcode output */
 .gmat-cart-total {
+    font-family: "Nunito Sans", Sans-serif;
     display: inline-flex;
     flex-direction: column;
     gap: 4px;
@@ -190,6 +200,61 @@
     margin-top: 2px;
 }
 
+/* Skeleton / shimmer during AJAX refresh */
+.gmat-is-loading {
+    position: relative;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+}
+
+.gmat-is-loading > * {
+    opacity: 0.35;
+    transition: opacity 0.15s ease;
+}
+
+.gmat-is-loading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(0, 64, 158, 0.08) 40%,
+        rgba(246, 133, 37, 0.12) 55%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: gmatShimmer 1.2s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 2;
+    border-radius: inherit;
+}
+
+@keyframes gmatShimmer {
+    0%   { background-position: -120% 0; }
+    100% { background-position: 220% 0; }
+}
+
+/* Make the sidebar cart-total skeleton match its rounded container */
+.gmat-cart-total.gmat-is-loading {
+    border-radius: 6px;
+    min-height: 52px;
+}
+
+/* Keep the coupon toggle's skeleton contained */
+.woocommerce-form-coupon-toggle.gmat-is-loading {
+    border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gmat-is-loading::after {
+        animation: none;
+        background: rgba(0, 64, 158, 0.08);
+    }
+}
+
 @media (max-width: 600px) {
     .checkout_coupon .form-row-first,
     .checkout_coupon .form-row-last {
@@ -200,4 +265,9 @@
         width: 100%;
         margin-top: 8px;
     }
+}
+
+
+.woocommerce-cart-form .shop_table .product-subtotal{
+    display: none;
 }

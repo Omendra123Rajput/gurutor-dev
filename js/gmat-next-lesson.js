@@ -40,19 +40,18 @@
     }
 
     function showButton(url, isLast) {
+        // Last lesson: existing "Back to Course" CTA already handles this case.
+        // Do not reveal a second button to avoid duplicate back-to-course buttons.
+        if (isLast) {
+            hideButton();
+            return;
+        }
+
         var $link = getLinkEl();
         if (!$link.length) return;
 
         $link.attr('href', url).removeAttr('aria-disabled')
              .removeClass('gmat-next-lesson__link--hidden');
-
-        if (isLast) {
-            $link.find('span[aria-hidden="true"]').remove();
-            $link.contents().filter(function () {
-                return this.nodeType === 3;
-            }).first().replaceWith(document.createTextNode('Back to Course'));
-            $link.attr('target', '_self').attr('rel', 'noopener');
-        }
     }
 
     function resolveNextUrl() {

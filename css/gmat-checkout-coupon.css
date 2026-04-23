@@ -13,6 +13,60 @@
     border-top-color: #00409E;
     padding: 12px 16px;
     font-size: 14px;
+    position: relative;
+}
+
+/* Kill the broken WooCommerce font icon on the coupon banner */
+.woocommerce-form-coupon-toggle .woocommerce-info::before {
+    content: none !important;
+    display: none !important;
+}
+
+/* Applied-coupon state: pill + remove link */
+.gmat-coupon-applied {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.gmat-coupon-applied__label {
+    font-weight: 600;
+    color: #00409E;
+}
+
+.gmat-coupon-applied__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #c7d8f2;
+    border-radius: 999px;
+    padding: 4px 10px 4px 14px;
+    font-size: 13px;
+}
+
+.gmat-coupon-applied__code {
+    color: #00409E;
+    letter-spacing: 0.5px;
+}
+
+.gmat-coupon-applied__remove {
+    color: #f68525;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #fff4e6;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.gmat-coupon-applied__remove:hover,
+.gmat-coupon-applied__remove:focus {
+    background: #f68525;
+    color: #fff;
+    text-decoration: none;
 }
 
 .woocommerce-form-coupon-toggle .woocommerce-info a,
@@ -94,6 +148,46 @@
 .cart-discount td .woocommerce-remove-coupon:hover {
     color: #00409E;
     text-decoration: underline;
+}
+
+/* Live cart total shortcode output */
+.gmat-cart-total {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 4px;
+    line-height: 1.2;
+}
+
+.gmat-cart-total__was {
+    display: inline-block;
+    color: #94a3b8;
+    font-size: 16px;
+    font-weight: 500;
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+}
+
+.gmat-cart-total__now {
+    display: inline-block;
+    color: #00409E;
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.gmat-cart-total__now .woocommerce-Price-currencySymbol {
+    font-size: 22px;
+}
+
+.gmat-cart-total__savings {
+    display: inline-block;
+    background: #f68525;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 50px;
+    width: fit-content;
+    margin-top: 2px;
 }
 
 @media (max-width: 600px) {

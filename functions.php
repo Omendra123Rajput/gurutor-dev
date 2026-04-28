@@ -28,7 +28,7 @@ $custom_includes = array(
     'inc/gmat-study-plan.php',                      // GMAT Study Plan — Dynamic course page
     'inc/gmat-dashboard.php',                       // GMAT Dashboard — Paid user home page
     'inc/gmat-analyse-ai.php',                      // GMAT Analyse with AI — Lesson page CTA
-    'inc/gmat-next-lesson.php',                     // GMAT External Next Lesson button
+    // 'inc/gmat-next-lesson.php',                     // GMAT External Next Lesson button
     'inc/gmat-course-preview.php',                  // GMAT Course Preview (locked) — /packages/ shortcode
     'inc/gmat-checkout-coupon.php',                 // GMAT Checkout Coupon — URL auto-apply + polish
 );
@@ -1406,6 +1406,14 @@ function gurutor_add_name_phone_to_registration_form() {
     $last_name  = isset($_POST['billing_last_name'])  ? wp_unslash($_POST['billing_last_name'])  : '';
     $phone      = isset($_POST['billing_phone'])      ? wp_unslash($_POST['billing_phone'])      : '';
     ?>
+    <?php
+    $first_msg_required = esc_attr__('Please enter your first name.', 'gurutor');
+    $first_msg_pattern  = esc_attr__('First name can only contain letters, spaces, and hyphens.', 'gurutor');
+    $last_msg_required  = esc_attr__('Please enter your last name.', 'gurutor');
+    $last_msg_pattern   = esc_attr__('Last name can only contain letters, spaces, and hyphens.', 'gurutor');
+    $phone_msg_required = esc_attr__('Please enter your phone number.', 'gurutor');
+    $phone_msg_pattern  = esc_attr__('Please enter phone in international format (7–15 digits, e.g. +14155551234).', 'gurutor');
+    ?>
     <p class="woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide">
         <label for="reg_billing_first_name"><?php esc_html_e('First name', 'woocommerce'); ?>&nbsp;<span class="required">*</span></label>
         <input type="text"
@@ -1413,7 +1421,11 @@ function gurutor_add_name_phone_to_registration_form() {
                name="billing_first_name"
                id="reg_billing_first_name"
                autocomplete="given-name"
+               placeholder="e.g. John"
                pattern="[A-Za-z\s\-]+"
+               title="<?php echo $first_msg_pattern; ?>"
+               data-msg-required="<?php echo $first_msg_required; ?>"
+               data-msg-pattern="<?php echo $first_msg_pattern; ?>"
                value="<?php echo esc_attr($first_name); ?>"
                required aria-required="true" />
     </p>
@@ -1424,7 +1436,11 @@ function gurutor_add_name_phone_to_registration_form() {
                name="billing_last_name"
                id="reg_billing_last_name"
                autocomplete="family-name"
+               placeholder="e.g. Doe"
                pattern="[A-Za-z\s\-]+"
+               title="<?php echo $last_msg_pattern; ?>"
+               data-msg-required="<?php echo $last_msg_required; ?>"
+               data-msg-pattern="<?php echo $last_msg_pattern; ?>"
                value="<?php echo esc_attr($last_name); ?>"
                required aria-required="true" />
     </p>
@@ -1435,8 +1451,11 @@ function gurutor_add_name_phone_to_registration_form() {
                name="billing_phone"
                id="reg_billing_phone"
                autocomplete="tel"
-               placeholder="+14155551234"
+               placeholder="e.g. +14155551234"
                pattern="\+?[1-9][0-9]{6,14}"
+               title="<?php echo $phone_msg_pattern; ?>"
+               data-msg-required="<?php echo $phone_msg_required; ?>"
+               data-msg-pattern="<?php echo $phone_msg_pattern; ?>"
                value="<?php echo esc_attr($phone); ?>"
                required aria-required="true" />
     </p>
@@ -1514,13 +1533,23 @@ function gurutor_save_registration_name_phone($customer_id, $new_customer_data, 
     }
 }
 
-// 4. Client-side input sanitisation on registration fields
+// 4. Client-side input sanitisation + custom validation messages on registration fields
 add_action('wp_footer', 'gurutor_registration_field_js');
 function gurutor_registration_field_js() {
     if (!is_account_page() || is_user_logged_in()) {
         return;
     }
     ?>
+    <style type="text/css">
+        form.register input::placeholder,
+        form.register input::-webkit-input-placeholder,
+        form.register input::-moz-placeholder,
+        form.register input:-ms-input-placeholder {
+            color: #a8b3c2;
+            opacity: 1;
+            font-weight: 400;
+        }
+    </style>
     <script type="text/javascript">
         jQuery(function($){
             $('#reg_billing_first_name, #reg_billing_last_name').on('input', function(){
@@ -1531,6 +1560,39 @@ function gurutor_registration_field_js() {
                 if (v.indexOf('+') > 0) { v = v.replace(/\+/g, ''); }
                 if (v.length > 16) { v = v.substring(0, 16); }
                 this.value = v;
+            });
+
+            // Placeholders + title for native WooCommerce email/password fields
+            $('#reg_email')
+                .attr('placeholder', 'e.g. john.doe@example.com')
+                .attr('title', 'Please enter a valid email address (e.g. john.doe@example.com).')
+                .attr('data-msg-required', 'Please enter your email address.')
+                .attr('data-msg-pattern', 'Please enter a valid email address (e.g. john.doe@example.com).');
+
+            $('#reg_password')
+                .attr('placeholder', 'At least 8 characters')
+                .attr('title', 'Please choose a password.')
+                .attr('data-msg-required', 'Please choose a password.');
+
+            // Custom HTML5 validation messages — replace the generic browser defaults
+            function applyCustomValidity(el) {
+                var $el = $(el);
+                var msgRequired = $el.attr('data-msg-required') || '';
+                var msgPattern  = $el.attr('data-msg-pattern')  || '';
+
+                if (el.validity.valueMissing && msgRequired) {
+                    el.setCustomValidity(msgRequired);
+                } else if ((el.validity.patternMismatch || el.validity.typeMismatch) && msgPattern) {
+                    el.setCustomValidity(msgPattern);
+                } else {
+                    el.setCustomValidity('');
+                }
+            }
+
+            var selector = '#reg_billing_first_name, #reg_billing_last_name, #reg_billing_phone, #reg_email, #reg_password';
+
+            $(document).on('invalid input change', selector, function(){
+                applyCustomValidity(this);
             });
         });
     </script>
@@ -3903,20 +3965,28 @@ function restrict_phone_field_to_numbers() {
         <script type="text/javascript">
             jQuery(document).ready(function($) {
                 $('#billing_phone, #shipping_phone').on('input', function() {
-                    this.value = this.value.replace(/[^0-9]/g, '');
+                    // Allow an optional leading '+' followed by digits only (E.164).
+                    var v = this.value.replace(/[^0-9+]/g, '');
+                    if (v.indexOf('+') > 0) {
+                        v = v.replace(/\+/g, '');
+                    }
+                    this.value = v;
                 });
             });
         </script>
     <?php }
 }
 
-/**Validate Phone Field at Checkout */
+/**Validate Phone Field at Checkout (E.164: optional + then 7–15 digits) */
 
 add_action('woocommerce_after_checkout_validation', 'validate_phone_number', 10, 2);
 
 function validate_phone_number($data, $errors) {
-    if (!preg_match('/^[0-9]+$/', $data['billing_phone'])) {
-        $errors->add('validation', __('Please enter a valid phone number with digits only.', 'woocommerce'));
+    if (empty($data['billing_phone'])) {
+        return;
+    }
+    if (!preg_match('/^\+?[1-9][0-9]{6,14}$/', $data['billing_phone'])) {
+        $errors->add('validation', __('Please enter a valid phone number (7–15 digits, e.g. +14155551234).', 'woocommerce'));
     }
 }
 
@@ -3958,12 +4028,16 @@ function validate_name_fields($data, $errors) {
 add_action('woocommerce_save_account_details_errors', 'validate_phone_number_my_account', 10, 2);
 
 function validate_phone_number_my_account($errors, $user) {
-    if (!preg_match('/^[0-9]+$/', $_POST['billing_phone'])) {
-        $errors->add('validation', __('Please enter a valid phone number with digits only.', 'woocommerce'));
+    $phone = isset($_POST['billing_phone']) ? sanitize_text_field(wp_unslash($_POST['billing_phone'])) : '';
+    if ('' === $phone) {
+        return;
+    }
+    if (!preg_match('/^\+?[1-9][0-9]{6,14}$/', $phone)) {
+        $errors->add('validation', __('Please enter a valid phone number (7–15 digits, e.g. +14155551234).', 'woocommerce'));
     }
 }
 
-/**JS for phone numbers only on My profile */
+/**JS for phone numbers only on My profile (E.164) */
 
 add_action('wp_footer', 'restrict_phone_field_to_numbers_my_account');
 
@@ -3972,7 +4046,11 @@ function restrict_phone_field_to_numbers_my_account() {
         <script type="text/javascript">
             jQuery(document).ready(function($) {
                 $('#billing_phone').on('input', function() {
-                    this.value = this.value.replace(/[^0-9]/g, '');
+                    var v = this.value.replace(/[^0-9+]/g, '');
+                    if (v.indexOf('+') > 0) {
+                        v = v.replace(/\+/g, '');
+                    }
+                    this.value = v;
                 });
             });
         </script>

@@ -2,6 +2,36 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Role
+
+You are a senior WordPress PHP full-stack developer, 20+ years experience. GrassBlade LRS expert, Lectora tool expert, expert in HTML, iframe, and xAPI modules.
+
+### Role Rules
+- Write clean, minimal, secure code only
+- Never assume missing requirements — ask first
+- Never make mistakes — verify logic before output
+- Follow WordPress coding standards and best practices
+- Always sanitize inputs, escape outputs, use nonces
+
+### Security Protocol
+- Self-audit every snippet before output
+- Flag any vulnerability, then fix it inline
+- No raw SQL — use `$wpdb` with `prepare()`
+- No direct file access — check `ABSPATH`
+
+### Response Format
+- Strip filler words: no "the / is / am / are / basically / simply"
+- Sentences: 3–6 words max
+- No narration — show output, stop
+- Code first, explanation after (if needed)
+- No preamble, no summary
+
+### Before Every Code Response
+1. Re-read requirement
+2. Check for edge cases
+3. Security audit
+4. Output final code only
+
 ## Project Overview
 
 **Gurutor** — A GMAT test prep platform built as a **WordPress GeneratePress child theme**. No build tools, bundlers, or package managers. All PHP/JS/CSS is vanilla and served directly.
@@ -52,10 +82,11 @@ gurutor_user_has_active_paid_access($user_id = null)
 | **Next Lesson Button** | `inc/gmat-next-lesson.php` | `js/gmat-next-lesson.js` | `css/gmat-next-lesson.css` | `wp_footer` + `wp_enqueue_scripts` on lessons/topics of courses 7472, 9361, 8112 |
 | **Course Preview (locked)** | `inc/gmat-course-preview.php` | — (reuses `js/gmat-study-plan.js`) | `css/gmat-course-preview.css` (+ `css/gmat-study-plan.css`) | Shortcode `[gmat_course_preview]` on `/packages/` page |
 | **Checkout Coupon** | `inc/gmat-checkout-coupon.php` | — | `css/gmat-checkout-coupon.css` | `template_redirect` + `wp_enqueue_scripts` on checkout/cart; admin hint on coupon edit |
+| **Lesson Loader** | `inc/gmat-lesson-loader.php` | `js/gmat-lesson-loader.js` | `css/gmat-lesson-loader.css` | `wp_footer` priority 50 — branded full-screen overlay on lesson navigation clicks + iframe load wait |
 
 ### Active Includes (functions.php)
 
-All includes are in `functions.php` lines 21-33. Some may be commented out during development — always check the actual file before assuming a feature is active. Currently all modules are included (no lines commented out).
+All includes are in `functions.php` lines 21-34. Some may be commented out during development — always check the actual file before assuming a feature is active. Currently all modules are included (no lines commented out).
 
 ## Important Conventions
 
@@ -102,6 +133,17 @@ All includes are in `functions.php` lines 21-33. Some may be commented out durin
 - On completion, calls `gmat_next_lesson_url` AJAX which flattens lessons + topics via `learndash_course_get_steps_by_type()` + `learndash_get_topic_list()` and returns the next step's permalink. Last step → returns course permalink with `is_last: true` and button label flips to "Back to Course".
 - Button opens next lesson in a new tab (`target="_blank" rel="noopener noreferrer"`) — user-initiated click, so not blocked by popup blockers.
 - Nonce: `gmat_next_lesson_nonce`. Both AJAX handlers require `is_user_logged_in()`.
+
+### Lesson Loader (Branded Loading Overlay)
+- File: `inc/gmat-lesson-loader.php` + `js/gmat-lesson-loader.js` + `css/gmat-lesson-loader.css`.
+- Purpose: cover the blank window between clicking a lesson-navigation link and the GrassBlade iframe finishing load.
+- Gate function `gmat_lesson_loader_page_type()` returns `'destination'`, `'source'`, or `false` (static-cached per request):
+  - `'destination'` → lesson/topic of courses **7472, 9361, 8112**.
+  - `'source'` → paid course view (8112), OR any singular page whose `post_content` / `_elementor_data` contains `[grassblade_study_plan_focus`, `[grassblade_study_plan_test2`, `[grassblade_study_plan`, OR the user-defined Elementor IDs `free-trial-test-1` / `personalized-gmatz-cta`.
+- Hook priority: `wp_footer` priority **50** (mirrors chatbox — late enough that all footer markup is in place).
+- Click triggers (delegated, all skipped when `href="#"`, `target=_blank`, or modifier-key/middle-click): `a.gmat-sp-lesson__btn`, `a.lesson-link`, `a.gurutor-back-to-course__link`, `a.gmat-next-lesson__link`, `#free-trial-test-1 a.elementor-button`, `#personalized-gmatz-cta a.elementor-button`.
+- Destination behavior: overlay shows on DOM ready, dismisses on `.grassblade iframe.grassblade_iframe` `load` event. `MutationObserver` handles late iframe injection. Safety timeout 15 s (`GMAT_LESSON_LOADER_TIMEOUT_MS`) + a `window.load + 1500 ms` belt-and-braces.
+- z-index `999999` (above chatbox 99997). `display: flex !important` on `--visible` state to defeat any third-party overrides.
 
 ### Registration Form (Name + Phone)
 - Hooked at `woocommerce_register_form_start` via `gurutor_add_name_phone_to_registration_form()` (`functions.php` ~line 1400). Appears on both `/my-account/` and `/my-account/?type_subs=free`.

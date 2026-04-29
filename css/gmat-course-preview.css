@@ -139,18 +139,39 @@
     font-weight: 700;
     font-size: 15px;
     line-height: 1;
+    border: 2px solid #FBB03B;
     border-radius: 50px;
     text-decoration: none !important;
-    box-shadow: 0 6px 20px rgba(0, 64, 158, 0.32);
-    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    animation: gmatSpScrollCueGlow 1.8s ease-in-out infinite;
 }
 
 .gmat-sp-scroll-cue__link:hover,
 .gmat-sp-scroll-cue__link:focus {
     background-color: #FBB03B;
-    color: #ffffff !important;
+    color: #002b6b !important;
     transform: translateY(-2px);
-    box-shadow: 0 10px 24px rgba(251, 176, 59, 0.4);
+}
+
+@keyframes gmatSpScrollCueGlow {
+    0%, 100% {
+        box-shadow: 0 6px 20px rgba(0, 64, 158, 0.32),
+                    0 0 0 0 rgba(251, 176, 59, 0.6),
+                    0 0 12px rgba(251, 176, 59, 0.55);
+    }
+    50% {
+        box-shadow: 0 6px 20px rgba(0, 64, 158, 0.32),
+                    0 0 0 6px rgba(251, 176, 59, 0),
+                    0 0 24px rgba(251, 176, 59, 0.95);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gmat-sp-scroll-cue__link {
+        animation: none;
+        box-shadow: 0 6px 20px rgba(0, 64, 158, 0.32),
+                    0 0 18px rgba(251, 176, 59, 0.7);
+    }
 }
 
 .gmat-sp-scroll-cue__arrow {

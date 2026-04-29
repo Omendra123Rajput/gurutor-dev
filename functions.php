@@ -31,6 +31,7 @@ $custom_includes = array(
     'inc/gmat-next-lesson.php',                     // GMAT External Next Lesson button
     'inc/gmat-course-preview.php',                  // GMAT Course Preview (locked) — /packages/ shortcode
     'inc/gmat-checkout-coupon.php',                 // GMAT Checkout Coupon — URL auto-apply + polish
+    'inc/gmat-lesson-loader.php',                   // GMAT Lesson Loader — branded overlay on Start Lesson click + iframe load
 );
 
 foreach ($custom_includes as $file) {

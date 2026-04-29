@@ -104,6 +104,54 @@ function gmat_course_preview_shortcode( $atts = array() ) {
 }
 
 // ============================================================================
+// Floating scroll CTA: fixed at bottom-right; auto-hides when preview is visible.
+// Rendered via wp_footer so it escapes any Elementor transform contexts.
+// ============================================================================
+
+add_action( 'wp_footer', 'gmat_course_preview_render_scroll_cue' );
+function gmat_course_preview_render_scroll_cue() {
+    if ( ! gmat_course_preview_should_enqueue() ) return;
+    ?>
+    <div class="gmat-sp-scroll-cue" id="gmat-sp-scroll-cue" data-target="gmat-study-plan">
+        <a href="#gmat-study-plan" class="gmat-sp-scroll-cue__link" data-gmat-scroll>
+            <span class="gmat-sp-scroll-cue__label"><?php esc_html_e( 'Preview Study Plan', 'gurutor' ); ?></span>
+            <span class="gmat-sp-scroll-cue__arrow" aria-hidden="true">&darr;</span>
+        </a>
+    </div>
+    <script>
+    (function () {
+        var cue = document.getElementById('gmat-sp-scroll-cue');
+        if (!cue) return;
+
+        var targetId = cue.getAttribute('data-target');
+        var target   = targetId ? document.getElementById(targetId) : null;
+
+        cue.addEventListener('click', function (e) {
+            var link = e.target.closest && e.target.closest('[data-gmat-scroll]');
+            if (!link || !target) return;
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        if (target && 'IntersectionObserver' in window) {
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        cue.classList.add('gmat-sp-scroll-cue--hidden');
+                    } else {
+                        cue.classList.remove('gmat-sp-scroll-cue--hidden');
+                    }
+                });
+            }, { threshold: 0.1 });
+            io.observe(target);
+        }
+    })();
+    </script>
+    <?php
+}
+
+
+// ============================================================================
 // Render: locked preview accordion
 // ============================================================================
 

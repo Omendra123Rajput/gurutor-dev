@@ -28,7 +28,7 @@ $custom_includes = array(
     'inc/gmat-study-plan.php',                      // GMAT Study Plan — Dynamic course page
     'inc/gmat-dashboard.php',                       // GMAT Dashboard — Paid user home page
     'inc/gmat-analyse-ai.php',                      // GMAT Analyse with AI — Lesson page CTA
-    // 'inc/gmat-next-lesson.php',                     // GMAT External Next Lesson button
+    'inc/gmat-next-lesson.php',                     // GMAT External Next Lesson button
     'inc/gmat-course-preview.php',                  // GMAT Course Preview (locked) — /packages/ shortcode
     'inc/gmat-checkout-coupon.php',                 // GMAT Checkout Coupon — URL auto-apply + polish
 );

@@ -1,9 +1,11 @@
 /**
- * GMAT Next Lesson button — client-side controller.
+ * GMAT Prev/Next Lesson buttons — client-side controller (free trial only).
  *
- * - Injects the hidden button next to the GrassBlade iframe.
- * - Polls LRS (via AJAX) for the `completed` verb since page open.
- * - On completion, resolves the next lesson URL and reveals the button.
+ * - Injects two hidden buttons next to the GrassBlade iframe.
+ * - If the current lesson is already completed (server flag), resolves
+ *   neighbor URLs immediately. Otherwise polls LRS for a `completed`
+ *   statement since page open.
+ * - Only sides with an in-plan neighbor are revealed.
  */
 (function ($) {
     'use strict';
@@ -17,7 +19,7 @@
     var pollTimer = null;
     var resolved  = false;
 
-    function injectButton() {
+    function injectButtons() {
         var $template = $('#gmat-next-lesson-template');
         if (!$template.length) return;
 
@@ -31,30 +33,28 @@
         $container.after($injected);
     }
 
-    function getLinkEl() {
-        return $injected ? $injected.find('.gmat-next-lesson__link') : $();
+    function getPrev() { return $injected ? $injected.find('.gmat-next-lesson__link--prev') : $(); }
+    function getNext() { return $injected ? $injected.find('.gmat-next-lesson__link--next') : $(); }
+
+    function hideButtons() {
+        getPrev().addClass('gmat-next-lesson__link--hidden').attr('aria-disabled', 'true');
+        getNext().addClass('gmat-next-lesson__link--hidden').attr('aria-disabled', 'true');
     }
 
-    function hideButton() {
-        getLinkEl().addClass('gmat-next-lesson__link--hidden').attr('aria-disabled', 'true');
-    }
-
-    function showButton(url, isLast) {
-        // Last lesson: existing "Back to Course" CTA already handles this case.
-        // Do not reveal a second button to avoid duplicate back-to-course buttons.
-        if (isLast) {
-            hideButton();
-            return;
+    function showButtons(prevUrl, nextUrl) {
+        if (prevUrl) {
+            getPrev().attr('href', prevUrl)
+                     .removeAttr('aria-disabled')
+                     .removeClass('gmat-next-lesson__link--hidden');
         }
-
-        var $link = getLinkEl();
-        if (!$link.length) return;
-
-        $link.attr('href', url).removeAttr('aria-disabled')
-             .removeClass('gmat-next-lesson__link--hidden');
+        if (nextUrl) {
+            getNext().attr('href', nextUrl)
+                     .removeAttr('aria-disabled')
+                     .removeClass('gmat-next-lesson__link--hidden');
+        }
     }
 
-    function resolveNextUrl() {
+    function resolveNeighbors() {
         $.ajax({
             url: gmatNextLesson.ajaxUrl,
             method: 'POST',
@@ -62,12 +62,11 @@
             data: {
                 action: 'gmat_next_lesson_url',
                 nonce: gmatNextLesson.nonce,
-                lesson_id: gmatNextLesson.lessonId,
-                course_id: gmatNextLesson.courseId
+                lesson_id: gmatNextLesson.lessonId
             }
         }).done(function (res) {
-            if (res && res.success && res.data && res.data.next_url) {
-                showButton(res.data.next_url, !!res.data.is_last);
+            if (res && res.success && res.data) {
+                showButtons(res.data.prev_url || '', res.data.next_url || '');
             }
         });
     }
@@ -89,7 +88,7 @@
             if (res && res.success && res.data && res.data.completed) {
                 resolved = true;
                 clearInterval(pollTimer);
-                resolveNextUrl();
+                resolveNeighbors();
             } else if (pollCount >= gmatNextLesson.maxPolls) {
                 clearInterval(pollTimer);
             }
@@ -101,9 +100,16 @@
     }
 
     $(function () {
-        injectButton();
+        injectButtons();
         if (!$injected) return;
-        hideButton();
+        hideButtons();
+
+        if (gmatNextLesson.alreadyCompleted) {
+            resolved = true;
+            resolveNeighbors();
+            return;
+        }
+
         pollTimer = setInterval(checkCompletion, gmatNextLesson.pollMs);
         setTimeout(checkCompletion, 4000);
     });

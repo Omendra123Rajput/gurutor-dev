@@ -1,16 +1,19 @@
 <?php
 /**
- * GMAT External Next Lesson Button
+ * GMAT External Prev/Next Lesson Buttons (Free Trial)
  *
- * Injects a "Next Lesson" button outside the GrassBlade iframe on lesson /
- * topic pages for trial courses (7472, 9361) and paid course (8112).
+ * Injects "Previous Lesson" and "Next Lesson" buttons outside the GrassBlade
+ * iframe on lesson / topic pages for the free-trial courses (7472, 9361).
+ * Navigation is scoped to the user's personalized Study_Plan_Focus map
+ * (`grassblade_get_focus_lesson_map()`), not LearnDash flat order.
  *
  * Flow:
- *   1) Button hidden on page load.
- *   2) JS polls LRS (via AJAX) for any `completed` xAPI statement from the
- *      current user emitted after the page was opened.
- *   3) Once detected, next-lesson URL is resolved via LearnDash and the
- *      button fades in. Clicking opens the next lesson in a new tab.
+ *   1) Buttons hidden on page load.
+ *   2) If the current lesson is already marked completed in the LRS,
+ *      neighbor URLs are resolved immediately. Otherwise JS polls the LRS
+ *      for a `completed` xAPI statement emitted after page open.
+ *   3) On completion, prev/next URLs are resolved against the user's focus
+ *      plan; only sides with an in-plan neighbor are revealed.
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
@@ -38,10 +41,9 @@ function gmat_next_lesson_should_load() {
     $course_id = intval( learndash_get_course_id( get_the_ID() ) );
     if ( ! $course_id ) return false;
 
-    $allowed = array_map( 'intval', array_filter( array_merge(
-        explode( ',', GMAT_NEXT_LESSON_TRIAL_COURSE_IDS ),
-        array( GMAT_NEXT_LESSON_PAID_COURSE_ID )
-    ) ) );
+    $allowed = array_map( 'intval', array_filter(
+        explode( ',', GMAT_NEXT_LESSON_TRIAL_COURSE_IDS )
+    ) );
 
     return in_array( $course_id, $allowed, true );
 }
@@ -74,14 +76,20 @@ function gmat_next_lesson_enqueue_assets() {
         true
     );
 
+    $already_completed = false;
+    if ( function_exists( 'grassblade_get_free_trial_lesson_status' ) ) {
+        $already_completed = ( 'completed' === grassblade_get_free_trial_lesson_status( get_current_user_id(), get_the_ID() ) );
+    }
+
     wp_localize_script( 'gmat-next-lesson', 'gmatNextLesson', array(
-        'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
-        'nonce'       => wp_create_nonce( 'gmat_next_lesson_nonce' ),
-        'lessonId'    => intval( get_the_ID() ),
-        'courseId'    => intval( learndash_get_course_id( get_the_ID() ) ),
-        'pageOpenIso' => gmdate( 'Y-m-d\TH:i:s\Z' ),
-        'pollMs'      => 15000,
-        'maxPolls'    => 40,
+        'ajaxUrl'          => admin_url( 'admin-ajax.php' ),
+        'nonce'            => wp_create_nonce( 'gmat_next_lesson_nonce' ),
+        'lessonId'         => intval( get_the_ID() ),
+        'courseId'         => intval( learndash_get_course_id( get_the_ID() ) ),
+        'pageOpenIso'      => gmdate( 'Y-m-d\TH:i:s\Z' ),
+        'pollMs'           => 15000,
+        'maxPolls'         => 40,
+        'alreadyCompleted' => $already_completed,
     ) );
 }
 
@@ -135,69 +143,54 @@ function gmat_next_lesson_resolve_url() {
     }
 
     $lesson_id = isset( $_POST['lesson_id'] ) ? absint( $_POST['lesson_id'] ) : 0;
-    $course_id = isset( $_POST['course_id'] ) ? absint( $_POST['course_id'] ) : 0;
-
-    if ( ! $lesson_id || ! $course_id ) {
+    if ( ! $lesson_id ) {
         wp_send_json_error( array( 'message' => 'Invalid parameters.' ), 400 );
     }
 
-    if ( ! function_exists( 'learndash_course_get_steps_by_type' ) ) {
-        wp_send_json_error( array( 'message' => 'LearnDash unavailable.' ), 500 );
-    }
-
-    $next_id = gmat_next_lesson_find_next_step( $course_id, $lesson_id );
-
-    if ( ! $next_id ) {
-        wp_send_json_success( array(
-            'next_url' => get_permalink( $course_id ),
-            'is_last'  => true,
-        ) );
-    }
+    $neighbors = gmat_next_lesson_resolve_neighbors( get_current_user_id(), $lesson_id );
 
     wp_send_json_success( array(
-        'next_url' => get_permalink( $next_id ),
-        'is_last'  => false,
+        'prev_url' => $neighbors['prev'] ? get_permalink( $neighbors['prev'] ) : '',
+        'next_url' => $neighbors['next'] ? get_permalink( $neighbors['next'] ) : '',
     ) );
 }
 
 /**
- * Find next lesson or topic within the same course.
- * Flattens lessons + topics in LearnDash step order.
- *
- * @return int  next step post ID, or 0 if current is last.
+ * Resolve prev/next lesson IDs based on the user's personalized
+ * Study_Plan_Focus map (free trial). Returns { prev, next } as post IDs;
+ * 0 means "no neighbor in plan" (off-plan, first/last item, or no focus yet).
  */
-function gmat_next_lesson_find_next_step( $course_id, $current_id ) {
-    $course_id  = intval( $course_id );
+function gmat_next_lesson_resolve_neighbors( $user_id, $current_id ) {
+    $user_id    = intval( $user_id );
     $current_id = intval( $current_id );
-    if ( ! $course_id || ! $current_id ) return 0;
+    $empty      = array( 'prev' => 0, 'next' => 0 );
 
-    $lessons = function_exists( 'learndash_course_get_steps_by_type' )
-        ? learndash_course_get_steps_by_type( $course_id, 'sfwd-lessons' )
-        : array();
+    if ( ! $user_id || ! $current_id ) return $empty;
+    if ( ! function_exists( 'grassblade_get_study_plan_focus' ) ) return $empty;
+    if ( ! function_exists( 'grassblade_get_focus_lesson_map' ) ) return $empty;
 
-    $flat = array();
-    if ( is_array( $lessons ) ) {
-        foreach ( $lessons as $lesson_id ) {
-            $flat[] = intval( $lesson_id );
-            if ( function_exists( 'learndash_get_topic_list' ) ) {
-                $topics = learndash_get_topic_list( $lesson_id, $course_id );
-                if ( is_array( $topics ) ) {
-                    foreach ( $topics as $topic ) {
-                        $topic_id = is_object( $topic ) && isset( $topic->ID ) ? intval( $topic->ID ) : 0;
-                        if ( $topic_id ) $flat[] = $topic_id;
-                    }
-                }
-            }
-        }
+    $user = get_userdata( $user_id );
+    if ( ! $user || empty( $user->user_email ) ) return $empty;
+
+    $focus = grassblade_get_study_plan_focus( $user->user_email );
+    if ( empty( $focus ) ) return $empty;
+
+    $map = grassblade_get_focus_lesson_map();
+    $key = strtoupper( $focus );
+    if ( ! isset( $map[ $key ]['lessons'] ) || ! is_array( $map[ $key ]['lessons'] ) ) return $empty;
+
+    $ids = array();
+    foreach ( $map[ $key ]['lessons'] as $row ) {
+        if ( ! empty( $row['lesson_id'] ) ) $ids[] = intval( $row['lesson_id'] );
     }
 
-    $flat = array_values( array_unique( array_filter( $flat ) ) );
-    $idx  = array_search( $current_id, $flat, true );
+    $idx = array_search( $current_id, $ids, true );
+    if ( false === $idx ) return $empty;
 
-    if ( false === $idx ) return 0;
-    if ( ! isset( $flat[ $idx + 1 ] ) ) return 0;
-
-    return intval( $flat[ $idx + 1 ] );
+    return array(
+        'prev' => isset( $ids[ $idx - 1 ] ) ? intval( $ids[ $idx - 1 ] ) : 0,
+        'next' => isset( $ids[ $idx + 1 ] ) ? intval( $ids[ $idx + 1 ] ) : 0,
+    );
 }
 
 // ============================================================================
@@ -210,10 +203,15 @@ function gmat_next_lesson_inject_button() {
     ?>
     <script type="text/html" id="gmat-next-lesson-template">
         <div class="gmat-next-lesson-wrap">
-            <a class="gmat-next-lesson__link gmat-next-lesson__link--hidden"
+            <a class="gmat-next-lesson__link gmat-next-lesson__link--prev gmat-next-lesson__link--hidden"
                href="#"
-               target="_blank"
-               rel="noopener noreferrer"
+               aria-disabled="true"
+               aria-label="<?php esc_attr_e( 'Previous lesson', 'gurutor' ); ?>">
+                <span aria-hidden="true">&larr;</span>
+                <?php esc_html_e( 'Previous Lesson', 'gurutor' ); ?>
+            </a>
+            <a class="gmat-next-lesson__link gmat-next-lesson__link--next gmat-next-lesson__link--hidden"
+               href="#"
                aria-disabled="true"
                aria-label="<?php esc_attr_e( 'Next lesson', 'gurutor' ); ?>">
                 <?php esc_html_e( 'Next Lesson', 'gurutor' ); ?>

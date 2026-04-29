@@ -1,0 +1,66 @@
+/**
+ * GMAT Prev/Next Lesson buttons (free trial).
+ * Sit side-by-side under the GrassBlade iframe; each side reveals
+ * independently based on the user's personalized study plan.
+ */
+
+.gmat-next-lesson-wrap {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 8px auto 24px;
+    padding: 0 15px;
+}
+
+.gmat-next-lesson__link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 24px;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    background: #00409E;
+    border: 2px solid #00409E !important;
+    border-radius: 50px;
+    text-decoration: none !important;
+    box-shadow: none !important;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+}
+
+.gmat-next-lesson__link:hover,
+.gmat-next-lesson__link:focus {
+    background-color: #FBB03B;
+    border-color: #FBB03B !important;
+    color: #ffffff;
+    text-decoration: none !important;
+    box-shadow: none !important;
+}
+
+.gmat-next-lesson__link--prev {
+    background: #00409E;
+    color: #ffffff;
+}
+
+.gmat-next-lesson__link--prev:hover {
+    background-color: #FBB03B;
+    border-color: #FBB03B !important;
+    color: #ffffff;
+}
+
+.gmat-next-lesson__link--hidden {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .gmat-next-lesson__link {
+        font-size: 14px;
+        padding: 10px 20px;
+    }
+}

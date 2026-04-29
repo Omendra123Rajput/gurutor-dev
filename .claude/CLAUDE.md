@@ -48,10 +48,14 @@ gurutor_user_has_active_paid_access($user_id = null)
 | **AI Chatbox** | `inc/gmat-chatbox.php` | `js/gmat-chatbox.js` | `css/gmat-chatbox.css` | `wp_footer` hook on course 8112 only |
 | **GMAT Settings** | `inc/gmat-settings-account.php` | `js/gmat-settings.js` | `css/gmat-settings.css` | WooCommerce My Account endpoint `/my-account/gmat-settings/` |
 | **Free Trial/xAPI** | `inc/free-trial-grassblade-xapi.php` | — | — | Various hooks |
+| **Analyse with AI** | `inc/gmat-analyse-ai.php` | `js/gmat-analyse-ai.js` | `css/gmat-analyse-ai.css` | `wp_enqueue_scripts` hook on course 8112 lesson pages |
+| **Next Lesson Button** | `inc/gmat-next-lesson.php` | `js/gmat-next-lesson.js` | `css/gmat-next-lesson.css` | `wp_footer` + `wp_enqueue_scripts` on lessons/topics of courses 7472, 9361, 8112 |
+| **Course Preview (locked)** | `inc/gmat-course-preview.php` | — (reuses `js/gmat-study-plan.js`) | `css/gmat-course-preview.css` (+ `css/gmat-study-plan.css`) | Shortcode `[gmat_course_preview]` on `/packages/` page |
+| **Checkout Coupon** | `inc/gmat-checkout-coupon.php` | — | `css/gmat-checkout-coupon.css` | `template_redirect` + `wp_enqueue_scripts` on checkout/cart; admin hint on coupon edit |
 
 ### Active Includes (functions.php)
 
-All includes are in `functions.php` lines 21-30. Some may be commented out during development — always check the actual file before assuming a feature is active. Currently all modules are included (no lines commented out).
+All includes are in `functions.php` lines 21-33. Some may be commented out during development — always check the actual file before assuming a feature is active. Currently all modules are included (no lines commented out).
 
 ## Important Conventions
 
@@ -83,6 +87,26 @@ All includes are in `functions.php` lines 21-30. Some may be commented out durin
 - `gmat_sp_format_description($desc)` — converts newline-separated text to HTML `<ul>` list
 - Lesson descriptions stored as `'desc'` field, topic names stored as `'topic'` field in `gmat_sp_get_lesson_keys()`
 - **Two suggest boxes per unit:** Practice suggest box (`suggest`/`suggest_redo`) renders ABOVE practice lessons. Review suggest box (`review_suggest`/`review_suggest_redo` + `cross_suggest_links`) renders ABOVE review lessons. Verbal units use `review_suggest` only; quant units use both.
+
+### Course Preview (Locked)
+- File: `inc/gmat-course-preview.php`. Shortcode: `[gmat_course_preview]`. Default attrs: `preference="verbal"`, optional `heading`, `subheading`.
+- Reuses `gmat_sp_build_verbal_first(0, $ids)` / `gmat_sp_build_quant_first(0, $ids)` — passing `$user_id = 0` short-circuits `gmat_sp_fetch_xapi_data()` (early return in `get_userdata()` check), so no LRS calls are made in preview mode.
+- Renders locked accordion: units expandable, all lessons show "🔒 Locked" pill instead of action buttons. Progress cards + suggest boxes are suppressed.
+- Enqueues `css/gmat-study-plan.css` + `css/gmat-course-preview.css` + `js/gmat-study-plan.js` only when `is_page('packages')` OR shortcode detected in post content.
+- Shortcode is expected on `/packages/` page; drop into Elementor or the page content to render.
+
+### External Next Lesson Button
+- File: `inc/gmat-next-lesson.php` + `js/gmat-next-lesson.js` + `css/gmat-next-lesson.css`.
+- Active on lessons/topics of courses **7472, 9361, 8112** (trial + paid). Injects a hidden button next to the existing "Back to Course" CTA (both sit after `.grassblade` iframe container).
+- Polls LRS via `gmat_next_lesson_check` AJAX every 15s (max 40 polls = 10 min). Query: `agent_email` + `verb=completed` + `since=page_open_iso`. Any completed statement after page open reveals the button.
+- On completion, calls `gmat_next_lesson_url` AJAX which flattens lessons + topics via `learndash_course_get_steps_by_type()` + `learndash_get_topic_list()` and returns the next step's permalink. Last step → returns course permalink with `is_last: true` and button label flips to "Back to Course".
+- Button opens next lesson in a new tab (`target="_blank" rel="noopener noreferrer"`) — user-initiated click, so not blocked by popup blockers.
+- Nonce: `gmat_next_lesson_nonce`. Both AJAX handlers require `is_user_logged_in()`.
+
+### Registration Form (Name + Phone)
+- Hooked at `woocommerce_register_form_start` via `gurutor_add_name_phone_to_registration_form()` (`functions.php` ~line 1400). Appears on both `/my-account/` and `/my-account/?type_subs=free`.
+- Fields: `billing_first_name`, `billing_last_name`, `billing_phone` — all required. Name regex: `/^[a-zA-Z\s\-]+$/`. Phone regex: `/^\+?[1-9][0-9]{6,14}$/` (E.164, 7–15 digits).
+- Validation in `validate_terms_checkbox()` (extended). Persistence in `gurutor_save_registration_name_phone()` on `woocommerce_created_customer` — writes both WP core (`first_name`, `last_name`) and WC billing (`billing_first_name`, `billing_last_name`, `billing_phone`) so checkout auto-populates.
 
 ### JavaScript
 - All JS wraps in `(function($) { 'use strict'; ... })(jQuery);` IIFE
@@ -117,6 +141,10 @@ All includes are in `functions.php` lines 21-30. Some may be commented out durin
 | `GMAT_CHATBOX_RATE_LIMIT` | 20 msg/60s | Per-user rate limit (transient key: `gmat_cb_rate_{user_id}`) |
 | `GMAT_CHATBOX_API_TIMEOUT` | 30s | External API request timeout |
 | `GMAT_CHATBOX_MAX_MSG_LENGTH` | 2000 chars | Max user message length |
+| `GMAT_ANALYSE_AI_API_URL` | wp-config.php | External AI analysis endpoint (ngrok/production) |
+| `GMAT_ANALYSE_AI_API_KEY` | wp-config.php | Shared secret sent as `x-api-key` header |
+| `GMAT_ANALYSE_AI_COURSE_ID` | 8112 | Course whose lessons show the Analyse button |
+| `GMAT_ANALYSE_AI_API_TIMEOUT` | 30s | External API request timeout |
 
 ## User Meta Keys Reference
 

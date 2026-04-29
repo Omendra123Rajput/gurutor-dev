@@ -1,0 +1,83 @@
+.gmat-analyse-ai {
+    text-align: center;
+    margin: 16px auto;
+    padding: 0 15px;
+}
+
+.gmat-analyse-ai__btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 28px;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    background: #f68525;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.gmat-analyse-ai__btn:hover {
+    background: #e0741a;
+    color: #fff;
+}
+
+.gmat-analyse-ai__btn--loading {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+.gmat-analyse-ai__btn--sent {
+    background: #28a745;
+    cursor: default;
+}
+
+.gmat-analyse-ai__btn--sent:hover {
+    background: #28a745;
+}
+
+.gmat-analyse-ai__icon {
+    flex-shrink: 0;
+}
+
+.gmat-analyse-ai__spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: gmat-analyse-spin 0.6s linear infinite;
+    vertical-align: middle;
+}
+
+@keyframes gmat-analyse-spin {
+    to { transform: rotate(360deg); }
+}
+
+.gmat-analyse-ai__msg {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.gmat-analyse-ai__msg--success {
+    color: #28a745;
+}
+
+.gmat-analyse-ai__msg--error {
+    color: #dc3545;
+}
+
+@media (max-width: 768px) {
+    .gmat-analyse-ai__btn {
+        font-size: 14px;
+        padding: 10px 22px;
+    }
+}

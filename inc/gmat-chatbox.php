@@ -28,7 +28,7 @@ if (!defined('ABSPATH')) exit;
 if (!defined('GMAT_CHATBOX_COURSE_ID'))      define('GMAT_CHATBOX_COURSE_ID', 8112);
 if (!defined('GMAT_CHATBOX_RATE_LIMIT'))     define('GMAT_CHATBOX_RATE_LIMIT', 20);       // messages per window
 if (!defined('GMAT_CHATBOX_RATE_WINDOW'))    define('GMAT_CHATBOX_RATE_WINDOW', 60);      // seconds
-if (!defined('GMAT_CHATBOX_API_TIMEOUT'))    define('GMAT_CHATBOX_API_TIMEOUT', 30);      // seconds
+if (!defined('GMAT_CHATBOX_API_TIMEOUT'))    define('GMAT_CHATBOX_API_TIMEOUT', 300);      // seconds
 if (!defined('GMAT_CHATBOX_MAX_MSG_LENGTH')) define('GMAT_CHATBOX_MAX_MSG_LENGTH', 2000); // characters
 
 

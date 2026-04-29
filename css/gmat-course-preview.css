@@ -1,0 +1,270 @@
+/**
+ * GMAT Course Preview — locked state overrides.
+ * Layers on top of css/gmat-study-plan.css.
+ */
+
+.gmat-study-plan--preview {
+    max-width: 960px;
+    margin: 40px auto;
+    padding: 0 15px;
+}
+
+.gmat-sp-preview-intro {
+    text-align: center;
+    margin: 32px auto 28px;
+    padding: 20px 24px;
+    max-width: 1120px;
+    background: linear-gradient(180deg, #f1f5ff 0%, #eef3fb 100%);
+    border: 1px solid #dbe4f5;
+    border-radius: 12px;
+    margin-bottom: 10%;
+}
+
+.gmat-sp-preview-intro__eyebrow {
+    display: inline-block;
+    background: #00409E;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 50px;
+    margin-bottom: 10px;
+}
+
+.gmat-sp-preview-intro__title {
+    color: #00409E;
+    font-size: 28px;
+    line-height: 1.2;
+    font-weight: 800;
+    margin: 0 0 8px;
+}
+
+.gmat-sp-preview-intro__sub {
+    color: #475569;
+    font-size: 15px;
+    line-height: 1.5;
+    margin: 0;
+    max-width: 620px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Disable any navigation affordance on lesson rows */
+.gmat-sp-lesson--locked {
+    cursor: default;
+}
+
+.gmat-sp-lesson--locked .gmat-sp-lesson__top-row {
+    cursor: default;
+}
+
+.gmat-sp-lesson--locked .gmat-sp-lesson__info {
+    opacity: 0.85;
+}
+
+/* Locked pill button */
+.gmat-sp-lesson__btn--locked {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 50px;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.gmat-sp-lesson__btn--locked svg {
+    flex-shrink: 0;
+}
+
+/* Hide expand-icon + desc content inside preview (nothing to expand at lesson level) */
+.gmat-study-plan--preview .gmat-sp-lesson__expand-icon,
+.gmat-study-plan--preview .gmat-sp-lesson__desc {
+    display: none;
+}
+
+/* Visually suppress any status/suggest badges if a builder accidentally adds one */
+.gmat-study-plan--preview .gmat-sp-lesson__status-badge,
+.gmat-study-plan--preview .gmat-sp-lesson__suggested-badge {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .gmat-sp-preview-intro__title {
+        font-size: 22px;
+    }
+    .gmat-sp-lesson__btn--locked {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+}
+
+/* ============================================================================
+   Floating scroll CTA (fixed bottom-right; auto-hides when preview is in view)
+   ============================================================================ */
+
+.gmat-sp-scroll-cue {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 9999;
+    transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.gmat-sp-scroll-cue--hidden {
+    opacity: 0;
+    transform: translateY(12px);
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.gmat-sp-scroll-cue__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: #00409E;
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 15px;
+    line-height: 1;
+    border-radius: 50px;
+    text-decoration: none !important;
+    box-shadow: 0 6px 20px rgba(0, 64, 158, 0.32);
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gmat-sp-scroll-cue__link:hover,
+.gmat-sp-scroll-cue__link:focus {
+    background-color: #FBB03B;
+    color: #ffffff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(251, 176, 59, 0.4);
+}
+
+.gmat-sp-scroll-cue__arrow {
+    display: inline-block;
+    font-size: 18px;
+    line-height: 1;
+    animation: gmatSpScrollCueBounce 1.6s ease-in-out infinite;
+}
+
+@keyframes gmatSpScrollCueBounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gmat-sp-scroll-cue__arrow {
+        animation: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .gmat-sp-scroll-cue {
+        right: 16px;
+        bottom: 16px;
+    }
+    .gmat-sp-scroll-cue__link {
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+}
+
+/* ============================================================================
+   Guarantee hero summary (below the preview, links to /guarantee/)
+   ============================================================================ */
+
+.gmat-guarantee-hero {
+    background: linear-gradient(135deg, #00409E 0%, #002b6b 100%);
+    border-radius: 16px;
+    padding: 56px 24px;
+    margin: 56px auto 40px;
+    max-width: 980px;
+    text-align: center;
+    color: #ffffff;
+}
+
+.gmat-guarantee-hero__inner {
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.gmat-guarantee-hero__badge {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    color: #ffffff;
+}
+
+.gmat-guarantee-hero__title {
+    font-size: 38px;
+    line-height: 1.15;
+    font-weight: 800;
+    margin: 0 0 16px;
+    color: #ffffff;
+}
+
+.gmat-guarantee-hero__highlight {
+    color: #FBB03B;
+}
+
+.gmat-guarantee-hero__copy {
+    font-size: 16px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.92);
+    margin: 0 auto 26px;
+    max-width: 620px;
+}
+
+.gmat-guarantee-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: #FBB03B;
+    color: #002b6b !important;
+    font-weight: 700;
+    font-size: 15px;
+    border-radius: 50px;
+    text-decoration: none !important;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.gmat-guarantee-hero__cta:hover,
+.gmat-guarantee-hero__cta:focus {
+    background: #ffffff;
+    color: #00409E !important;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 600px) {
+    .gmat-guarantee-hero {
+        padding: 40px 18px;
+        margin: 40px 12px;
+        border-radius: 12px;
+    }
+    .gmat-guarantee-hero__title {
+        font-size: 28px;
+    }
+    .gmat-guarantee-hero__copy {
+        font-size: 15px;
+    }
+}

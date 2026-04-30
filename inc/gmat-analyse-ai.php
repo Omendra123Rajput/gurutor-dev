@@ -15,6 +15,8 @@ if (!defined('ABSPATH')) exit;
 
 define('GMAT_ANALYSE_AI_COURSE_ID', 8112);
 define('GMAT_ANALYSE_AI_API_TIMEOUT', 30);
+define('GMAT_ANALYSE_AI_MAX_REPORT_BYTES', 51200); // 50 KB hard cap on coaching_report
+define('GMAT_ANALYSE_AI_META_PREFIX', '_gmat_analyse_ai_report_');
 
 
 // ============================================================================
@@ -102,10 +104,11 @@ function gmat_analyse_ai_enqueue_assets() {
     );
 
     wp_localize_script('gmat-analyse-ai', 'gmatAnalyseAI', array(
-        'ajaxUrl'     => admin_url('admin-ajax.php'),
-        'nonce'       => wp_create_nonce('gmat_analyse_ai_nonce'),
-        'postId'      => get_the_ID(),
-        'lessonLabel' => $meta['label'],
+        'ajaxUrl'         => admin_url('admin-ajax.php'),
+        'nonce'           => wp_create_nonce('gmat_analyse_ai_nonce'),
+        'postId'          => get_the_ID(),
+        'lessonLabel'     => $meta['label'],
+        'hasCachedReport' => false, // caching disabled — always fetch fresh
     ));
 }
 
@@ -170,6 +173,8 @@ function gmat_analyse_ai_send_data() {
         wp_send_json_error(array('message' => 'Lesson not found.'), 404);
     }
 
+    error_log('[AAI] send_data start | user=' . get_current_user_id() . ' | lesson_key=' . $meta['lesson_key'] . ' | post_id=' . $post_id);
+
     // Fetch all statements for this activity (completed + answered)
     $user = wp_get_current_user();
     $base_filters = array(
@@ -199,8 +204,11 @@ function gmat_analyse_ai_send_data() {
     $statements = array_merge($completed_stmts, $answered_stmts);
 
     if (empty($statements)) {
+        error_log('[AAI] no LRS statements');
         wp_send_json_error(array('message' => 'No completion data found.'), 404);
     }
+
+    error_log('[AAI] LRS counts | completed=' . count($completed_stmts) . ' | answered=' . count($answered_stmts) . ' | total=' . count($statements));
 
     // Build payload
     $payload = array(
@@ -233,19 +241,177 @@ function gmat_analyse_ai_send_data() {
     ));
 
     if (is_wp_error($response)) {
-        error_log('GMAT Analyse AI: API error — ' . $response->get_error_message());
+        error_log('[AAI] wp_remote_post WP_Error: ' . $response->get_error_message());
         wp_send_json_error(array('message' => 'Unable to reach AI service.'), 502);
     }
 
     $http_code = wp_remote_retrieve_response_code($response);
+    $body      = wp_remote_retrieve_body($response);
+    $body_len  = strlen((string) $body);
+
+    error_log('[AAI] HTTP=' . $http_code . ' | body_bytes=' . $body_len);
+
     if ($http_code !== 200) {
-        error_log('GMAT Analyse AI: API HTTP ' . $http_code . ': ' . wp_remote_retrieve_body($response));
+        error_log('[AAI] non-200 body sample: ' . substr((string) $body, 0, 2000));
         wp_send_json_error(array('message' => 'AI service error.'), 502);
     }
 
+    $data = json_decode($body, true);
+    if (!is_array($data)) {
+        error_log('[AAI] json_decode failed | last_error=' . json_last_error_msg() . ' | body sample: ' . substr((string) $body, 0, 2000));
+        wp_send_json_error(array('message' => 'Invalid AI response.'), 502);
+    }
+
+    error_log('[AAI] decoded keys=' . implode(',', array_keys($data)));
+
+    $cr_top = isset($data['coaching_report'])                    ? $data['coaching_report']                    : null;
+    $cr_nest = isset($data['chatbot_response']['coaching_report']) ? $data['chatbot_response']['coaching_report'] : null;
+    error_log('[AAI] coaching_report top: ' . (is_string($cr_top) ? 'str(' . strlen($cr_top) . ')' : gettype($cr_top))
+        . ' | nested: '                       . (is_string($cr_nest) ? 'str(' . strlen($cr_nest) . ')' : gettype($cr_nest)));
+
+    $report = gmat_analyse_ai_normalize_report($data);
+
+    error_log('[AAI] normalized | coaching_html_bytes=' . strlen((string) $report['coaching_report_html'])
+        . ' | weaknesses=' . count($report['weaknesses']));
+
+    if (empty($report['coaching_report_html'])) {
+        error_log('[AAI] EMPTY coaching_report_html | full body sample: ' . substr((string) $body, 0, 2000));
+    }
+
     wp_send_json_success(array(
-        'sent'             => true,
-        'message'          => 'Analysis data sent successfully.',
-        'statements_count' => count($statements),
+        'cached'    => false,
+        'report'    => $report,
+        'cached_at' => time(),
     ));
+}
+
+
+// ============================================================================
+// HELPER: Normalize raw API response into safe, render-ready array
+// ============================================================================
+
+function gmat_analyse_ai_normalize_report($raw) {
+    $total     = isset($raw['total_questions'])     ? absint($raw['total_questions'])     : 0;
+    $attempted = isset($raw['attempted_questions']) ? absint($raw['attempted_questions']) : 0;
+    $correct   = isset($raw['correct'])             ? absint($raw['correct'])             : 0;
+    $incorrect = isset($raw['incorrect'])           ? absint($raw['incorrect'])           : 0;
+
+    $accuracy_pct = 0;
+    if (isset($raw['accuracy']) && is_numeric($raw['accuracy'])) {
+        $accuracy_pct = (int) round(floatval($raw['accuracy']) * 100);
+    } elseif ($attempted > 0) {
+        $accuracy_pct = (int) round(($correct / $attempted) * 100);
+    }
+    if ($accuracy_pct < 0)   $accuracy_pct = 0;
+    if ($accuracy_pct > 100) $accuracy_pct = 100;
+
+    $weaknesses = array();
+    if (!empty($raw['weaknesses']) && is_array($raw['weaknesses'])) {
+        foreach ($raw['weaknesses'] as $w) {
+            if (!is_array($w)) continue;
+
+            $questions = array();
+            if (!empty($w['questions']) && is_array($w['questions'])) {
+                foreach ($w['questions'] as $q) {
+                    if (!is_array($q)) continue;
+                    $questions[] = array(
+                        'question_id'    => isset($q['question_id'])    ? sanitize_text_field($q['question_id'])    : '',
+                        'student_answer' => isset($q['student_answer']) ? sanitize_text_field($q['student_answer']) : '',
+                        'correct_answer' => isset($q['correct_answer']) ? sanitize_text_field($q['correct_answer']) : '',
+                    );
+                }
+            }
+
+            $weaknesses[] = array(
+                'topic'           => isset($w['topic'])           ? sanitize_text_field($w['topic'])    : '',
+                'subtopic'        => isset($w['subtopic'])        ? sanitize_text_field($w['subtopic']) : '',
+                'incorrect_count' => isset($w['incorrect_count']) ? absint($w['incorrect_count'])      : 0,
+                'questions'       => $questions,
+            );
+        }
+    }
+
+    $coaching_md = '';
+    if (!empty($raw['coaching_report']) && is_string($raw['coaching_report'])) {
+        $coaching_md = $raw['coaching_report'];
+    } elseif (!empty($raw['chatbot_response']['coaching_report']) && is_string($raw['chatbot_response']['coaching_report'])) {
+        $coaching_md = $raw['chatbot_response']['coaching_report'];
+    }
+
+    if (strlen($coaching_md) > GMAT_ANALYSE_AI_MAX_REPORT_BYTES) {
+        $coaching_md = substr($coaching_md, 0, GMAT_ANALYSE_AI_MAX_REPORT_BYTES);
+    }
+
+    $coaching_html = $coaching_md !== '' ? gmat_analyse_ai_format_markdown($coaching_md) : '';
+
+    error_log('[AAI] normalize | md_bytes=' . strlen($coaching_md) . ' | html_bytes=' . strlen($coaching_html));
+
+    return array(
+        'lesson_key'           => isset($raw['lesson_key']) ? sanitize_text_field($raw['lesson_key']) : '',
+        'total_questions'      => $total,
+        'attempted'            => $attempted,
+        'correct'              => $correct,
+        'incorrect'            => $incorrect,
+        'accuracy_pct'         => $accuracy_pct,
+        'weaknesses'           => $weaknesses,
+        'coaching_report_html' => $coaching_html,
+    );
+}
+
+
+// ============================================================================
+// HELPER: Markdown -> safe HTML (## / ### headers + reuses chatbox formatter)
+// ============================================================================
+
+function gmat_analyse_ai_format_markdown($md) {
+    if (!is_string($md) || $md === '') return '';
+
+    // Normalize line endings
+    $md = str_replace(array("\r\n", "\r"), "\n", $md);
+
+    // Repair adjacent header mash-ups like "Heading###" -> "Heading\n###"
+    $md = preg_replace('/([^\n#])(#{2,6}\s)/', "$1\n$2", $md);
+
+    // Split on ATX-style headers (## or ###); preserve hash count via capture
+    $parts = preg_split('/^(#{2,6})\s+(.+?)\s*$/m', $md, -1, PREG_SPLIT_DELIM_CAPTURE);
+
+    $html  = '';
+    $count = count($parts);
+
+    for ($i = 0; $i < $count; $i++) {
+        $chunk = $parts[$i];
+
+        // Header tuple: hashes at $i+1, title text at $i+2 (delim-capture pattern)
+        if (isset($parts[$i + 1]) && isset($parts[$i + 2]) && preg_match('/^#{2,6}$/', $parts[$i + 1])) {
+            // Body chunk (before next header)
+            if (function_exists('gmat_chatbox_format_reply')) {
+                $html .= gmat_chatbox_format_reply($chunk);
+            } else {
+                $html .= '<p>' . esc_html($chunk) . '</p>';
+            }
+
+            $level = strlen($parts[$i + 1]); // 2 -> h3, 3 -> h4, 4+ -> h5
+            $tag   = ($level === 2) ? 'h3' : (($level === 3) ? 'h4' : 'h5');
+            $title = trim($parts[$i + 2]);
+            $html .= '<' . $tag . ' class="gmat-aai-h gmat-aai-h--' . $level . '">' . esc_html($title) . '</' . $tag . '>';
+
+            $i += 2; // skip the two captured groups
+            continue;
+        }
+
+        // Trailing/standalone body chunk
+        if (function_exists('gmat_chatbox_format_reply')) {
+            $html .= gmat_chatbox_format_reply($chunk);
+        } else {
+            $html .= '<p>' . esc_html($chunk) . '</p>';
+        }
+    }
+
+    // Allow our header tags + the standard chatbox-style HTML
+    $allowed = wp_kses_allowed_html('post');
+    $allowed['h3'] = array('class' => true);
+    $allowed['h4'] = array('class' => true);
+    $allowed['h5'] = array('class' => true);
+
+    return wp_kses($html, $allowed);
 }

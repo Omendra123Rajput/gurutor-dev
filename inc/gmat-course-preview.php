@@ -104,50 +104,59 @@ function gmat_course_preview_shortcode( $atts = array() ) {
 }
 
 // ============================================================================
-// Floating scroll CTA: fixed at bottom-right; auto-hides when preview is visible.
-// Rendered via wp_footer so it escapes any Elementor transform contexts.
+// Shortcode: [gmat_preview_scroll_cue] — inline CTA that smooth-scrolls to
+// the study plan preview. Drop into Elementor wherever needed.
+//
+// Attributes:
+//   label  — button text (default: "Preview Study Plan")
+//   target — element ID to scroll to (default: "gmat-study-plan")
 // ============================================================================
 
-add_action( 'wp_footer', 'gmat_course_preview_render_scroll_cue' );
-function gmat_course_preview_render_scroll_cue() {
-    if ( ! gmat_course_preview_should_enqueue() ) return;
+add_shortcode( 'gmat_preview_scroll_cue', 'gmat_preview_scroll_cue_shortcode' );
+function gmat_preview_scroll_cue_shortcode( $atts = array() ) {
+    static $printed_script = false;
+
+    $atts = shortcode_atts( array(
+        'label'  => __( 'Preview Study Plan', 'gurutor' ),
+        'target' => 'gmat-study-plan',
+    ), $atts, 'gmat_preview_scroll_cue' );
+
+    $target = sanitize_html_class( $atts['target'] );
+    if ( '' === $target ) {
+        $target = 'gmat-study-plan';
+    }
+
+    ob_start();
     ?>
-    <div class="gmat-sp-scroll-cue" id="gmat-sp-scroll-cue" data-target="gmat-study-plan">
-        <a href="#gmat-study-plan" class="gmat-sp-scroll-cue__link" data-gmat-scroll>
-            <span class="gmat-sp-scroll-cue__label"><?php esc_html_e( 'Preview Study Plan', 'gurutor' ); ?></span>
+    <div class="gmat-sp-scroll-cue">
+        <a href="#<?php echo esc_attr( $target ); ?>" class="gmat-sp-scroll-cue__link" data-gmat-scroll>
+            <span class="gmat-sp-scroll-cue__label"><?php echo esc_html( $atts['label'] ); ?></span>
             <span class="gmat-sp-scroll-cue__arrow" aria-hidden="true">&darr;</span>
         </a>
     </div>
-    <script>
-    (function () {
-        var cue = document.getElementById('gmat-sp-scroll-cue');
-        if (!cue) return;
-
-        var targetId = cue.getAttribute('data-target');
-        var target   = targetId ? document.getElementById(targetId) : null;
-
-        cue.addEventListener('click', function (e) {
-            var link = e.target.closest && e.target.closest('[data-gmat-scroll]');
-            if (!link || !target) return;
-            e.preventDefault();
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-
-        if (target && 'IntersectionObserver' in window) {
-            var io = new IntersectionObserver(function (entries) {
-                entries.forEach(function (entry) {
-                    if (entry.isIntersecting) {
-                        cue.classList.add('gmat-sp-scroll-cue--hidden');
-                    } else {
-                        cue.classList.remove('gmat-sp-scroll-cue--hidden');
-                    }
-                });
-            }, { threshold: 0.1 });
-            io.observe(target);
-        }
-    })();
-    </script>
     <?php
+
+    if ( ! $printed_script ) {
+        $printed_script = true;
+        ?>
+        <script>
+        (function () {
+            document.addEventListener('click', function (e) {
+                var link = e.target.closest && e.target.closest('[data-gmat-scroll]');
+                if (!link) return;
+                var hash = link.getAttribute('href') || '';
+                if (hash.charAt(0) !== '#') return;
+                var target = document.getElementById(hash.slice(1));
+                if (!target) return;
+                e.preventDefault();
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        })();
+        </script>
+        <?php
+    }
+
+    return ob_get_clean();
 }
 
 

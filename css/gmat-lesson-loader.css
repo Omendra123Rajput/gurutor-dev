@@ -11,9 +11,9 @@
     right: 0;
     bottom: 0;
     z-index: 999999;
-    background: rgba(0, 43, 107, 0.92);
-    -webkit-backdrop-filter: blur(4px);
-    backdrop-filter: blur(4px);
+    background: rgba(255, 255, 255, 0.94);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
     pointer-events: none;
     margin: 0;
     padding: 0;
@@ -36,27 +36,37 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 22px;
+    gap: 24px;
     padding: 32px 40px;
-    color: #ffffff;
-    font-family: "Inter", "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     text-align: center;
     line-height: 1.4;
+    font-family: "Inter", "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.gmat-loader__brand {
-    font-size: 26px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    color: #ffffff;
-    margin: 0;
+.gmat-loader__logo {
+    width: 220px;
+    max-width: 80vw;
+    transform-origin: center;
+    animation: gmat-loader-logo-breathe 2.4s ease-in-out infinite;
+}
+
+.gmat-loader__logo-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.gmat-loader__logo-dot {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: gmat-loader-logo-dot 1.4s ease-in-out infinite;
 }
 
 .gmat-loader__spinner {
     display: inline-block;
-    width: 48px;
-    height: 48px;
-    border: 4px solid rgba(255, 255, 255, 0.18);
+    width: 44px;
+    height: 44px;
+    border: 4px solid rgba(0, 64, 158, 0.12);
     border-top-color: #f68525;
     border-radius: 50%;
     animation: gmat-loader-spin 0.8s linear infinite;
@@ -64,9 +74,10 @@
 }
 
 .gmat-loader__text {
-    font-size: 16px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.92);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    color: #002b6b;
     margin: 0;
 }
 
@@ -85,14 +96,26 @@
     to   { opacity: 0; }
 }
 
+@keyframes gmat-loader-logo-breathe {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.04); }
+}
+
+@keyframes gmat-loader-logo-dot {
+    0%, 100% { opacity: 1;   transform: translateY(0)    scale(1); }
+    50%      { opacity: 0.45; transform: translateY(-2px) scale(1.18); }
+}
+
 @media (max-width: 480px) {
-    .gmat-loader__brand   { font-size: 22px; }
-    .gmat-loader__spinner { width: 40px; height: 40px; border-width: 3px; }
-    .gmat-loader__text    { font-size: 15px; }
+    .gmat-loader__logo    { width: 170px; }
+    .gmat-loader__spinner { width: 38px; height: 38px; border-width: 3px; }
+    .gmat-loader__text    { font-size: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .gmat-loader__overlay,
-    .gmat-loader__overlay--leaving { animation: none; }
-    .gmat-loader__spinner          { animation-duration: 1.6s; }
+    .gmat-loader__overlay--leaving,
+    .gmat-loader__logo,
+    .gmat-loader__logo-dot { animation: none; }
+    .gmat-loader__spinner  { animation-duration: 1.6s; }
 }

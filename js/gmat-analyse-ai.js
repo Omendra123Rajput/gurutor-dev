@@ -16,6 +16,10 @@
     var $modal = null;
     var escHandler = null;
 
+    function generateSessionId() {
+        return 'gs_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 8);
+    }
+
     function init() {
         var iframe = document.querySelector('.grassblade iframe.grassblade_iframe');
         if (!iframe) return;
@@ -133,9 +137,10 @@
             type: 'POST',
             dataType: 'json',
             data: {
-                action:  'gmat_analyse_ai_send_data',
-                nonce:   config.nonce,
-                post_id: config.postId
+                action:     'gmat_analyse_ai_send_data',
+                nonce:      config.nonce,
+                post_id:    config.postId,
+                session_id: generateSessionId()
             },
             timeout: 60000,
             success: function(res) {
@@ -168,9 +173,10 @@
             type: 'POST',
             dataType: 'json',
             data: {
-                action: 'gmat_analyse_ai_send_data',
-                nonce: config.nonce,
-                post_id: config.postId
+                action:     'gmat_analyse_ai_send_data',
+                nonce:      config.nonce,
+                post_id:    config.postId,
+                session_id: generateSessionId()
             },
             timeout: 60000,
             success: function(res) {

@@ -173,7 +173,13 @@ function gmat_analyse_ai_send_data() {
         wp_send_json_error(array('message' => 'Lesson not found.'), 404);
     }
 
-    error_log('[AAI] send_data start | user=' . get_current_user_id() . ' | lesson_key=' . $meta['lesson_key'] . ' | post_id=' . $post_id);
+    $session_id = isset($_POST['session_id']) ? sanitize_text_field(wp_unslash($_POST['session_id'])) : '';
+
+    if (empty($session_id) || strlen($session_id) > 64) {
+        wp_send_json_error(array('message' => 'Invalid session. Please refresh the page.'), 400);
+    }
+
+    error_log('[AAI] send_data start | user=' . get_current_user_id() . ' | lesson_key=' . $meta['lesson_key'] . ' | post_id=' . $post_id . ' | session_id=' . $session_id);
 
     // Fetch all statements for this activity (completed + answered)
     $user = wp_get_current_user();
@@ -213,6 +219,7 @@ function gmat_analyse_ai_send_data() {
     // Build payload
     $payload = array(
         'user_id'        => 'wp_user_' . get_current_user_id(),
+        'session_id'     => $session_id,
         'lesson_title'   => $meta['label'],
         'lesson_key'     => $meta['lesson_key'],
         'lrs_statements' => $statements,

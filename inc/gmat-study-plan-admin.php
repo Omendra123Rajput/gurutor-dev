@@ -183,7 +183,7 @@ function gmat_sp_get_default_ids() {
 // ============================================================================
 
 function gmat_sp_get_lesson_keys() {
-    return array(
+    $keys = array(
         // ── Introductions ──
         // xapi_slug = the slug portion of the xAPI activity ID: http://www.uniqueurl.com/{xapi_slug}
         // These must match exactly what GrassBlade sends in xAPI statements.
@@ -412,6 +412,118 @@ function gmat_sp_get_lesson_keys() {
         'di_lesson_7'     => array('label' => 'DI Lesson 7: Multi-Source Reasoning', 'section' => 'DI Lessons', 'xapi_slug' => '',
             'topic' => 'Practice Multi-Source Reasoning',
             'desc' => "Learn how to scan, prioritize, and cross-reference multiple information sources efficiently"),
+    );
+
+    // Inject estimated completion minutes (content-owned, sourced from PDFs).
+    // Keys without an entry render with no time line.
+    $minutes = gmat_sp_get_lesson_minutes();
+    foreach ($keys as $k => &$v) {
+        if (isset($minutes[$k])) {
+            $v['minutes'] = (int) $minutes[$k];
+        }
+    }
+    unset($v);
+
+    return $keys;
+}
+
+
+/**
+ * Estimated completion minutes per lesson key.
+ * Source: Gurutor Module Completion Times PDFs (Quant / Verbal / Data Insights).
+ * Lessons absent from this map render no time line (e.g. intro_verbal).
+ */
+function gmat_sp_get_lesson_minutes() {
+    return array(
+        // ── Introductions ──
+        'intro_verbal'     => 5,
+        'intro_quant'      => 5,
+        'intro_di'         => 5,
+
+        // ── CR Lessons ──
+        'cr_lesson_1'      => 5,
+        'cr_lesson_2'      => 7,
+        'cr_lesson_3'      => 25,
+        'cr_lesson_4'      => 12,
+        'cr_lesson_5'      => 43,
+        'cr_lesson_6'      => 43,
+        'cr_lesson_7'      => 48,
+        'cr_lesson_8'      => 15,
+        'cr_lesson_9'      => 25,
+
+        // ── CR Exercises ──
+        'cr_exercise_1'    => 20,
+        'cr_exercise_2'    => 12,
+        'cr_exercise_3'    => 15,
+        'cr_exercise_4'    => 68,
+        'cr_exercise_5'    => 68,
+        'cr_exercise_6'    => 68,
+        'cr_exercise_7'    => 30,
+        'cr_exercise_8'    => 40,
+
+        // ── RC ──
+        'rc_lesson_1'      => 7,
+        'rc_lesson_2'      => 6,
+        'rc_lesson_3'      => 12,
+        'rc_exercise_1'    => 74,
+
+        // ── PSS ──
+        'pss_lesson_1'     => 45,
+        'pss_lesson_2'     => 15,
+
+        // ── Algebra ──
+        'algebra_1'        => 48,
+        'algebra_2'        => 26,
+        'algebra_3'        => 37,
+        'algebra_4'        => 21,
+        'algebra_5'        => 10,
+
+        // ── Word Problems ──
+        'word_problems_1'  => 25,
+        'word_problems_2'  => 58,
+        'word_problems_3'  => 54,
+        'word_problems_4'  => 29,
+        'word_problems_5'  => 37,
+        'word_problems_6'  => 55,
+        'word_problems_7'  => 36,
+
+        // ── Number Properties ──
+        'number_props_1'   => 26,
+        'number_props_2'   => 15,
+        'number_props_3'   => 21,
+
+        // ── FPRs ──
+        'fprs_1'           => 48,
+        'fprs_2'           => 22,
+
+        // ── Quant Exercises ──
+        'quant_exercise_1' => 122,
+        'quant_exercise_2' => 138,
+        'quant_exercise_3' => 150,
+        'quant_exercise_4' => 98,
+        'quant_exercise_5' => 76,
+
+        // ── Verbal Review Sets ──
+        'verbal_review_2'  => 63,
+        'verbal_review_3'  => 122,
+        'verbal_review_4'  => 134,
+        'verbal_review_5'  => 138,
+
+        // ── Quant Review Sets ──
+        'quant_review_2'   => 100,
+        'quant_review_3'   => 92,
+        'quant_review_4'   => 100,
+        'quant_review_5'   => 72,
+        'quant_review_6'   => 56,
+
+        // ── DI Lessons ──
+        'di_lesson_1'      => 20,
+        'di_lesson_2'      => 40,
+        'di_lesson_3'      => 50,
+        'di_lesson_4'      => 20,
+        'di_lesson_5'      => 20,
+        'di_lesson_6'      => 25,
+        'di_lesson_7'      => 36,
     );
 }
 

@@ -243,8 +243,9 @@ function gmat_course_preview_render( $plan, $lesson_ids, $atts ) {
 
                                         <div class="gmat-sp-lesson-list">
                                             <?php foreach ( $unit[ $type ] as $lk ) :
-                                                $label = isset( $all_keys[ $lk ]['label'] ) ? $all_keys[ $lk ]['label'] : $lk;
-                                                $topic = isset( $all_keys[ $lk ]['topic'] ) ? $all_keys[ $lk ]['topic'] : '';
+                                                $label   = isset( $all_keys[ $lk ]['label'] ) ? $all_keys[ $lk ]['label'] : $lk;
+                                                $topic   = isset( $all_keys[ $lk ]['topic'] ) ? $all_keys[ $lk ]['topic'] : '';
+                                                $minutes = isset( $all_keys[ $lk ]['minutes'] ) ? intval( $all_keys[ $lk ]['minutes'] ) : 0;
                                             ?>
                                                 <div class="gmat-sp-lesson gmat-sp-lesson--not-started gmat-sp-lesson--locked" aria-disabled="true">
                                                     <div class="gmat-sp-lesson__top-row">
@@ -255,6 +256,15 @@ function gmat_course_preview_render( $plan, $lesson_ids, $atts ) {
                                                             <span class="gmat-sp-lesson__name"><?php echo esc_html( $label ); ?></span>
                                                             <?php if ( $topic ) : ?>
                                                                 <span class="gmat-sp-lesson__topic">Topic: <?php echo esc_html( $topic ); ?></span>
+                                                            <?php endif; ?>
+                                                            <?php if ( $minutes > 0 ) : ?>
+                                                                <span class="gmat-sp-lesson__time">
+                                                                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                                                                        <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/>
+                                                                        <path d="M6 3.2v3l1.8 1.1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                                                                    </svg>
+                                                                    Est. <?php echo intval( $minutes ); ?> min
+                                                                </span>
                                                             <?php endif; ?>
                                                         </div>
                                                         <div class="gmat-sp-lesson__actions">

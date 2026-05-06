@@ -116,6 +116,8 @@
     display: flex;
     justify-content: center;
     margin: 16px 0;
+    margin-top: 0;
+    margin-bottom: 60px;
 }
 
 .gmat-sp-scroll-cue__link {
@@ -185,6 +187,9 @@
     .gmat-sp-scroll-cue__link {
         padding: 10px 16px;
         font-size: 14px;
+    }
+    .gmat-sp-scroll-cue {
+        margin: 0;
     }
 }
 

@@ -1643,6 +1643,16 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                                                             <?php if ($topic) : ?>
                                                                 <span class="gmat-sp-lesson__topic">Topic: <?php echo esc_html($topic); ?></span>
                                                             <?php endif; ?>
+                                                            <?php $minutes = isset($all_keys[$lk]['minutes']) ? intval($all_keys[$lk]['minutes']) : 0; ?>
+                                                            <?php if ($minutes > 0) : ?>
+                                                                <span class="gmat-sp-lesson__time">
+                                                                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                                                                        <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/>
+                                                                        <path d="M6 3.2v3l1.8 1.1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                                                                    </svg>
+                                                                    Est. <?php echo $minutes; ?> min
+                                                                </span>
+                                                            <?php endif; ?>
                                                         </div>
                                                         <div class="gmat-sp-lesson__actions">
                                                             <?php if ($is_suggested) : ?>

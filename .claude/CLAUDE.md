@@ -118,6 +118,7 @@ All includes are in `functions.php` lines 21-34. Some may be commented out durin
 - `gmat_sp_format_description($desc)` — converts newline-separated text to HTML `<ul>` list
 - Lesson descriptions stored as `'desc'` field, topic names stored as `'topic'` field in `gmat_sp_get_lesson_keys()`
 - **Two suggest boxes per unit:** Practice suggest box (`suggest`/`suggest_redo`) renders ABOVE practice lessons. Review suggest box (`review_suggest`/`review_suggest_redo` + `cross_suggest_links`) renders ABOVE review lessons. Verbal units use `review_suggest` only; quant units use both.
+- `gmat_sp_get_lesson_minutes()` (in `gmat-study-plan-admin.php`) — flat `lesson_key => int` map of estimated completion minutes sourced from the Gurutor Module Completion Times PDFs (Quant / Verbal / Data Insights, kept in repo root). Merged into each entry's `'minutes'` field at the end of `gmat_sp_get_lesson_keys()`. Renders as `<span class="gmat-sp-lesson__time">Est. N min</span>` under the topic line in both the paid plan (course 8112) and the locked `/packages/` preview. Lessons absent from the map render no time line.
 
 ### Course Preview (Locked)
 - File: `inc/gmat-course-preview.php`. Shortcode: `[gmat_course_preview]`. Default attrs: `preference="verbal"`, optional `heading`, `subheading`.

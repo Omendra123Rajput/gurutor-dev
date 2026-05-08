@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) exit;
 // ============================================================================
 
 define('GMAT_ANALYSE_AI_COURSE_ID', 8112);
-define('GMAT_ANALYSE_AI_API_TIMEOUT', 30);
+define('GMAT_ANALYSE_AI_API_TIMEOUT', 300);
 define('GMAT_ANALYSE_AI_MAX_REPORT_BYTES', 51200); // 50 KB hard cap on coaching_report
 define('GMAT_ANALYSE_AI_META_PREFIX', '_gmat_analyse_ai_report_');
 

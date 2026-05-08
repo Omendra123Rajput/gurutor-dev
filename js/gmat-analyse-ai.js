@@ -142,7 +142,7 @@
                 post_id:    config.postId,
                 session_id: generateSessionId()
             },
-            timeout: 60000,
+            timeout: 310000,
             success: function(res) {
                 setButtonLoading($btn, $label, false);
                 if (res && res.success && res.data && res.data.report) {
@@ -178,7 +178,7 @@
                 post_id:    config.postId,
                 session_id: generateSessionId()
             },
-            timeout: 60000,
+            timeout: 310000,
             success: function(res) {
                 if (res && res.success && res.data && res.data.report) {
                     closeModal();

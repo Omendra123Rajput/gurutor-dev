@@ -463,14 +463,23 @@ function gmat_analyse_ai_format_markdown($md) {
     // ----------------------------------------------------------------------
     // 4. Sanitize: allow tables + custom span classes
     // ----------------------------------------------------------------------
+    return wp_kses($html, gmat_analyse_ai_allowed_html());
+}
+
+
+// ============================================================================
+// HELPER: Allowed HTML tag/attr table for coaching report rendering
+// Single source of truth — shared by format_markdown() and PDF handler.
+// ============================================================================
+
+function gmat_analyse_ai_allowed_html() {
     $allowed = wp_kses_allowed_html('post');
     $extra_attrs = array('class' => true);
     foreach (array('h3', 'h4', 'h5', 'div', 'span', 'p', 'table', 'thead', 'tbody', 'tr', 'th', 'td') as $tag) {
         if (!isset($allowed[$tag])) $allowed[$tag] = array();
         $allowed[$tag] = array_merge($allowed[$tag], $extra_attrs);
     }
-
-    return wp_kses($html, $allowed);
+    return $allowed;
 }
 
 
@@ -667,4 +676,162 @@ function gmat_analyse_ai_format_cell($cell) {
     );
 
     return $html;
+}
+
+
+// ============================================================================
+// AJAX: Download report as PDF (streams directly to browser, no disk write)
+// ============================================================================
+
+add_action('wp_ajax_gmat_analyse_ai_download_pdf', 'gmat_analyse_ai_download_pdf');
+function gmat_analyse_ai_download_pdf() {
+    if (!wp_doing_ajax()) {
+        wp_die('Forbidden', 'Forbidden', array('response' => 403));
+    }
+
+    check_ajax_referer('gmat_analyse_ai_nonce', 'nonce');
+
+    if (!is_user_logged_in()) {
+        wp_send_json_error(array('message' => 'Not authenticated.'), 403);
+    }
+
+    if (!function_exists('gurutor_user_has_active_paid_access') || !gurutor_user_has_active_paid_access()) {
+        wp_send_json_error(array('message' => 'Active subscription required.'), 403);
+    }
+
+    $post_id = isset($_POST['post_id']) ? absint($_POST['post_id']) : 0;
+    $meta = gmat_analyse_ai_get_lesson_meta($post_id);
+
+    if (!$meta) {
+        wp_send_json_error(array('message' => 'Lesson not found.'), 404);
+    }
+
+    // Client-supplied HTML — re-sanitised below. Length-capped at 2x upstream cap
+    // to allow for HTML tag overhead beyond GMAT_ANALYSE_AI_MAX_REPORT_BYTES (50 KB).
+    $report_html_raw = isset($_POST['report_html']) ? wp_unslash($_POST['report_html']) : '';
+    if (!is_string($report_html_raw) || trim($report_html_raw) === '') {
+        wp_send_json_error(array('message' => 'No report to download. Please re-analyse first.'), 400);
+    }
+
+    if (strlen($report_html_raw) > (GMAT_ANALYSE_AI_MAX_REPORT_BYTES * 2)) {
+        $report_html_raw = substr($report_html_raw, 0, GMAT_ANALYSE_AI_MAX_REPORT_BYTES * 2);
+    }
+
+    // Defence in depth — re-run wp_kses() with the same allowed-tag table the
+    // modal renderer uses. Client cannot inject <script>, event handlers, etc.
+    $coaching_html = wp_kses($report_html_raw, gmat_analyse_ai_allowed_html());
+
+    if (trim($coaching_html) === '') {
+        wp_send_json_error(array('message' => 'Report content was empty after sanitisation.'), 400);
+    }
+
+    // Server-derived metadata — NEVER read these from the POST body.
+    $current_user = wp_get_current_user();
+    $student_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
+    $date_format  = get_option('date_format');
+    if (empty($date_format)) $date_format = 'F j, Y';
+    $report_date  = date_i18n($date_format);
+
+    $lesson_label = (string) $meta['label'];
+    $lesson_key   = (string) $meta['lesson_key'];
+
+    // Logo: theme-local SVG, embedded INLINE (not via <img>). Dompdf 3.x renders
+    // inline <svg> via php-svg-lib. Try multiple candidate paths in case the
+    // filename differs between local + staging deploys.
+    $theme_path = get_stylesheet_directory();
+    $logo_candidates = array(
+        $theme_path . '/GURUTOR-logo (1).svg',
+        $theme_path . '/GURUTOR-logo.svg',
+        $theme_path . '/images/GURUTOR-logo.svg',
+        $theme_path . '/images/gurutor-logo.svg',
+    );
+
+    $logo_svg = '';
+    foreach ($logo_candidates as $candidate) {
+        if (file_exists($candidate)) {
+            $raw = file_get_contents($candidate);
+            if (is_string($raw) && $raw !== '') {
+                // Strip any XML prolog / DOCTYPE — Dompdf only wants the <svg> element.
+                $raw = preg_replace('/^\s*<\?xml[^>]*\?>\s*/', '', $raw);
+                $raw = preg_replace('/^\s*<!DOCTYPE[^>]*>\s*/i', '', $raw);
+                // Drop explicit width/height on the root <svg> so the wrapping
+                // container's CSS dimensions take effect (preserves viewBox).
+                $raw = preg_replace('/(<svg\b[^>]*?)\s+width="[^"]*"/i', '$1', $raw, 1);
+                $raw = preg_replace('/(<svg\b[^>]*?)\s+height="[^"]*"/i', '$1', $raw, 1);
+                $logo_svg = $raw;
+                break;
+            }
+        }
+    }
+
+    if ($logo_svg === '') {
+        error_log('[AAI-PDF] Logo SVG not found — checked: ' . implode(' | ', $logo_candidates));
+    }
+
+    // ------------------------------------------------------------------------
+    // Load Dompdf (lazy — only when this handler runs)
+    // ------------------------------------------------------------------------
+    $dompdf_autoload = $theme_path . '/lib/dompdf/autoload.inc.php';
+    if (!file_exists($dompdf_autoload)) {
+        error_log('[AAI-PDF] Dompdf autoloader missing at: ' . $dompdf_autoload);
+        wp_send_json_error(array('message' => 'PDF library not installed.'), 500);
+    }
+    require_once $dompdf_autoload;
+
+    if (!class_exists('Dompdf\\Dompdf')) {
+        error_log('[AAI-PDF] Dompdf class not available after autoload');
+        wp_send_json_error(array('message' => 'PDF library failed to load.'), 500);
+    }
+
+    // ------------------------------------------------------------------------
+    // Render HTML template into buffer
+    // ------------------------------------------------------------------------
+    $template_path = $theme_path . '/inc/templates/pdf-analyse-ai.php';
+    if (!file_exists($template_path)) {
+        error_log('[AAI-PDF] PDF template missing at: ' . $template_path);
+        wp_send_json_error(array('message' => 'PDF template missing.'), 500);
+    }
+
+    ob_start();
+    include $template_path;
+    $html = ob_get_clean();
+
+    // ------------------------------------------------------------------------
+    // Generate PDF
+    // ------------------------------------------------------------------------
+    try {
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', false);          // block remote fetches
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');      // ships with Dompdf, supports ✓ ✗
+        $options->set('chroot', $theme_path);             // restrict file:// to theme dir
+
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $pdf_binary = $dompdf->output();
+    } catch (\Throwable $e) {
+        error_log('[AAI-PDF] render error: ' . $e->getMessage());
+        wp_send_json_error(array('message' => 'PDF generation failed.'), 500);
+    }
+
+    // ------------------------------------------------------------------------
+    // Stream PDF binary to browser (no disk write)
+    // ------------------------------------------------------------------------
+    $filename = sanitize_file_name('Gurutor-Coaching-Report-' . $lesson_key . '-' . date('Y-m-d') . '.pdf');
+    if (substr($filename, -4) !== '.pdf') $filename .= '.pdf';
+
+    // Strip any stray output / buffer noise before headers
+    while (ob_get_level() > 0) { ob_end_clean(); }
+
+    nocache_headers();
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Length: ' . strlen($pdf_binary));
+    header('X-Content-Type-Options: nosniff');
+
+    echo $pdf_binary;
+    exit;
 }

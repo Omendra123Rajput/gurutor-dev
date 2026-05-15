@@ -102,7 +102,7 @@ body.gmat-aai-locked { overflow: hidden; }
 
 .gmat-aai-modal__card {
     position: relative;
-    width: min(760px, 95vw);
+    width: min(1040px, 95vw);
     max-height: min(90vh, 920px);
     display: flex;
     flex-direction: column;
@@ -265,57 +265,126 @@ body.gmat-aai-locked { overflow: hidden; }
 }
 
 /* --------------------------------------------------------------------------
-   Lesson pill
+   Report head (Performance Report label + lesson title + meta row)
    -------------------------------------------------------------------------- */
 
-.gmat-aai-lesson {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 18px;
-    flex-wrap: wrap;
+.gmat-aai-report-head {
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #e5ecf6;
 }
 
-.gmat-aai-lesson__pill {
-    background: #eef3fb;
-    color: #00409E;
+.gmat-aai-report-head__type {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 700;
+    color: #5a6b85;
     text-transform: uppercase;
-    letter-spacing: 0.6px;
-    padding: 4px 10px;
-    border-radius: 20px;
+    letter-spacing: 1.4px;
+    margin-bottom: 8px;
 }
 
-.gmat-aai-lesson__name {
-    font-size: 15px;
-    font-weight: 700;
+.gmat-aai-modal .gmat-aai-report-head__title,
+.gmat-aai-modal .gmat-aai-report-head h3.gmat-aai-report-head__title {
+    margin: 0 0 10px !important;
+    padding: 0 !important;
+    font-family: "Nunito Sans", -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-size: 24px !important;
+    font-weight: 800 !important;
+    line-height: 1.25 !important;
+    color: #002b6b !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    background: none !important;
+    border: none !important;
+    text-shadow: none !important;
+}
+
+.gmat-aai-report-head__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 22px;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: #3d4b66;
+}
+
+.gmat-aai-report-head__meta strong {
     color: #002b6b;
+    font-weight: 700;
 }
 
 /* --------------------------------------------------------------------------
-   Section title
+   Hero PASS/FAIL banner
    -------------------------------------------------------------------------- */
 
-.gmat-aai-section__title {
-    margin: 22px 0 12px;
-    font-size: 13px;
-    font-weight: 800;
-    color: #5a6b85;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
+.gmat-aai-hero {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 14px;
+    padding: 16px 20px;
+    border-left: 4px solid #d8442f;
+    background: #fdf2ef;
+    border-radius: 8px;
+    margin-bottom: 22px;
 }
 
-.gmat-aai-section__title::before {
-    content: "";
-    display: inline-block;
-    width: 18px;
-    height: 2px;
-    background: #f68525;
-    border-radius: 2px;
+.gmat-aai-hero--pass {
+    border-left-color: #1f8a52;
+    background: #eef9f1;
+}
+
+.gmat-aai-hero__pill {
+    flex-shrink: 0;
+    background: #d8442f;
+    color: #ffffff;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 5px 11px;
+    border-radius: 4px;
+}
+
+.gmat-aai-hero--pass .gmat-aai-hero__pill {
+    background: #1f8a52;
+}
+
+.gmat-aai-hero__msg {
+    flex: 1 1 240px;
+    margin: 0;
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: #2c3a52;
+}
+
+.gmat-aai-hero__score-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    margin-left: auto;
+}
+
+.gmat-aai-hero__score {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 18px;
+    font-weight: 800;
+    color: #d8442f;
+    letter-spacing: 0.5px;
+}
+
+.gmat-aai-hero--pass .gmat-aai-hero__score {
+    color: #1f8a52;
+}
+
+.gmat-aai-hero__threshold {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: #5a6b85;
+    letter-spacing: 0.4px;
 }
 
 /* --------------------------------------------------------------------------
@@ -393,43 +462,69 @@ body.gmat-aai-locked { overflow: hidden; }
 .gmat-aai-coaching__body > *:first-child { margin-top: 0; }
 .gmat-aai-coaching__body > *:last-child  { margin-bottom: 0; }
 
-/* Section heading from "## ..." (h3) */
+/* Section heading from "## ..." (h3) — reference monospace numbered style */
 
-.gmat-aai-coaching__body h3,
-.gmat-aai-coaching__body .gmat-aai-h--2 {
+.gmat-aai-modal .gmat-aai-coaching__body h3.gmat-aai-section {
     position: relative;
-    margin: 22px 0 14px;
-    padding: 14px 16px 14px 18px;
-    background: linear-gradient(90deg, #eef3fb 0%, rgba(238, 243, 251, 0) 100%);
-    border-left: 4px solid #00409E;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 800;
-    color: #00409E;
-    letter-spacing: 0.2px;
-    line-height: 1.3;
+    margin: 30px 0 14px !important;
+    padding: 0 0 8px !important;
+    background: none !important;
+    border: none !important;
+    border-bottom: 1px solid #d8dfeb !important;
+    border-radius: 0 !important;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace !important;
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+    color: #5a6b85 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.6px !important;
+    line-height: 1.4 !important;
+    text-shadow: none !important;
+    display: block !important;
 }
 
-.gmat-aai-coaching__body > h3:first-child,
-.gmat-aai-coaching__body > .gmat-aai-h--2:first-child {
-    margin-top: 4px;
+.gmat-aai-modal .gmat-aai-coaching__body h3.gmat-aai-section:first-child {
+    margin-top: 4px !important;
+}
+
+.gmat-aai-coaching__body .gmat-aai-section__num {
+    color: #00409E;
+    font-weight: 800;
+    margin-right: 10px;
+}
+
+.gmat-aai-coaching__body .gmat-aai-section__title {
+    color: inherit;
+}
+
+.gmat-aai-modal .gmat-aai-coaching__body h3.gmat-aai-section--instructor {
+    border-bottom: none !important;
+    padding: 0 !important;
+}
+
+.gmat-aai-coaching__body .gmat-aai-section--instructor .gmat-aai-section__title {
+    display: inline-block;
+    background: #0d1b30;
+    color: #ffffff;
+    padding: 5px 11px;
+    border-radius: 4px;
+    letter-spacing: 1.2px;
+    font-size: 11.5px;
 }
 
 /* Sub-heading from "### ..." (h4) */
 
-.gmat-aai-coaching__body h4,
-.gmat-aai-coaching__body .gmat-aai-h--3 {
-    margin: 16px 0 8px;
-    font-size: 15px;
+.gmat-aai-coaching__body h4.gmat-aai-subsection {
+    margin: 18px 0 8px;
+    font-size: 14.5px;
     font-weight: 800;
     color: #002b6b;
     line-height: 1.3;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
-.gmat-aai-coaching__body h5,
-.gmat-aai-coaching__body .gmat-aai-h--4,
-.gmat-aai-coaching__body .gmat-aai-h--5,
-.gmat-aai-coaching__body .gmat-aai-h--6 {
+.gmat-aai-coaching__body h5 {
     margin: 14px 0 6px;
     font-size: 13.5px;
     font-weight: 700;
@@ -437,6 +532,69 @@ body.gmat-aai-locked { overflow: hidden; }
     text-transform: uppercase;
     letter-spacing: 0.4px;
 }
+
+/* --------------------------------------------------------------------------
+   Tables (markdown -> styled HTML)
+   -------------------------------------------------------------------------- */
+
+.gmat-aai-coaching__body .gmat-aai-table-wrap {
+    overflow-x: auto;
+    margin: 14px 0 20px;
+    border: 1px solid #e5ecf6;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.gmat-aai-coaching__body .gmat-aai-table-wrap::-webkit-scrollbar { height: 8px; }
+.gmat-aai-coaching__body .gmat-aai-table-wrap::-webkit-scrollbar-thumb { background: #c3d4ee; border-radius: 8px; }
+.gmat-aai-coaching__body .gmat-aai-table-wrap::-webkit-scrollbar-track { background: transparent; }
+
+.gmat-aai-coaching__body .gmat-aai-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    line-height: 1.5;
+    background: #ffffff;
+    margin: 0;
+}
+
+.gmat-aai-coaching__body .gmat-aai-table thead th {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: #5a6b85;
+    background: #f5f8fc;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 11px 14px;
+    text-align: left;
+    border-bottom: 1px solid #d8dfeb;
+    white-space: nowrap;
+}
+
+.gmat-aai-coaching__body .gmat-aai-table tbody td {
+    padding: 11px 14px;
+    border-bottom: 1px solid #eef2f8;
+    color: #1c2940;
+    vertical-align: top;
+}
+
+.gmat-aai-coaching__body .gmat-aai-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.gmat-aai-coaching__body .gmat-aai-table tbody tr.gmat-aai-tr--pass td {
+    background: #f4faf6;
+}
+
+.gmat-aai-coaching__body .gmat-aai-mark {
+    display: inline-block;
+    font-weight: 700;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+.gmat-aai-coaching__body .gmat-aai-mark--ok   { color: #1f8a52; }
+.gmat-aai-coaching__body .gmat-aai-mark--fail { color: #d8442f; }
 
 /* Paragraphs */
 
@@ -568,10 +726,40 @@ body.gmat-aai-locked { overflow: hidden; }
 
     .gmat-aai-coaching__body { font-size: 14px; }
 
-    .gmat-aai-coaching__body h3,
-    .gmat-aai-coaching__body .gmat-aai-h--2 {
-        font-size: 15px;
-        padding: 12px 14px 12px 16px;
+    .gmat-aai-modal .gmat-aai-report-head__title,
+    .gmat-aai-modal .gmat-aai-report-head h3.gmat-aai-report-head__title {
+        font-size: 20px !important;
+    }
+
+    .gmat-aai-report-head__meta {
+        flex-direction: column;
+        gap: 4px;
+        font-size: 12px;
+    }
+
+    .gmat-aai-hero {
+        padding: 14px 16px;
+        gap: 10px;
+    }
+
+    .gmat-aai-hero__msg {
+        flex: 1 1 100%;
+        font-size: 14px;
+    }
+
+    .gmat-aai-hero__score-wrap {
+        margin-left: 0;
+        align-items: flex-start;
+    }
+
+    .gmat-aai-modal .gmat-aai-coaching__body h3.gmat-aai-section {
+        font-size: 11.5px !important;
+        letter-spacing: 1.2px !important;
+    }
+
+    .gmat-aai-coaching__body .gmat-aai-table thead th,
+    .gmat-aai-coaching__body .gmat-aai-table tbody td {
+        padding: 9px 10px;
     }
 
     .gmat-aai-coaching__body ol > li {

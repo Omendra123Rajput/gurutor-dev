@@ -142,7 +142,7 @@
                 post_id:    config.postId,
                 session_id: generateSessionId()
             },
-            timeout: 60000,
+            timeout: 310000,
             success: function(res) {
                 setButtonLoading($btn, $label, false);
                 if (res && res.success && res.data && res.data.report) {
@@ -178,7 +178,7 @@
                 post_id:    config.postId,
                 session_id: generateSessionId()
             },
-            timeout: 60000,
+            timeout: 310000,
             success: function(res) {
                 if (res && res.success && res.data && res.data.report) {
                     closeModal();
@@ -265,9 +265,6 @@
 
         $modal = $(html).appendTo($body);
 
-        // Populate text-only fields via .text() to keep them XSS-safe
-        $modal.find('.gmat-aai-lesson__name').text(config.lessonLabel || '');
-
         // Inject sanitized HTML for coaching narrative (server-side wp_kses'd)
         if (report && report.coaching_report_html) {
             $modal.find('.gmat-aai-coaching__body').html(report.coaching_report_html);
@@ -309,12 +306,26 @@
     // ------------------------------------------------------------------
 
     function buildLessonHeader(r) {
-        var label = (config.lessonLabel || '').toString();
-        if (!label) return '';
-        return '<div class="gmat-aai-lesson">' +
-                    '<span class="gmat-aai-lesson__pill">Lesson</span>' +
-                    '<span class="gmat-aai-lesson__name"></span>' +
-                '</div>';
+        var label   = (config.lessonLabel  || '').toString();
+        var student = (config.studentName  || '').toString();
+        var modKey  = (config.lessonKey    || '').toString();
+        var date    = (config.reportDate   || '').toString();
+        var typeLbl = (config.reportTypeLbl || 'Performance Report').toString();
+
+        if (!label && !student && !modKey) return '';
+
+        var html = '<div class="gmat-aai-report-head">';
+        html += '<div class="gmat-aai-report-head__type">' + escapeHtml(typeLbl) + '</div>';
+        if (label) {
+            html += '<h3 class="gmat-aai-report-head__title">' + escapeHtml(label) + '</h3>';
+        }
+        html += '<div class="gmat-aai-report-head__meta">';
+        if (student) html += '<span><strong>Student:</strong> ' + escapeHtml(student) + '</span>';
+        if (modKey)  html += '<span><strong>Module:</strong> '  + escapeHtml(modKey)  + '</span>';
+        if (date)    html += '<span><strong>Date:</strong> '    + escapeHtml(date)    + '</span>';
+        html += '</div>';
+        html += '</div>';
+        return html;
     }
 
     function buildCoachingHTML(r) {

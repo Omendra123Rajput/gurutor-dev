@@ -9,12 +9,15 @@
     var MAX_POLLS = 20;
     var POLL_INTERVAL = 30000; // 30s
 
-    var BTN_LABEL_DEFAULT = 'Analyse with AI';
+    var BTN_LABEL_DEFAULT = 'Analyze with AI';
     var BTN_LABEL_VIEW    = 'View AI Report';
 
     var $body  = null;
     var $modal = null;
     var escHandler = null;
+    var latestReport = null;     // cached after each successful analysis — used by Download Report
+    var latestSessionId = null;  // session_id of the cached report
+    var downloadTimer = null;
 
     function generateSessionId() {
         return 'gs_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 8);
@@ -132,6 +135,8 @@
 
         setButtonLoading($btn, $label, true);
 
+        var sessionId = generateSessionId();
+
         $.ajax({
             url: config.ajaxUrl,
             type: 'POST',
@@ -140,12 +145,14 @@
                 action:     'gmat_analyse_ai_send_data',
                 nonce:      config.nonce,
                 post_id:    config.postId,
-                session_id: generateSessionId()
+                session_id: sessionId
             },
             timeout: 310000,
             success: function(res) {
                 setButtonLoading($btn, $label, false);
                 if (res && res.success && res.data && res.data.report) {
+                    latestReport = res.data.report;
+                    latestSessionId = sessionId;
                     renderModal(res.data.report);
                 } else {
                     showInlineError($btn, (res && res.data && res.data.message) || 'Could not load report.');
@@ -168,6 +175,8 @@
         $regen.prop('disabled', true).text('Re-analysing…');
         $card.addClass('gmat-aai-modal__card--busy');
 
+        var sessionId = generateSessionId();
+
         $.ajax({
             url: config.ajaxUrl,
             type: 'POST',
@@ -176,11 +185,13 @@
                 action:     'gmat_analyse_ai_send_data',
                 nonce:      config.nonce,
                 post_id:    config.postId,
-                session_id: generateSessionId()
+                session_id: sessionId
             },
             timeout: 310000,
             success: function(res) {
                 if (res && res.success && res.data && res.data.report) {
+                    latestReport = res.data.report;
+                    latestSessionId = sessionId;
                     closeModal();
                     renderModal(res.data.report);
                 } else {
@@ -200,6 +211,57 @@
                 if ($err.length) $err.text('Connection error.').show();
             }
         });
+    }
+
+    // ------------------------------------------------------------------
+    // Download report as PDF
+    // ------------------------------------------------------------------
+
+    function downloadReport() {
+        if (!$modal || !latestReport || !latestReport.coaching_report_html) return;
+
+        var $btn   = $modal.find('.gmat-aai-modal__download');
+        var $label = $btn.find('.gmat-aai-modal__download-label');
+
+        if ($btn.hasClass('gmat-aai-modal__download--loading')) return;
+
+        $btn.addClass('gmat-aai-modal__download--loading').prop('disabled', true);
+        $label.text('Generating PDF…');
+
+        // Build a hidden form so the browser handles the binary response as a
+        // file download (Content-Disposition: attachment). XHR cannot trigger
+        // a native Save dialog cleanly across browsers.
+        var $form = $('<form>', {
+            method: 'POST',
+            action: config.ajaxUrl,
+            target: '_self',
+            style: 'display:none;'
+        });
+
+        var fields = {
+            action:      'gmat_analyse_ai_download_pdf',
+            nonce:       config.nonce,
+            post_id:     config.postId,
+            session_id:  latestSessionId || '',
+            report_html: latestReport.coaching_report_html
+        };
+
+        $.each(fields, function(name, value) {
+            $('<input>', { type: 'hidden', name: name }).val(value).appendTo($form);
+        });
+
+        $form.appendTo($body);
+        $form[0].submit();
+        $form.remove();
+
+        // Safety timeout — re-enable after a few seconds so the user can retry
+        // if the response stalls (PDF render is normally <1s).
+        if (downloadTimer) clearTimeout(downloadTimer);
+        downloadTimer = setTimeout(function() {
+            $btn.removeClass('gmat-aai-modal__download--loading').prop('disabled', false);
+            $label.text('Download Report');
+            downloadTimer = null;
+        }, 5000);
     }
 
     function setButtonLoading($btn, $label, on) {
@@ -257,6 +319,9 @@
                     '</div>' +
                     '<footer class="gmat-aai-modal__footer">' +
                         '<div class="gmat-aai-modal__err" role="alert" style="display:none;"></div>' +
+                        '<button type="button" class="gmat-aai-modal__download">' +
+                            '<span class="gmat-aai-modal__download-label">Download Report</span>' +
+                        '</button>' +
                         '<button type="button" class="gmat-aai-modal__regen">Re-analyse</button>' +
                         '<button type="button" class="gmat-aai-modal__ok">Close</button>' +
                     '</footer>' +
@@ -275,6 +340,12 @@
         $modal.find('.gmat-aai-modal__close, .gmat-aai-modal__ok').on('click', closeModal);
         $modal.find('.gmat-aai-modal__backdrop').on('click', closeModal);
         $modal.find('.gmat-aai-modal__regen').on('click', regenerateReport);
+        $modal.find('.gmat-aai-modal__download').on('click', downloadReport);
+
+        // Hide Download button if there's no coaching HTML to print (rare edge case).
+        if (!report || !report.coaching_report_html) {
+            $modal.find('.gmat-aai-modal__download').hide();
+        }
 
         escHandler = function(e) { if (e.key === 'Escape' || e.keyCode === 27) closeModal(); };
         $(document).on('keydown.gmatAai', escHandler);

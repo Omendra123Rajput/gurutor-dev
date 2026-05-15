@@ -231,6 +231,7 @@ body.gmat-aai-locked { overflow: hidden; }
 }
 
 .gmat-aai-modal__regen,
+.gmat-aai-modal__download,
 .gmat-aai-modal__ok {
     border: none;
     border-radius: 50px;
@@ -242,17 +243,9 @@ body.gmat-aai-locked { overflow: hidden; }
     font-family: inherit;
 }
 
+/* Re-analyse CTA hidden — coaching report download replaces it */
 .gmat-aai-modal__regen {
-    background: #ffffff;
-    color: #00409E;
-    border: 1.5px solid #00409E;
-}
-.gmat-aai-modal__regen:hover:not(:disabled) {
-    background: #eef3fb;
-}
-.gmat-aai-modal__regen:disabled {
-    opacity: 0.65;
-    cursor: wait;
+    display: none !important;
 }
 
 .gmat-aai-modal__ok {
@@ -262,6 +255,22 @@ body.gmat-aai-locked { overflow: hidden; }
 .gmat-aai-modal__ok:hover {
     background: #002b6b;
     transform: translateY(-1px);
+}
+
+/* Download Report — outline blue, matches the Re-analyse CTA exactly */
+.gmat-aai-modal__download {
+    background: #ffffff;
+    color: #00409E;
+    border: 1.5px solid #00409E;
+}
+.gmat-aai-modal__download:hover:not(:disabled) {
+    background: #eef3fb;
+}
+.gmat-aai-modal__download:disabled,
+.gmat-aai-modal__download--loading {
+    opacity: 0.65;
+    cursor: wait;
+    pointer-events: none;
 }
 
 /* --------------------------------------------------------------------------

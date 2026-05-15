@@ -103,11 +103,20 @@ function gmat_analyse_ai_enqueue_assets() {
         true
     );
 
+    $current_user  = wp_get_current_user();
+    $student_name  = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
+    $date_format   = get_option('date_format');
+    if (empty($date_format)) $date_format = 'F j, Y';
+
     wp_localize_script('gmat-analyse-ai', 'gmatAnalyseAI', array(
         'ajaxUrl'         => admin_url('admin-ajax.php'),
         'nonce'           => wp_create_nonce('gmat_analyse_ai_nonce'),
         'postId'          => get_the_ID(),
         'lessonLabel'     => $meta['label'],
+        'lessonKey'       => $meta['lesson_key'],
+        'studentName'     => $student_name,
+        'reportDate'      => date_i18n($date_format),
+        'reportTypeLbl'   => __('Performance Report', 'gurutor'),
         'hasCachedReport' => false, // caching disabled — always fetch fresh
     ));
 }
@@ -367,7 +376,7 @@ function gmat_analyse_ai_normalize_report($raw) {
 
 
 // ============================================================================
-// HELPER: Markdown -> safe HTML (## / ### headers + reuses chatbox formatter)
+// HELPER: Markdown -> safe HTML (hero banner, tables, sections, prose)
 // ============================================================================
 
 function gmat_analyse_ai_format_markdown($md) {
@@ -379,46 +388,283 @@ function gmat_analyse_ai_format_markdown($md) {
     // Repair adjacent header mash-ups like "Heading###" -> "Heading\n###"
     $md = preg_replace('/([^\n#])(#{2,6}\s)/', "$1\n$2", $md);
 
-    // Split on ATX-style headers (## or ###); preserve hash count via capture
-    $parts = preg_split('/^(#{2,6})\s+(.+?)\s*$/m', $md, -1, PREG_SPLIT_DELIM_CAPTURE);
+    $html = '';
 
-    $html  = '';
+    // ----------------------------------------------------------------------
+    // 1. Extract hero PASS/FAIL banner from the very top
+    // ----------------------------------------------------------------------
+    if (preg_match('/^[\s\n]*(PASS|FAIL)[ \t]*\n+([^\n]+(?:\n(?!##|---)[^\n]+)*)/i', $md, $hm)) {
+        $status     = strtoupper(trim($hm[1]));
+        $msg_block  = trim($hm[2]);
+        $score      = '';
+        $threshold  = '';
+
+        // Pull "N / M" and optional "(Threshold: X)"
+        if (preg_match('/(\d+)\s*\/\s*(\d+)/', $msg_block, $sm)) {
+            $score = $sm[1] . ' / ' . $sm[2];
+        }
+        if (preg_match('/\(Threshold:\s*(\d+)\)/i', $msg_block, $tm)) {
+            $threshold = 'Threshold: ' . $tm[1];
+        }
+
+        // Strip score/threshold pattern from the descriptive message
+        $msg = preg_replace('/(\d+)\s*\/\s*(\d+)\s*(?:\(Threshold:\s*\d+\))?/i', '', $msg_block);
+        $msg = trim($msg, " \t\n.");
+
+        $cls = ($status === 'PASS') ? 'gmat-aai-hero--pass' : 'gmat-aai-hero--fail';
+
+        $html .= '<div class="gmat-aai-hero ' . esc_attr($cls) . '">'
+              .    '<span class="gmat-aai-hero__pill">' . esc_html($status) . '</span>'
+              .    '<p class="gmat-aai-hero__msg">' . esc_html($msg) . '</p>';
+        if ($score !== '' || $threshold !== '') {
+            $html .= '<div class="gmat-aai-hero__score-wrap">';
+            if ($score !== '') {
+                $html .= '<span class="gmat-aai-hero__score">' . esc_html($score) . '</span>';
+            }
+            if ($threshold !== '') {
+                $html .= '<span class="gmat-aai-hero__threshold">' . esc_html($threshold) . '</span>';
+            }
+            $html .= '</div>';
+        }
+        $html .= '</div>';
+
+        // Remove the hero block from the source
+        $md = preg_replace('/^[\s\n]*(PASS|FAIL)[ \t]*\n+([^\n]+(?:\n(?!##|---)[^\n]+)*)/i', '', $md, 1);
+    }
+
+    // ----------------------------------------------------------------------
+    // 2. Strip stray "---" horizontal rules (we use section borders instead)
+    // ----------------------------------------------------------------------
+    $md = preg_replace('/^\s*---+\s*$/m', '', $md);
+
+    // ----------------------------------------------------------------------
+    // 3. Split on ## / ### headers and process each chunk
+    // ----------------------------------------------------------------------
+    $parts = preg_split('/^(#{2,6})\s+(.+?)\s*$/m', $md, -1, PREG_SPLIT_DELIM_CAPTURE);
     $count = count($parts);
 
     for ($i = 0; $i < $count; $i++) {
         $chunk = $parts[$i];
 
-        // Header tuple: hashes at $i+1, title text at $i+2 (delim-capture pattern)
         if (isset($parts[$i + 1]) && isset($parts[$i + 2]) && preg_match('/^#{2,6}$/', $parts[$i + 1])) {
-            // Body chunk (before next header)
-            if (function_exists('gmat_chatbox_format_reply')) {
-                $html .= gmat_chatbox_format_reply($chunk);
-            } else {
-                $html .= '<p>' . esc_html($chunk) . '</p>';
-            }
+            $html .= gmat_analyse_ai_render_body_chunk($chunk);
 
-            $level = strlen($parts[$i + 1]); // 2 -> h3, 3 -> h4, 4+ -> h5
-            $tag   = ($level === 2) ? 'h3' : (($level === 3) ? 'h4' : 'h5');
+            $level = strlen($parts[$i + 1]);
             $title = trim($parts[$i + 2]);
-            $html .= '<' . $tag . ' class="gmat-aai-h gmat-aai-h--' . $level . '">' . esc_html($title) . '</' . $tag . '>';
+            $html .= gmat_analyse_ai_render_section_header($title, $level);
 
-            $i += 2; // skip the two captured groups
+            $i += 2;
             continue;
         }
 
-        // Trailing/standalone body chunk
-        if (function_exists('gmat_chatbox_format_reply')) {
-            $html .= gmat_chatbox_format_reply($chunk);
-        } else {
-            $html .= '<p>' . esc_html($chunk) . '</p>';
+        $html .= gmat_analyse_ai_render_body_chunk($chunk);
+    }
+
+    // ----------------------------------------------------------------------
+    // 4. Sanitize: allow tables + custom span classes
+    // ----------------------------------------------------------------------
+    $allowed = wp_kses_allowed_html('post');
+    $extra_attrs = array('class' => true);
+    foreach (array('h3', 'h4', 'h5', 'div', 'span', 'p', 'table', 'thead', 'tbody', 'tr', 'th', 'td') as $tag) {
+        if (!isset($allowed[$tag])) $allowed[$tag] = array();
+        $allowed[$tag] = array_merge($allowed[$tag], $extra_attrs);
+    }
+
+    return wp_kses($html, $allowed);
+}
+
+
+// ============================================================================
+// HELPER: Render a section header (## or ###) with reference-style classes
+// ============================================================================
+
+function gmat_analyse_ai_render_section_header($title, $level) {
+    $title = trim($title);
+    if ($title === '') return '';
+
+    if ($level >= 3) {
+        // ### -> sub-section
+        return '<h4 class="gmat-aai-subsection">' . esc_html($title) . '</h4>';
+    }
+
+    // ## -> primary section. Detect numbered prefix or "INSTRUCTOR SUMMARY"
+    if (preg_match('/^(\d+)\s*[-—–]\s*(.+)$/u', $title, $m)) {
+        return '<h3 class="gmat-aai-section gmat-aai-section--numbered">'
+             .   '<span class="gmat-aai-section__num">' . esc_html($m[1]) . '</span>'
+             .   '<span class="gmat-aai-section__title">' . esc_html(trim($m[2])) . '</span>'
+             . '</h3>';
+    }
+
+    if (stripos($title, 'INSTRUCTOR SUMMARY') !== false) {
+        return '<h3 class="gmat-aai-section gmat-aai-section--instructor">'
+             .   '<span class="gmat-aai-section__title">' . esc_html($title) . '</span>'
+             . '</h3>';
+    }
+
+    return '<h3 class="gmat-aai-section">'
+         .   '<span class="gmat-aai-section__title">' . esc_html($title) . '</span>'
+         . '</h3>';
+}
+
+
+// ============================================================================
+// HELPER: Render a body chunk -> tables become real tables, prose via chatbox
+// ============================================================================
+
+function gmat_analyse_ai_render_body_chunk($text) {
+    if (!is_string($text) || trim($text) === '') return '';
+
+    $lines = explode("\n", $text);
+    $total = count($lines);
+    $out   = '';
+    $i     = 0;
+
+    while ($i < $total) {
+        $line    = $lines[$i];
+        $trimmed = trim($line);
+
+        // Detect a markdown table: a "|...|" header row followed by a
+        // "|---|---|..." separator row.
+        if ($trimmed !== '' && substr($trimmed, 0, 1) === '|'
+            && isset($lines[$i + 1])
+            && preg_match('/^\s*\|[\s\-:|]+\|\s*$/', $lines[$i + 1])) {
+
+            $table_lines = array($trimmed);
+            $j = $i + 1;
+            // Capture the separator + all subsequent body rows
+            while ($j < $total) {
+                $tl = trim($lines[$j]);
+                if ($tl === '' || substr($tl, 0, 1) !== '|') break;
+                $table_lines[] = $tl;
+                $j++;
+            }
+
+            // Flush any pending prose first
+            $out .= '';
+            $out .= gmat_analyse_ai_render_table($table_lines);
+
+            $i = $j;
+            continue;
+        }
+
+        // Otherwise, accumulate prose lines until next table / end
+        $prose_buf = array();
+        while ($i < $total) {
+            $cur = $lines[$i];
+            $ct  = trim($cur);
+            if ($ct !== '' && substr($ct, 0, 1) === '|'
+                && isset($lines[$i + 1])
+                && preg_match('/^\s*\|[\s\-:|]+\|\s*$/', $lines[$i + 1])) {
+                break;
+            }
+            $prose_buf[] = $cur;
+            $i++;
+        }
+
+        $prose = implode("\n", $prose_buf);
+        if (trim($prose) !== '' && function_exists('gmat_chatbox_format_reply')) {
+            $out .= gmat_chatbox_format_reply($prose);
+        } elseif (trim($prose) !== '') {
+            $out .= '<p>' . esc_html($prose) . '</p>';
         }
     }
 
-    // Allow our header tags + the standard chatbox-style HTML
-    $allowed = wp_kses_allowed_html('post');
-    $allowed['h3'] = array('class' => true);
-    $allowed['h4'] = array('class' => true);
-    $allowed['h5'] = array('class' => true);
+    return $out;
+}
 
-    return wp_kses($html, $allowed);
+
+// ============================================================================
+// HELPER: Render a markdown table block as styled HTML
+// ============================================================================
+
+function gmat_analyse_ai_render_table($lines) {
+    if (count($lines) < 2) return '';
+
+    $header_line = array_shift($lines);
+    array_shift($lines); // drop separator row
+
+    $headers = gmat_analyse_ai_split_table_row($header_line);
+    if (empty($headers)) return '';
+
+    $thead = '<thead><tr>';
+    foreach ($headers as $h) {
+        $thead .= '<th>' . gmat_analyse_ai_format_cell($h) . '</th>';
+    }
+    $thead .= '</tr></thead>';
+
+    $tbody = '<tbody>';
+    foreach ($lines as $row_line) {
+        $cells = gmat_analyse_ai_split_table_row($row_line);
+        if (empty($cells)) continue;
+
+        // Pad to header width
+        while (count($cells) < count($headers)) $cells[] = '';
+
+        // Determine row tint based on last cell content
+        $last      = trim(end($cells));
+        $row_class = '';
+        if ($last === '✓' || $last === '✔') {
+            $row_class = ' class="gmat-aai-tr--pass"';
+        } elseif ($last === '✗' || $last === '✘' || $last === 'x' || $last === 'X') {
+            $row_class = ''; // neutral, marker alone provides red emphasis
+        }
+
+        $tbody .= '<tr' . $row_class . '>';
+        foreach ($cells as $c) {
+            $tbody .= '<td>' . gmat_analyse_ai_format_cell($c) . '</td>';
+        }
+        $tbody .= '</tr>';
+    }
+    $tbody .= '</tbody>';
+
+    return '<div class="gmat-aai-table-wrap"><table class="gmat-aai-table">' . $thead . $tbody . '</table></div>';
+}
+
+
+// ============================================================================
+// HELPER: Split a "| a | b | c |" markdown row into trimmed cells
+// ============================================================================
+
+function gmat_analyse_ai_split_table_row($line) {
+    $line = trim($line);
+    if ($line === '' || substr($line, 0, 1) !== '|') return array();
+
+    // Strip leading & trailing pipes
+    $line = preg_replace('/^\|/', '', $line);
+    $line = preg_replace('/\|\s*$/', '', $line);
+
+    $cells = explode('|', $line);
+    foreach ($cells as $k => $c) {
+        $cells[$k] = trim($c);
+    }
+    return $cells;
+}
+
+
+// ============================================================================
+// HELPER: Format a single table cell — inline markdown + colorized marks
+// ============================================================================
+
+function gmat_analyse_ai_format_cell($cell) {
+    if ($cell === '') return '';
+
+    if (function_exists('gmat_chatbox_format_inline')) {
+        $html = gmat_chatbox_format_inline($cell);
+    } else {
+        $html = esc_html($cell);
+    }
+
+    // Colorize result symbols (operate on already-escaped HTML)
+    $html = str_replace(
+        array('✓', '✔', '✗', '✘'),
+        array(
+            '<span class="gmat-aai-mark gmat-aai-mark--ok">✓</span>',
+            '<span class="gmat-aai-mark gmat-aai-mark--ok">✓</span>',
+            '<span class="gmat-aai-mark gmat-aai-mark--fail">✗</span>',
+            '<span class="gmat-aai-mark gmat-aai-mark--fail">✗</span>',
+        ),
+        $html
+    );
+
+    return $html;
 }

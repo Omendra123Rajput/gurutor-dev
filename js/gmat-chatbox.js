@@ -428,6 +428,29 @@
 
             $msg.append($bubble);
             this.$messages.append($msg);
+
+            // Render LaTeX math in AI / welcome bubbles via KaTeX
+            if (role === 'assistant' || role === 'welcome') {
+                this.renderMath($bubble[0]);
+            }
+        },
+
+        renderMath: function (el) {
+            if (!el || typeof window.renderMathInElement !== 'function') return;
+            try {
+                window.renderMathInElement(el, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true  },
+                        { left: '\\[', right: '\\]', display: true  },
+                        { left: '\\(', right: '\\)', display: false },
+                        { left: '$',  right: '$',  display: false }
+                    ],
+                    throwOnError: false,
+                    errorColor: '#cc0000',
+                    ignoredTags:    ['script', 'noscript', 'style', 'textarea', 'pre'],
+                    ignoredClasses: ['gmat-cb__msg-time']
+                });
+            } catch (e) { /* fail silently */ }
         },
 
         restoreMessages: function () {

@@ -735,37 +735,31 @@ function gmat_analyse_ai_download_pdf() {
     $lesson_label = (string) $meta['label'];
     $lesson_key   = (string) $meta['lesson_key'];
 
-    // Logo: theme-local SVG, embedded INLINE (not via <img>). Dompdf 3.x renders
-    // inline <svg> via php-svg-lib. Try multiple candidate paths in case the
-    // filename differs between local + staging deploys.
+    // Logo: prefer the pre-rendered PNG that ships with the template (Dompdf
+    // renders PNG flawlessly). Dompdf's bundled php-svg-lib can't render the
+    // brand SVG's text glyphs reliably, hence the PNG fallback.
     $theme_path = get_stylesheet_directory();
     $logo_candidates = array(
+        $theme_path . '/inc/templates/gurutor-logo.png',
+        $theme_path . '/images/gurutor-logo.png',
         $theme_path . '/GURUTOR-logo (1).svg',
         $theme_path . '/GURUTOR-logo.svg',
-        $theme_path . '/images/GURUTOR-logo.svg',
-        $theme_path . '/images/gurutor-logo.svg',
     );
 
-    $logo_svg = '';
+    $logo_src = '';
     foreach ($logo_candidates as $candidate) {
         if (file_exists($candidate)) {
             $raw = file_get_contents($candidate);
             if (is_string($raw) && $raw !== '') {
-                // Strip any XML prolog / DOCTYPE — Dompdf only wants the <svg> element.
-                $raw = preg_replace('/^\s*<\?xml[^>]*\?>\s*/', '', $raw);
-                $raw = preg_replace('/^\s*<!DOCTYPE[^>]*>\s*/i', '', $raw);
-                // Drop explicit width/height on the root <svg> so the wrapping
-                // container's CSS dimensions take effect (preserves viewBox).
-                $raw = preg_replace('/(<svg\b[^>]*?)\s+width="[^"]*"/i', '$1', $raw, 1);
-                $raw = preg_replace('/(<svg\b[^>]*?)\s+height="[^"]*"/i', '$1', $raw, 1);
-                $logo_svg = $raw;
+                $mime = (substr($candidate, -4) === '.svg') ? 'image/svg+xml' : 'image/png';
+                $logo_src = 'data:' . $mime . ';base64,' . base64_encode($raw);
                 break;
             }
         }
     }
 
-    if ($logo_svg === '') {
-        error_log('[AAI-PDF] Logo SVG not found — checked: ' . implode(' | ', $logo_candidates));
+    if ($logo_src === '') {
+        error_log('[AAI-PDF] Logo not found — checked: ' . implode(' | ', $logo_candidates));
     }
 
     // ------------------------------------------------------------------------

@@ -64,6 +64,26 @@ function gmat_chatbox_format_reply($text) {
     // Normalize line endings
     $text = str_replace(array("\r\n", "\r"), "\n", $text);
 
+    // --- PROTECT MATH (LaTeX) ---
+    // Replace math regions with placeholders so the bold/italic regex below
+    // cannot mangle expressions like $\frac{a*b}{c}$ or $2*3$.
+    // Placeholders are restored verbatim at the end; KaTeX renders client-side.
+    $math_map = array();
+    $protect_math = function ($pattern, $wrap_left, $wrap_right) use (&$text, &$math_map) {
+        $text = preg_replace_callback($pattern, function ($m) use (&$math_map, $wrap_left, $wrap_right) {
+            $key = 'XMATHTOKEN' . count($math_map) . 'X';
+            $math_map[$key] = $wrap_left . $m[1] . $wrap_right;
+            return $key;
+        }, $text);
+    };
+    // Order matters: longest / least ambiguous delimiters first
+    $protect_math('/\$\$(.+?)\$\$/s',     '$$', '$$');
+    $protect_math('/\\\\\[(.+?)\\\\\]/s', '\\[', '\\]');
+    $protect_math('/\\\\\((.+?)\\\\\)/s', '\\(', '\\)');
+    // Inline $...$ — require non-whitespace at both boundaries so prices
+    // like "costs $5 and $10" don't get captured.
+    $protect_math('/\$([^\s\$\n](?:[^\$\n]*?[^\s\$\n])?)\$/', '$', '$');
+
     // Split into lines (indexed for look-ahead)
     $lines = explode("\n", $text);
     $total = count($lines);
@@ -138,6 +158,77 @@ function gmat_chatbox_format_reply($text) {
             continue;
         }
 
+        // --- Markdown heading (##, ###, …) ---
+        if (preg_match('/^(#{1,6})\s+(.+?)\s*#*$/', $trimmed, $m)) {
+            $close_sub_ul();
+            if ($in_ul) { $html .= '</ul>'; $in_ul = false; }
+            if ($in_ol) { $html .= '</ol>'; $in_ol = false; }
+            // Clamp to h3–h6 for visual hierarchy inside a chat bubble
+            $level = max(3, min(6, strlen($m[1]) + 2));
+            $html .= '<h' . $level . '>' . gmat_chatbox_format_inline($m[2]) . '</h' . $level . '>';
+            continue;
+        }
+
+        // --- Horizontal rule (---, ***, ___) ---
+        if (preg_match('/^([-*_])\1{2,}$/', $trimmed)) {
+            $close_sub_ul();
+            if ($in_ul) { $html .= '</ul>'; $in_ul = false; }
+            if ($in_ol) { $html .= '</ol>'; $in_ol = false; }
+            $html .= '<hr>';
+            continue;
+        }
+
+        // --- Markdown table: | header | header | + separator + body rows ---
+        if (preg_match('/^\|.+\|$/', $trimmed)) {
+            $sep_idx = -1;
+            for ($j = $i + 1; $j < $total; $j++) {
+                $nxt = trim($lines[$j]);
+                if ($nxt === '') continue;
+                if (preg_match('/^\|?\s*:?-+:?(\s*\|\s*:?-+:?)+\s*\|?$/', $nxt)) {
+                    $sep_idx = $j;
+                }
+                break;
+            }
+            if ($sep_idx > $i) {
+                $split_row = function ($row) {
+                    $row = trim($row);
+                    $row = preg_replace('/^\||\|$/', '', $row);
+                    $cells = explode('|', $row);
+                    return array_map('trim', $cells);
+                };
+                $headers = $split_row($trimmed);
+                $body_rows = array();
+                $last_row_idx = $sep_idx;
+                for ($k = $sep_idx + 1; $k < $total; $k++) {
+                    $t = trim($lines[$k]);
+                    if ($t === '' || !preg_match('/^\|.+\|$/', $t)) break;
+                    $body_rows[] = $split_row($t);
+                    $last_row_idx = $k;
+                }
+
+                $close_sub_ul();
+                if ($in_ul) { $html .= '</ul>'; $in_ul = false; }
+                if ($in_ol) { $html .= '</ol>'; $in_ol = false; }
+
+                $html .= '<div class="gmat-cb__table-wrap"><table class="gmat-cb__table"><thead><tr>';
+                foreach ($headers as $h) {
+                    $html .= '<th>' . gmat_chatbox_format_inline($h) . '</th>';
+                }
+                $html .= '</tr></thead><tbody>';
+                foreach ($body_rows as $row) {
+                    $html .= '<tr>';
+                    foreach ($row as $cell) {
+                        $html .= '<td>' . gmat_chatbox_format_inline($cell) . '</td>';
+                    }
+                    $html .= '</tr>';
+                }
+                $html .= '</tbody></table></div>';
+
+                $i = $last_row_idx; // outer for-loop will ++
+                continue;
+            }
+        }
+
         // --- Detect line types ---
         $is_bullet = false;
         $bullet_content = '';
@@ -209,6 +300,13 @@ function gmat_chatbox_format_reply($text) {
     if ($in_ul) $html .= '</ul>';
     if ($in_ol) $html .= '</ol>';
 
+    // --- RESTORE math placeholders ---
+    // esc_html so chars like < > & inside math don't break the surrounding HTML.
+    // KaTeX (client-side) reads text nodes, so it sees the unescaped form.
+    if (!empty($math_map)) {
+        $html = strtr($html, array_map('esc_html', $math_map));
+    }
+
     return $html;
 }
 
@@ -275,17 +373,39 @@ function gmat_chatbox_enqueue_assets() {
     $css_ver = filemtime($dir . '/css/gmat-chatbox.css');
     $js_ver  = filemtime($dir . '/js/gmat-chatbox.js');
 
+    // KaTeX — LaTeX math rendering (CDN, cache-friendly)
+    wp_enqueue_style(
+        'gmat-katex',
+        'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css',
+        array(),
+        '0.16.11'
+    );
+    wp_enqueue_script(
+        'gmat-katex',
+        'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js',
+        array(),
+        '0.16.11',
+        true
+    );
+    wp_enqueue_script(
+        'gmat-katex-autorender',
+        'https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js',
+        array('gmat-katex'),
+        '0.16.11',
+        true
+    );
+
     wp_enqueue_style(
         'gmat-chatbox',
         get_stylesheet_directory_uri() . '/css/gmat-chatbox.css',
-        array(),
+        array('gmat-katex'),
         $css_ver
     );
 
     wp_enqueue_script(
         'gmat-chatbox',
         get_stylesheet_directory_uri() . '/js/gmat-chatbox.js',
-        array('jquery'),
+        array('jquery', 'gmat-katex-autorender'),
         $js_ver,
         true
     );

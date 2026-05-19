@@ -3,7 +3,7 @@
  * PDF template — AI Coaching Report
  *
  * Rendered by Dompdf. Receives the following from the calling handler:
- *   @var string $logo_svg           Raw <svg>...</svg> markup or empty if logo missing
+ *   @var string $logo_src           data:image/svg+xml;base64,... URI or empty
  *   @var string $student_name       Sanitized student display name
  *   @var string $lesson_label       Sanitized lesson title
  *   @var string $lesson_key         Sanitized lesson key (module identifier)
@@ -33,16 +33,20 @@ if (!defined('ABSPATH')) exit;
         padding: 0;
     }
 
-    /* ---------- Top header band ---------- */
+    /* ---------- Top header band (single table, no wrapping div) ---------- */
     .pdf-header {
-        background-color: #00409E;
-        color: #ffffff;
-        padding: 10pt 18pt;
         width: 100%;
+        background-color: #00409E;
+        border-collapse: collapse;
+        margin: 0;
     }
-    .pdf-header__table { width: 100%; border-collapse: collapse; }
-    .pdf-header__logo-cell { width: 165pt; vertical-align: middle; padding: 0; }
-    .pdf-header__title-cell { vertical-align: middle; text-align: right; padding: 0; }
+    .pdf-header td {
+        padding: 10pt 18pt;
+        vertical-align: middle;
+        color: #ffffff;
+    }
+    .pdf-header__logo-cell { width: 165pt; }
+    .pdf-header__title-cell { text-align: right; }
     .pdf-header__title {
         margin: 0;
         font-size: 16pt;
@@ -54,11 +58,6 @@ if (!defined('ABSPATH')) exit;
         display: block;
         width: 150pt;
         height: 34pt;
-    }
-    .pdf-header__logo svg {
-        width: 150pt;
-        height: 34pt;
-        display: block;
     }
     .pdf-header__logo-fallback {
         font-size: 18pt;
@@ -274,22 +273,20 @@ if (!defined('ABSPATH')) exit;
 </head>
 <body>
 
-<div class="pdf-header">
-    <table class="pdf-header__table">
-        <tr>
-            <td class="pdf-header__logo-cell">
-                <?php if (!empty($logo_svg)) : ?>
-                    <div class="pdf-header__logo"><?php echo $logo_svg; // raw SVG — read from theme file, not user input ?></div>
-                <?php else : ?>
-                    <span class="pdf-header__logo-fallback">GURUTOR</span>
-                <?php endif; ?>
-            </td>
-            <td class="pdf-header__title-cell">
-                <h1 class="pdf-header__title">AI Coaching Report</h1>
-            </td>
-        </tr>
-    </table>
-</div>
+<table class="pdf-header" cellpadding="0" cellspacing="0">
+    <tr>
+        <td class="pdf-header__logo-cell">
+            <?php if (!empty($logo_src)) : ?>
+                <img src="<?php echo esc_attr($logo_src); ?>" alt="Gurutor" class="pdf-header__logo">
+            <?php else : ?>
+                <span class="pdf-header__logo-fallback">GURUTOR</span>
+            <?php endif; ?>
+        </td>
+        <td class="pdf-header__title-cell">
+            <h1 class="pdf-header__title">AI Coaching Report</h1>
+        </td>
+    </tr>
+</table>
 
 <div class="pdf-report-head">
     <p class="pdf-report-head__type">Performance Report</p>

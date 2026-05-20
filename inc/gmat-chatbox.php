@@ -329,6 +329,20 @@ function gmat_chatbox_format_inline($text) {
     // `code` → <code>code</code>
     $text = preg_replace('/`(.+?)`/', '<code>$1</code>', $text);
 
+    // --- ASCII math fallback (when AI emits plain notation, not LaTeX) ---
+    // sqrt(X) → radical + overlined argument
+    $text = preg_replace_callback('/\bsqrt\(([^()]+)\)/', function ($m) {
+        return '<span class="gmat-cb__radical">&radic;<span class="gmat-cb__radical-arg">' . $m[1] . '</span></span>';
+    }, $text);
+    // cbrt(X) → cube-root + overlined argument
+    $text = preg_replace_callback('/\bcbrt\(([^()]+)\)/', function ($m) {
+        return '<span class="gmat-cb__radical">&#8731;<span class="gmat-cb__radical-arg">' . $m[1] . '</span></span>';
+    }, $text);
+    // Exponents: ^{expr}, ^(expr), then ^x (single alphanumeric token)
+    $text = preg_replace('/\^\{([^{}]+)\}/', '<sup>$1</sup>', $text);
+    $text = preg_replace('/\^\(([^()]+)\)/', '<sup>$1</sup>', $text);
+    $text = preg_replace('/\^([A-Za-z0-9]+)/',  '<sup>$1</sup>', $text);
+
     return $text;
 }
 

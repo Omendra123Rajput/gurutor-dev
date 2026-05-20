@@ -669,6 +669,22 @@
     border-color: rgba(255, 255, 255, 0.4);
 }
 
+/* --- ASCII math fallback (sqrt, exponents) --- */
+.gmat-cb__msg-bubble .gmat-cb__radical {
+    white-space: nowrap;
+}
+.gmat-cb__msg-bubble .gmat-cb__radical-arg {
+    text-decoration: overline;
+    padding: 0 2px;
+    margin-left: 1px;
+}
+.gmat-cb__msg-bubble sup {
+    font-size: 0.72em;
+    line-height: 0;
+    vertical-align: super;
+    margin-left: 1px;
+}
+
 /* --- KaTeX math — keep display math from overflowing bubble --- */
 .gmat-cb__msg-bubble .katex { font-size: 1.02em; }
 .gmat-cb__msg-bubble .katex-display {

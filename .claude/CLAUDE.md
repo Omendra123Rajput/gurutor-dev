@@ -36,7 +36,7 @@ You are a senior WordPress PHP full-stack developer, 20+ years experience. Grass
 
 **Gurutor** — A GMAT test prep platform built as a **WordPress GeneratePress child theme**. No build tools, bundlers, or package managers. All PHP/JS/CSS is vanilla and served directly.
 
-**Stack:** WordPress, GeneratePress (parent theme), Elementor (header/footer only), WooCommerce + Subscriptions, LearnDash LMS, GrassBlade xAPI LRS, jQuery
+**Stack:** WordPress, GeneratePress (parent theme), Elementor (header/footer only), WooCommerce + Subscriptions, LearnDash LMS, GrassBlade xAPI LRS, jQuery, Dompdf 3.1.5 (vendored at `lib/dompdf/`, used only by the AI report PDF download)
 
 **Staging:** https://stg-gurutor-test.kinsta.cloud/
 
@@ -78,7 +78,7 @@ gurutor_user_has_active_paid_access($user_id = null)
 | **AI Chatbox** | `inc/gmat-chatbox.php` | `js/gmat-chatbox.js` | `css/gmat-chatbox.css` | `wp_footer` hook on course 8112 only |
 | **GMAT Settings** | `inc/gmat-settings-account.php` | `js/gmat-settings.js` | `css/gmat-settings.css` | WooCommerce My Account endpoint `/my-account/gmat-settings/` |
 | **Free Trial/xAPI** | `inc/free-trial-grassblade-xapi.php` | — | — | Various hooks |
-| **Analyse with AI** | `inc/gmat-analyse-ai.php` | `js/gmat-analyse-ai.js` | `css/gmat-analyse-ai.css` | `wp_enqueue_scripts` hook on course 8112 lesson pages |
+| **Analyse with AI** | `inc/gmat-analyse-ai.php` (+ `inc/templates/pdf-analyse-ai.php` + `inc/templates/gurutor-logo.png`) | `js/gmat-analyse-ai.js` | `css/gmat-analyse-ai.css` | `wp_enqueue_scripts` hook on course 8112 lesson pages. Modal includes a **Download Report** CTA that streams a Dompdf-rendered PDF via the `gmat_analyse_ai_download_pdf` AJAX endpoint |
 | **Next Lesson Button** | `inc/gmat-next-lesson.php` | `js/gmat-next-lesson.js` | `css/gmat-next-lesson.css` | `wp_footer` + `wp_enqueue_scripts` on lessons/topics of courses 7472, 9361, 8112 |
 | **Course Preview (locked)** | `inc/gmat-course-preview.php` | — (reuses `js/gmat-study-plan.js`) | `css/gmat-course-preview.css` (+ `css/gmat-study-plan.css`) | Shortcode `[gmat_course_preview]` on `/packages/` page |
 | **Checkout Coupon** | `inc/gmat-checkout-coupon.php` | — | `css/gmat-checkout-coupon.css` | `template_redirect` + `wp_enqueue_scripts` on checkout/cart; admin hint on coupon edit |
@@ -146,6 +146,18 @@ All includes are in `functions.php` lines 21-34. Some may be commented out durin
 - Destination behavior: overlay shows on DOM ready, dismisses on `.grassblade iframe.grassblade_iframe` `load` event. `MutationObserver` handles late iframe injection. Safety timeout 15 s (`GMAT_LESSON_LOADER_TIMEOUT_MS`) + a `window.load + 1500 ms` belt-and-braces.
 - z-index `999999` (above chatbox 99997). `display: flex !important` on `--visible` state to defeat any third-party overrides.
 
+### Analyse with AI — Download Report (PDF)
+- Files: `inc/gmat-analyse-ai.php` (handler) + `inc/templates/pdf-analyse-ai.php` (HTML/CSS template) + `inc/templates/gurutor-logo.png` (pre-rendered logo, 600×135 transparent PNG with WHITE text — designed for the dark-blue header) + `lib/dompdf/` (vendored Dompdf 3.1.5, no Composer).
+- AJAX handler: `wp_ajax_gmat_analyse_ai_download_pdf`. Nonce: `gmat_analyse_ai_nonce` (shared with `send_data`).
+- **Data flow:** JS caches the latest `coaching_report_html` returned by `gmat_analyse_ai_send_data` and POSTs it back on Download click — no AI re-run, instant PDF. Server re-runs `wp_kses()` via `gmat_analyse_ai_allowed_html()` (defence-in-depth). Lesson label / student name / date are re-derived server-side from `post_id` + current user — never trusted from POST.
+- **Storage:** none. PDF is generated in memory and streamed via `Dompdf::output()` + `Content-Disposition: attachment`. No file is ever written to `wp-content/uploads/` or the theme dir. `while (ob_get_level()) ob_end_clean();` before headers, `exit()` after stream.
+- **Dompdf options:** `isRemoteEnabled=false`, `isHtml5ParserEnabled=true`, `defaultFont='DejaVu Sans'`, `chroot=$theme_path`.
+- **Logo lookup priority:** `inc/templates/gurutor-logo.png` → `images/gurutor-logo.png` → `GURUTOR-logo (1).svg` → `GURUTOR-logo.svg`. PNG preferred — php-svg-lib (Dompdf's bundled SVG renderer) silently drops the brand SVG's text-glyph paths (the icon-arc renders but "URUTOR" letters disappear). The PNG was pre-rendered offline via `svglib + reportlab + pypdfium2` with white text + magenta-marker post-processing for transparency.
+- **Template layout (Dompdf-safe):** No flexbox/grid. Header is a single `<table class="pdf-header">` (NOT a div with `width:100%; padding;` — that overflows the @page content area because Dompdf doesn't honour `box-sizing: border-box` reliably for div+padding combinations). Table cells carry padding instead.
+- **Footer buttons:** Download Report (outline blue, matches `.gmat-aai-modal__regen` styling). Re-analyse is hidden via `.gmat-aai-modal__regen { display: none !important; }` — markup and click handler kept intact for easy revert.
+- **Filename:** `sanitize_file_name('Gurutor-Coaching-Report-{lesson_key}-{Y-m-d}.pdf')`.
+- **JS download trigger:** hidden `<form method="POST">` submission (not XHR) — browser handles the binary download natively via Content-Disposition. 5s safety timeout re-enables the button.
+
 ### Registration Form (Name + Phone)
 - Hooked at `woocommerce_register_form_start` via `gurutor_add_name_phone_to_registration_form()` (`functions.php` ~line 1400). Appears on both `/my-account/` and `/my-account/?type_subs=free`.
 - Fields: `billing_first_name`, `billing_last_name`, `billing_phone` — all required. Name regex: `/^[a-zA-Z\s\-]+$/`. Phone regex: `/^\+?[1-9][0-9]{6,14}$/` (E.164, 7–15 digits).
@@ -188,6 +200,8 @@ All includes are in `functions.php` lines 21-34. Some may be commented out durin
 | `GMAT_ANALYSE_AI_API_KEY` | wp-config.php | Shared secret sent as `x-api-key` header |
 | `GMAT_ANALYSE_AI_COURSE_ID` | 8112 | Course whose lessons show the Analyse button |
 | `GMAT_ANALYSE_AI_API_TIMEOUT` | 30s | External API request timeout |
+| `GMAT_ANALYSE_AI_MAX_REPORT_BYTES` | 50 KB | Upstream cap on coaching_report markdown. PDF handler caps `report_html` at 2× this (100 KB) to allow HTML-tag overhead |
+| `GMAT_ANALYSE_AI_META_PREFIX` | `_gmat_analyse_ai_report_` | Reserved prefix for any future per-user report meta keys (not currently used — caching disabled) |
 
 ## User Meta Keys Reference
 
@@ -218,6 +232,8 @@ Score entry format (stored as JSON arrays):
 6. **Login URL** — use `wc_get_page_permalink('myaccount')`, NOT `wp_login_url()`
 7. **Logout redirect loops** — home-to-dashboard redirect must guard against WooCommerce logout/my-account pages
 8. **xAPI DI lessons** — many Data Insights lessons have empty `xapi_slug`; depends on admin config in Settings → GMAT Study Plan
+9. **Dompdf + SVG** — Dompdf's bundled `php-svg-lib` does NOT reliably render the Gurutor brand SVG (text-glyph paths get dropped, only the icon-arc shows). Always use the pre-rendered PNG at `inc/templates/gurutor-logo.png` for PDF output. Do not switch the PDF template's `<img>` back to the SVG.
+10. **Dompdf + `box-sizing: border-box`** — not reliably honoured on `<div>` with `width:100%; padding;` (header bleeds past the @page right margin). Use a `<table width="100%">` with cell padding instead. See the `pdf-header` markup in `inc/templates/pdf-analyse-ai.php`.
 
 ## Design Tokens
 

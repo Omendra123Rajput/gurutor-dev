@@ -91,6 +91,7 @@ function gmat_chatbox_format_reply($text) {
     $in_ol = false;      // Inside a top-level ordered list
     $in_ul = false;      // Inside a top-level unordered list
     $in_sub_ul = false;  // Inside a nested <ul> within an <li>
+    $in_code = false;    // Inside a fenced code block (``` or ` line)
 
     // Helper: check if a line is indented (sub-content of a list item)
     $is_indented = function ($raw_line) {
@@ -129,6 +130,30 @@ function gmat_chatbox_format_reply($text) {
         $raw     = $lines[$i];
         $trimmed = trim($raw);
         $indented = $is_indented($raw);
+
+        // --- Fenced code block: a line that is ONLY backticks (` / `` / ``` etc.) ---
+        // Handles AI replies that use triple-backtick fences or stray single-backtick lines.
+        if (preg_match('/^`+$/', $trimmed)) {
+            if (!$in_code) {
+                $close_sub_ul();
+                if ($in_ul) { $html .= '</ul>'; $in_ul = false; }
+                if ($in_ol) { $html .= '</ol>'; $in_ol = false; }
+                $html .= '<pre class="gmat-cb__code"><code>';
+                $in_code = true;
+            } else {
+                // Strip trailing blank lines we just appended, then close
+                $html = rtrim($html, "\n");
+                $html .= '</code></pre>';
+                $in_code = false;
+            }
+            continue;
+        }
+
+        // While inside a fence, emit each line verbatim (escaped), preserve blanks
+        if ($in_code) {
+            $html .= esc_html($raw) . "\n";
+            continue;
+        }
 
         // --- Empty line handling ---
         if ($trimmed === '') {
@@ -299,6 +324,7 @@ function gmat_chatbox_format_reply($text) {
     if ($in_sub_ul) $html .= '</ul></li>';
     if ($in_ul) $html .= '</ul>';
     if ($in_ol) $html .= '</ol>';
+    if ($in_code) { $html = rtrim($html, "\n") . '</code></pre>'; }
 
     // --- RESTORE math placeholders ---
     // esc_html so chars like < > & inside math don't break the surrounding HTML.
@@ -328,6 +354,20 @@ function gmat_chatbox_format_inline($text) {
 
     // `code` → <code>code</code>
     $text = preg_replace('/`(.+?)`/', '<code>$1</code>', $text);
+
+    // --- ASCII math fallback (when AI emits plain notation, not LaTeX) ---
+    // sqrt(X) → radical + overlined argument
+    $text = preg_replace_callback('/\bsqrt\(([^()]+)\)/', function ($m) {
+        return '<span class="gmat-cb__radical">&radic;<span class="gmat-cb__radical-arg">' . $m[1] . '</span></span>';
+    }, $text);
+    // cbrt(X) → cube-root + overlined argument
+    $text = preg_replace_callback('/\bcbrt\(([^()]+)\)/', function ($m) {
+        return '<span class="gmat-cb__radical">&#8731;<span class="gmat-cb__radical-arg">' . $m[1] . '</span></span>';
+    }, $text);
+    // Exponents: ^{expr}, ^(expr), then ^x (single alphanumeric token)
+    $text = preg_replace('/\^\{([^{}]+)\}/', '<sup>$1</sup>', $text);
+    $text = preg_replace('/\^\(([^()]+)\)/', '<sup>$1</sup>', $text);
+    $text = preg_replace('/\^([A-Za-z0-9]+)/',  '<sup>$1</sup>', $text);
 
     return $text;
 }

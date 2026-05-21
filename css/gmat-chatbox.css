@@ -492,7 +492,7 @@
 
 /* --- Shared bubble base --- */
 .gmat-cb__msg-bubble {
-    padding: 10px 14px;
+    padding: 12px 16px;
     font-size: 14px;
     line-height: 1.6;
     word-wrap: break-word;
@@ -504,7 +504,7 @@
 
 /* --- Formatted AI content --- */
 .gmat-cb__msg-bubble p {
-    margin: 0 0 8px;
+    margin: 0 0 10px;
 }
 
 .gmat-cb__msg-bubble p:last-of-type {
@@ -512,14 +512,14 @@
 }
 
 .gmat-cb__msg-bubble ul {
-    margin: 6px 0 8px 0;
-    padding: 0 0 0 20px;
+    margin: 8px 0 10px 0;
+    padding: 0 0 0 22px;
     list-style-type: disc !important;
 }
 
 .gmat-cb__msg-bubble ol {
-    margin: 6px 0 8px 0;
-    padding: 0 0 0 20px;
+    margin: 8px 0 10px 0;
+    padding: 0 0 0 22px;
     list-style-type: decimal !important;
 }
 
@@ -536,9 +536,13 @@
 }
 
 .gmat-cb__msg-bubble li {
-    margin-bottom: 3px;
-    line-height: 1.5;
+    margin-bottom: 5px;
+    line-height: 1.55;
     list-style: inherit !important;
+}
+
+.gmat-cb__msg-bubble li:last-child {
+    margin-bottom: 0;
 }
 
 .gmat-cb__msg-bubble li::marker {
@@ -592,29 +596,40 @@
     border-bottom-color: rgba(191, 219, 254, 0.3);
 }
 
-/* --- Markdown headings inside AI replies --- */
-.gmat-cb__msg-bubble h3,
-.gmat-cb__msg-bubble h4,
-.gmat-cb__msg-bubble h5,
-.gmat-cb__msg-bubble h6 {
-    margin: 12px 0 6px 0;
-    font-weight: 700;
-    color: #002b6b;
-    line-height: 1.3;
+/* --- Headings inside AI replies (override global theme h1–h6) --- */
+.gmat-cb .gmat-cb__msg-bubble h1,
+.gmat-cb .gmat-cb__msg-bubble h2,
+.gmat-cb .gmat-cb__msg-bubble h3,
+.gmat-cb .gmat-cb__msg-bubble h4,
+.gmat-cb .gmat-cb__msg-bubble h5,
+.gmat-cb .gmat-cb__msg-bubble h6 {
+    margin: 14px 0 6px !important;
+    padding: 0 !important;
+    font-weight: 700 !important;
+    color: #002b6b !important;
+    line-height: 1.3 !important;
+    letter-spacing: 0 !important;
+    font-family: inherit !important;
 }
-.gmat-cb__msg-bubble h3 { font-size: 15px; }
-.gmat-cb__msg-bubble h4 { font-size: 14px; }
-.gmat-cb__msg-bubble h5,
-.gmat-cb__msg-bubble h6 { font-size: 13px; }
-.gmat-cb__msg-bubble h3:first-child,
-.gmat-cb__msg-bubble h4:first-child,
-.gmat-cb__msg-bubble h5:first-child,
-.gmat-cb__msg-bubble h6:first-child { margin-top: 0; }
+.gmat-cb .gmat-cb__msg-bubble h1 { font-size: 17px !important; }
+.gmat-cb .gmat-cb__msg-bubble h2 { font-size: 16px !important; }
+.gmat-cb .gmat-cb__msg-bubble h3 { font-size: 15px !important; }
+.gmat-cb .gmat-cb__msg-bubble h4 { font-size: 14px !important; }
+.gmat-cb .gmat-cb__msg-bubble h5,
+.gmat-cb .gmat-cb__msg-bubble h6 { font-size: 13px !important; }
+.gmat-cb .gmat-cb__msg-bubble h1:first-child,
+.gmat-cb .gmat-cb__msg-bubble h2:first-child,
+.gmat-cb .gmat-cb__msg-bubble h3:first-child,
+.gmat-cb .gmat-cb__msg-bubble h4:first-child,
+.gmat-cb .gmat-cb__msg-bubble h5:first-child,
+.gmat-cb .gmat-cb__msg-bubble h6:first-child { margin-top: 0 !important; }
 
-.gmat-cb__msg--user .gmat-cb__msg-bubble h3,
-.gmat-cb__msg--user .gmat-cb__msg-bubble h4,
-.gmat-cb__msg--user .gmat-cb__msg-bubble h5,
-.gmat-cb__msg--user .gmat-cb__msg-bubble h6 { color: #fff; }
+.gmat-cb .gmat-cb__msg--user .gmat-cb__msg-bubble h1,
+.gmat-cb .gmat-cb__msg--user .gmat-cb__msg-bubble h2,
+.gmat-cb .gmat-cb__msg--user .gmat-cb__msg-bubble h3,
+.gmat-cb .gmat-cb__msg--user .gmat-cb__msg-bubble h4,
+.gmat-cb .gmat-cb__msg--user .gmat-cb__msg-bubble h5,
+.gmat-cb .gmat-cb__msg--user .gmat-cb__msg-bubble h6 { color: #fff !important; }
 
 .gmat-cb__msg-bubble hr {
     border: 0;
@@ -667,6 +682,36 @@
 .gmat-cb__msg--user .gmat-cb__msg-bubble .gmat-cb__table-wrap {
     background: #fff;
     border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* --- Fenced code blocks inside AI replies --- */
+.gmat-cb__msg-bubble pre.gmat-cb__code {
+    margin: 8px 0;
+    padding: 10px 12px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+}
+.gmat-cb__msg-bubble pre.gmat-cb__code code {
+    display: block;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    color: #0f172a;
+    font-size: 13px;
+    line-height: 1.5;
+    font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    white-space: pre;
+}
+.gmat-cb__msg--user .gmat-cb__msg-bubble pre.gmat-cb__code {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+.gmat-cb__msg--user .gmat-cb__msg-bubble pre.gmat-cb__code code {
+    color: #e2e8f0;
 }
 
 /* --- ASCII math fallback (sqrt, exponents) --- */

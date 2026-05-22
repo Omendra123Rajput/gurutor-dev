@@ -1507,11 +1507,13 @@ function gmat_sp_render_pdf_card($lk, $all_keys, $args = array()) {
     $locked     = !empty($args['locked']);
     $lesson_num = isset($args['lesson_num']) ? $args['lesson_num'] : null;
 
-    $label = isset($entry['label']) ? $entry['label'] : $lk;
-    $topic = isset($entry['topic']) ? $entry['topic'] : '';
+    $label   = isset($entry['label']) ? $entry['label'] : $lk;
+    $topic   = isset($entry['topic']) ? $entry['topic'] : '';
+    $subtype = isset($entry['pdf_subtype']) ? sanitize_html_class($entry['pdf_subtype']) : '';
     $pdf_url = !$locked ? gmat_sp_get_pdf_url(isset($entry['pdf_path']) ? $entry['pdf_path'] : '') : '';
 
     $classes = 'gmat-sp-lesson gmat-sp-lesson--not-started gmat-sp-lesson--pdf';
+    if ($subtype) $classes .= ' gmat-sp-lesson--pdf-' . $subtype;
     if ($locked) $classes .= ' gmat-sp-lesson--locked';
 
     ob_start();
@@ -1562,13 +1564,15 @@ function gmat_sp_render_pdf_card($lk, $all_keys, $args = array()) {
 /**
  * Render a wrapper of PDF resource cards (used for intro/outro section blocks).
  *
- * @param array  $keys     Array of lesson keys to render.
- * @param array  $all_keys gmat_sp_get_lesson_keys() output.
- * @param string $heading  Optional section heading shown above cards.
- * @param bool   $locked   Render as locked (preview).
+ * @param array  $keys      Array of lesson keys to render.
+ * @param array  $all_keys  gmat_sp_get_lesson_keys() output.
+ * @param string $heading   Optional section heading shown above cards.
+ * @param bool   $locked    Render as locked (preview).
+ * @param string $placement 'top' = render above the section heading (plan-level intro);
+ *                          '' (default) = render inside the section card.
  * @return void Echoes markup.
  */
-function gmat_sp_render_resource_cards($keys, $all_keys, $heading = '', $locked = false) {
+function gmat_sp_render_resource_cards($keys, $all_keys, $heading = '', $locked = false, $placement = '') {
     if (empty($keys) || !is_array($keys)) return;
 
     // Filter to only valid PDF resource keys to keep markup clean.
@@ -1579,8 +1583,13 @@ function gmat_sp_render_resource_cards($keys, $all_keys, $heading = '', $locked 
         }
     }
     if (empty($valid)) return;
+
+    $wrapper_classes = 'gmat-sp-resources';
+    if ($placement === 'top') {
+        $wrapper_classes .= ' gmat-sp-resources--top';
+    }
     ?>
-    <div class="gmat-sp-resources">
+    <div class="<?php echo esc_attr($wrapper_classes); ?>">
         <?php if ($heading) : ?>
             <div class="gmat-sp-resources__heading"><?php echo esc_html($heading); ?></div>
         <?php endif; ?>
@@ -1674,15 +1683,16 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
             $sec_label_map = array('Verbal' => 'Verbal Modules', 'Quant' => 'Quant Modules', 'Data Insights' => 'Data Insights Modules');
             $sec_title = isset($sec_label_map[$section['section']]) ? $sec_label_map[$section['section']] : $section['section'] . ' Modules';
         ?>
+            <?php
+            // Intro resource cards (Course Intro) render OUTSIDE the section card,
+            // above the "Verbal/Quant Modules" heading so they read as plan-level resources.
+            if (!empty($section['intro_resources'])) {
+                gmat_sp_render_resource_cards($section['intro_resources'], $all_keys, '', false, 'top');
+            }
+            ?>
             <div class="gmat-sp-section" id="sp-section-<?php echo esc_attr(sanitize_title($section['section'])); ?>">
                 <h2 class="gmat-sp-section__title"><?php echo esc_html($sec_title); ?></h2>
                 <div class="gmat-sp-section__card">
-                    <?php
-                    // Intro resource cards (Course Intro on first section)
-                    if (!empty($section['intro_resources'])) {
-                        gmat_sp_render_resource_cards($section['intro_resources'], $all_keys);
-                    }
-                    ?>
                     <?php foreach ($section['units'] as $ui => $unit) :
 
                         // ── Calculate unit progress for header ──

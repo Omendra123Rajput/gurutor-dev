@@ -192,15 +192,16 @@ function gmat_course_preview_render( $plan, $lesson_ids, $atts ) {
                 ? $sec_label_map[ $section['section'] ]
                 : $section['section'] . ' Modules';
         ?>
+            <?php
+            // Intro PDF resources (Course Intro on first section) render OUTSIDE
+            // the section card, above the modules heading.
+            if ( ! empty( $section['intro_resources'] ) && function_exists( 'gmat_sp_render_resource_cards' ) ) {
+                gmat_sp_render_resource_cards( $section['intro_resources'], $all_keys, '', true, 'top' );
+            }
+            ?>
             <div class="gmat-sp-section" id="sp-preview-section-<?php echo esc_attr( sanitize_title( $section['section'] ) ); ?>">
                 <h2 class="gmat-sp-section__title"><?php echo esc_html( $sec_title ); ?></h2>
                 <div class="gmat-sp-section__card">
-                    <?php
-                    // Intro PDF resources (Course Intro on first section) — render locked
-                    if ( ! empty( $section['intro_resources'] ) && function_exists( 'gmat_sp_render_resource_cards' ) ) {
-                        gmat_sp_render_resource_cards( $section['intro_resources'], $all_keys, '', true );
-                    }
-                    ?>
                     <?php foreach ( $section['units'] as $ui => $unit ) :
                         $unit_total = 0;
                         foreach ( array( 'learn', 'practice', 'review' ) as $t ) {

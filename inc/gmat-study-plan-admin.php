@@ -412,6 +412,112 @@ function gmat_sp_get_lesson_keys() {
         'di_lesson_7'     => array('label' => 'DI Lesson 7: Multi-Source Reasoning', 'section' => 'DI Lessons', 'xapi_slug' => '',
             'topic' => 'Practice Multi-Source Reasoning',
             'desc' => "Learn how to scan, prioritize, and cross-reference multiple information sources efficiently"),
+
+        // ── PDF Resources ─────────────────────────────────────────────
+        // type = 'pdf' marks the entry as a supplementary resource.
+        // pdf_path is relative to wp_upload_dir()['baseurl'] — built dynamically
+        // via gmat_sp_get_pdf_url() so URLs work on staging + live.
+        // No xapi_slug, no minutes. Excluded from unit progress counters.
+
+        // Course-level intro
+        'course_intro' => array('label' => 'Course Introduction', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/gurutor-course-intro.pdf',
+            'topic' => 'Welcome & Platform Overview (PDF)',
+            'desc' => ''),
+
+        // Practice Tests (one per section end)
+        'practice_test_1' => array('label' => 'Practice Test 1', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/gurutor-pre-practice-test-1.pdf',
+            'topic' => 'Pre-Practice Test 1 (PDF)',
+            'desc' => ''),
+        'practice_test_2' => array('label' => 'Practice Test 2', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/gurutor-pre-practice-test-2.pdf',
+            'topic' => 'Pre-Practice Test 2 (PDF)',
+            'desc' => ''),
+        'practice_test_3' => array('label' => 'Practice Test 3', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/gurutor-pre-practice-test-3.pdf',
+            'topic' => 'Pre-Practice Test 3 (PDF)',
+            'desc' => ''),
+
+        // Quant Fundamentals — Lessons (Group A, used in Verbal Unit 1 review)
+        'qf_mental_math_lesson' => array('label' => 'Quant Fundamentals: Mental Math Tricks', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/GurutorMentalMathTricks_Lesson.pdf',
+            'topic' => 'Lesson (PDF)',
+            'desc' => ''),
+        'qf_fractions_lesson' => array('label' => 'Quant Fundamentals: Fractions', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/GurutorFractions_Lesson.pdf',
+            'topic' => 'Lesson (PDF)',
+            'desc' => ''),
+        'qf_linear_equations_lesson' => array('label' => 'Quant Fundamentals: Linear Equations', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/GurutorLinearEquations_Lesson.pdf',
+            'topic' => 'Lesson (PDF)',
+            'desc' => ''),
+        'qf_prime_factoring_lesson' => array('label' => 'Quant Fundamentals: Prime Factoring', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/GurutorPrimeFactoring_Lesson.pdf',
+            'topic' => 'Lesson (PDF)',
+            'desc' => ''),
+        'qf_translations_lesson' => array('label' => 'Quant Fundamentals: Translations', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/GurutorTranslations_Lesson.pdf',
+            'topic' => 'Lesson (PDF)',
+            'desc' => ''),
+
+        // Quant Fundamentals — Lessons (Group B, used in Verbal Unit 2 review)
+        'qf_percent_translations_lesson' => array('label' => 'Quant Fundamentals: Percent Translations', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/GurutorPercentTranslations_Lesson.pdf',
+            'topic' => 'Lesson (PDF)',
+            'desc' => ''),
+        'qf_exponents_lesson' => array('label' => 'Quant Fundamentals: Exponents', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/GurutorExponents_Lesson.pdf',
+            'topic' => 'Lesson (PDF)',
+            'desc' => ''),
+        'qf_radicals_quadratics_lesson' => array('label' => 'Quant Fundamentals: Simplifying Radicals & Quadratics', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/GurutorSimplifyingRadicals_Lesson.pdf',
+            'topic' => 'Lesson (PDF)',
+            'desc' => ''),
+        'qf_roots_lesson' => array('label' => 'Quant Fundamentals: Roots', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/GurutorRoots_Lesson.pdf',
+            'topic' => 'Lesson (PDF)',
+            'desc' => ''),
+
+        // Quant Fundamentals — Problem Sets (Group A, used in Verbal Units 3 & 5 review)
+        'qf_mental_math_practice' => array('label' => 'Quant Fundamentals: Mental Math Tricks — Problem Set', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/MentalMathTricks_Extended_Practice.pdf',
+            'topic' => 'Problem Set (PDF)',
+            'desc' => ''),
+        'qf_fractions_practice' => array('label' => 'Quant Fundamentals: Fractions — Problem Set', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/Fractions_Extended_Practice.pdf',
+            'topic' => 'Problem Set (PDF)',
+            'desc' => ''),
+        'qf_linear_equations_practice' => array('label' => 'Quant Fundamentals: Linear Equations — Problem Set', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/LinearEquations_Extended_Practice.pdf',
+            'topic' => 'Problem Set (PDF)',
+            'desc' => ''),
+        'qf_prime_factoring_practice' => array('label' => 'Quant Fundamentals: Prime Factoring — Problem Set', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/PrimeFactoring_Extended_Practice.pdf',
+            'topic' => 'Problem Set (PDF)',
+            'desc' => ''),
+        'qf_translations_practice' => array('label' => 'Quant Fundamentals: Translations — Problem Set', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/Translations_Extended_Practice.pdf',
+            'topic' => 'Problem Set (PDF)',
+            'desc' => ''),
+
+        // Quant Fundamentals — Problem Sets (Group B, used in Verbal Units 4 & 6 review)
+        'qf_percent_translations_practice' => array('label' => 'Quant Fundamentals: Percent Translations — Problem Set', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/PercentTranslations_Extended_Practice.pdf',
+            'topic' => 'Problem Set (PDF)',
+            'desc' => ''),
+        'qf_exponents_practice' => array('label' => 'Quant Fundamentals: Exponents — Problem Set', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/Exponents_Extended_Practice.pdf',
+            'topic' => 'Problem Set (PDF)',
+            'desc' => ''),
+        'qf_radicals_quadratics_practice' => array('label' => 'Quant Fundamentals: Simplifying Radicals & Quadratics — Problem Set', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/SimplifyingRadicals_Quadratics_Extended_Practice.pdf',
+            'topic' => 'Problem Set (PDF)',
+            'desc' => ''),
+        'qf_roots_practice' => array('label' => 'Quant Fundamentals: Roots — Problem Set', 'section' => 'Resources', 'type' => 'pdf',
+            'pdf_path' => '2026/05/Roots_Extended_Practice.pdf',
+            'topic' => 'Problem Set (PDF)',
+            'desc' => ''),
     );
 
     // Inject estimated completion minutes (content-owned, sourced from PDFs).
@@ -573,9 +679,11 @@ function gmat_sp_admin_page_render() {
     $saved_xapi   = get_option('gmat_study_plan_xapi_urls', array());
     $xapi_fields  = gmat_sp_get_xapi_url_fields();
 
-    // Group by section
+    // Group by section. Skip PDF resource entries — they have no LearnDash
+    // post ID and shouldn't appear in the lesson-ID mapping UI.
     $sections = array();
     foreach ($lesson_keys as $key => $meta) {
+        if (isset($meta['type']) && $meta['type'] === 'pdf') continue;
         $sections[$meta['section']][$key] = $meta;
     }
     ?>

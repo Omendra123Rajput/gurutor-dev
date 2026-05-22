@@ -195,11 +195,21 @@ function gmat_course_preview_render( $plan, $lesson_ids, $atts ) {
             <div class="gmat-sp-section" id="sp-preview-section-<?php echo esc_attr( sanitize_title( $section['section'] ) ); ?>">
                 <h2 class="gmat-sp-section__title"><?php echo esc_html( $sec_title ); ?></h2>
                 <div class="gmat-sp-section__card">
+                    <?php
+                    // Intro PDF resources (Course Intro on first section) — render locked
+                    if ( ! empty( $section['intro_resources'] ) && function_exists( 'gmat_sp_render_resource_cards' ) ) {
+                        gmat_sp_render_resource_cards( $section['intro_resources'], $all_keys, '', true );
+                    }
+                    ?>
                     <?php foreach ( $section['units'] as $ui => $unit ) :
                         $unit_total = 0;
                         foreach ( array( 'learn', 'practice', 'review' ) as $t ) {
                             if ( ! empty( $unit[ $t ] ) && is_array( $unit[ $t ] ) ) {
-                                $unit_total += count( $unit[ $t ] );
+                                foreach ( $unit[ $t ] as $lk ) {
+                                    // PDF resources are reference material — don't count.
+                                    if ( isset( $all_keys[ $lk ] ) && function_exists( 'gmat_sp_is_pdf_resource' ) && gmat_sp_is_pdf_resource( $all_keys[ $lk ] ) ) continue;
+                                    $unit_total++;
+                                }
                             }
                         }
                     ?>
@@ -243,6 +253,11 @@ function gmat_course_preview_render( $plan, $lesson_ids, $atts ) {
 
                                         <div class="gmat-sp-lesson-list">
                                             <?php foreach ( $unit[ $type ] as $lk ) :
+                                                // PDF resource entries render as locked PDF cards.
+                                                if ( isset( $all_keys[ $lk ] ) && function_exists( 'gmat_sp_is_pdf_resource' ) && gmat_sp_is_pdf_resource( $all_keys[ $lk ] ) ) {
+                                                    echo gmat_sp_render_pdf_card( $lk, $all_keys, array( 'locked' => true ) );
+                                                    continue;
+                                                }
                                                 $label   = isset( $all_keys[ $lk ]['label'] ) ? $all_keys[ $lk ]['label'] : $lk;
                                                 $topic   = isset( $all_keys[ $lk ]['topic'] ) ? $all_keys[ $lk ]['topic'] : '';
                                                 $minutes = isset( $all_keys[ $lk ]['minutes'] ) ? intval( $all_keys[ $lk ]['minutes'] ) : 0;
@@ -286,6 +301,12 @@ function gmat_course_preview_render( $plan, $lesson_ids, $atts ) {
                             </div>
                         </div>
                     <?php endforeach; ?>
+                    <?php
+                    // Outro PDF resources (Practice Tests) — render locked
+                    if ( ! empty( $section['outro_resources'] ) && function_exists( 'gmat_sp_render_resource_cards' ) ) {
+                        gmat_sp_render_resource_cards( $section['outro_resources'], $all_keys, '', true );
+                    }
+                    ?>
                 </div>
             </div>
         <?php endforeach; ?>

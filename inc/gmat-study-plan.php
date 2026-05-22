@@ -623,6 +623,31 @@ function gmat_sp_get_url($lesson_key, $lesson_ids) {
 
 
 /**
+ * Build a fully-qualified URL to a PDF resource stored under the site's
+ * uploads directory. Uses wp_upload_dir() so the URL host matches the
+ * current site (staging or live).
+ *
+ * @param string $relative_path e.g. "2026/05/gurutor-course-intro.pdf"
+ * @return string Absolute URL, or '#' if the path is empty.
+ */
+function gmat_sp_get_pdf_url($relative_path) {
+    $relative_path = ltrim((string) $relative_path, '/');
+    if ($relative_path === '') return '#';
+    $upload = wp_upload_dir();
+    if (empty($upload['baseurl'])) return '#';
+    return trailingslashit($upload['baseurl']) . $relative_path;
+}
+
+
+/**
+ * True when a lesson-key entry represents a PDF resource (not a LearnDash lesson).
+ */
+function gmat_sp_is_pdf_resource($entry) {
+    return is_array($entry) && isset($entry['type']) && $entry['type'] === 'pdf';
+}
+
+
+/**
  * Get the LearnDash topic name for a lesson post (for "Topic: ..." subtitle)
  */
 function gmat_sp_get_topic_name($lesson_key, $lesson_ids) {
@@ -658,6 +683,14 @@ function gmat_sp_get_topic_name($lesson_key, $lesson_ids) {
 function gmat_sp_build_verbal_first($user_id, $ids) {
     $plan = array();
 
+    // Quant Fundamentals PDF groups (per Verbal-first Platform Vision doc).
+    // Group A → Verbal Units 1 (lessons) and 3, 5 (problem sets)
+    // Group B → Verbal Units 2 (lessons) and 4, 6 (problem sets)
+    $qf_group_a_lessons  = array('qf_mental_math_lesson', 'qf_fractions_lesson', 'qf_linear_equations_lesson', 'qf_prime_factoring_lesson', 'qf_translations_lesson');
+    $qf_group_b_lessons  = array('qf_percent_translations_lesson', 'qf_exponents_lesson', 'qf_radicals_quadratics_lesson', 'qf_roots_lesson');
+    $qf_group_a_practice = array('qf_mental_math_practice', 'qf_fractions_practice', 'qf_linear_equations_practice', 'qf_prime_factoring_practice', 'qf_translations_practice');
+    $qf_group_b_practice = array('qf_percent_translations_practice', 'qf_exponents_practice', 'qf_radicals_quadratics_practice', 'qf_roots_practice');
+
     // ── VERBAL SECTION ──
     $verbal_units = array();
 
@@ -667,7 +700,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'description' => 'This unit builds the foundation for GMAT Verbal by teaching how Critical Reasoning and Reading Comprehension are structured and tested. You\'ll learn how to deconstruct arguments, identify question types, and read passages strategically so you can focus on reasoning instead of getting overwhelmed by content.',
         'learn' => array('intro_verbal', 'intro_quant', 'intro_di', 'cr_lesson_1', 'cr_lesson_2', 'rc_lesson_1'),
         'practice' => array('cr_exercise_1', 'cr_exercise_2'),
-        'review' => array(),
+        'review' => $qf_group_a_lessons,
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
@@ -679,7 +712,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'description' => 'This unit develops your ability to classify arguments and understand the core tasks in assumption-based questions. You\'ll also begin applying structured strategies to Reading Comprehension, learning how question type and language patterns guide correct answers.',
         'learn' => array('cr_lesson_3', 'cr_lesson_4', 'rc_lesson_2', 'rc_lesson_3'),
         'practice' => array('cr_exercise_3', 'rc_exercise_1'),
-        'review' => array(),
+        'review' => $qf_group_b_lessons,
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
@@ -692,7 +725,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'description' => 'This unit trains you to handle plan-based arguments, one of the most common and misunderstood CR types. You\'ll practice targeting goals, constraints, and assumptions while reinforcing Unit 2 skills under exam-like conditions.',
         'learn' => array('cr_lesson_5'),
         'practice' => array('cr_exercise_4'),
-        'review' => array('verbal_review_2'),
+        'review' => array_merge(array('verbal_review_2'), $qf_group_a_practice),
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
@@ -709,7 +742,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'description' => 'This unit focuses on "regular" CR arguments and strengthens your ability to evaluate how information affects conclusions. You\'ll refine your ability to identify logical gaps and eliminate attractive but irrelevant answers under time pressure. You\'ll finish up the unit with a thorough review of the verbal concepts from Unit 3 under exam-like conditions.',
         'learn' => array('cr_lesson_6'),
         'practice' => array('cr_exercise_5'),
-        'review' => array('verbal_review_3'),
+        'review' => array_merge(array('verbal_review_3'), $qf_group_b_practice),
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
@@ -728,7 +761,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'description' => 'This unit builds mastery of explanation arguments by teaching you how to recognize observation-and-explanation reasoning and the specific thought patterns that correct answers consistently address. You\'ll then reinforce the concepts from Unit 4 by completing a Unit 4 Verbal Review Set under exam-like conditions, so you can apply the approach quickly and accurately when it counts.',
         'learn' => array('cr_lesson_7'),
         'practice' => array('cr_exercise_6'),
-        'review' => array('verbal_review_4'),
+        'review' => array_merge(array('verbal_review_4'), $qf_group_a_practice),
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
@@ -746,7 +779,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'description' => 'This unit covers advanced CR families, including structure- and evidence-based questions. You\'ll learn to analyze arguments independent of topic content and apply advanced reasoning skills consistently across difficult questions before revisiting the concepts from Unit 5 under exam-like conditions.',
         'learn' => array('cr_lesson_8', 'cr_lesson_9'),
         'practice' => array('cr_exercise_7', 'cr_exercise_8'),
-        'review' => array('verbal_review_5'),
+        'review' => array_merge(array('verbal_review_5'), $qf_group_b_practice),
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
@@ -754,7 +787,13 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'review_suggest_redo' => $v6_suggest_redo,
     );
 
-    $plan[] = array('section' => 'Verbal', 'units' => $verbal_units);
+    // Course Intro sits above the first section; Practice Test 1 closes Verbal.
+    $plan[] = array(
+        'section'          => 'Verbal',
+        'intro_resources'  => array('course_intro'),
+        'outro_resources'  => array('practice_test_1'),
+        'units'            => $verbal_units,
+    );
 
     // ── QUANT SECTION ──
     $quant_units = array();
@@ -904,7 +943,11 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'cross_suggest_links' => $q6_cross_links,
     );
 
-    $plan[] = array('section' => 'Quant', 'units' => $quant_units);
+    $plan[] = array(
+        'section'         => 'Quant',
+        'outro_resources' => array('practice_test_2'),
+        'units'           => $quant_units,
+    );
 
     // ── DATA INSIGHTS SECTION ──
     $di_units = array();
@@ -949,7 +992,11 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'suggest_redo' => array(),
     );
 
-    $plan[] = array('section' => 'Data Insights', 'units' => $di_units);
+    $plan[] = array(
+        'section'         => 'Data Insights',
+        'outro_resources' => array('practice_test_3'),
+        'units'           => $di_units,
+    );
 
     return $plan;
 }
@@ -1073,7 +1120,13 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'review_suggest_redo' => $q6_review_extra,
     );
 
-    $plan[] = array('section' => 'Quant', 'units' => $quant_units);
+    // Course Intro sits above the first section; Practice Test 1 closes Quant.
+    $plan[] = array(
+        'section'          => 'Quant',
+        'intro_resources'  => array('course_intro'),
+        'outro_resources'  => array('practice_test_1'),
+        'units'            => $quant_units,
+    );
 
     // ── VERBAL SECTION ──
     $verbal_units = array();
@@ -1219,7 +1272,11 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'cross_suggest_links' => $v6_cross_links,
     );
 
-    $plan[] = array('section' => 'Verbal', 'units' => $verbal_units);
+    $plan[] = array(
+        'section'         => 'Verbal',
+        'outro_resources' => array('practice_test_2'),
+        'units'           => $verbal_units,
+    );
 
     // ── DATA INSIGHTS SECTION ──
     $di_units = array();
@@ -1260,7 +1317,11 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'suggest_redo' => array(),
     );
 
-    $plan[] = array('section' => 'Data Insights', 'units' => $di_units);
+    $plan[] = array(
+        'section'         => 'Data Insights',
+        'outro_resources' => array('practice_test_3'),
+        'units'           => $di_units,
+    );
 
     return $plan;
 }
@@ -1428,6 +1489,112 @@ function gmat_sp_build_suggest_html($args, $all_keys) {
 
 
 // ============================================================================
+// PDF resource card markup — reused by main render + course preview
+// ============================================================================
+
+/**
+ * Render a single PDF resource card.
+ *
+ * @param string $lk         Lesson key whose entry has 'type' => 'pdf'.
+ * @param array  $all_keys   Output of gmat_sp_get_lesson_keys().
+ * @param array  $args       Optional: 'locked' (bool), 'lesson_num' (int|null).
+ * @return string HTML for one card.
+ */
+function gmat_sp_render_pdf_card($lk, $all_keys, $args = array()) {
+    if (!isset($all_keys[$lk]) || !gmat_sp_is_pdf_resource($all_keys[$lk])) return '';
+    $entry = $all_keys[$lk];
+
+    $locked     = !empty($args['locked']);
+    $lesson_num = isset($args['lesson_num']) ? $args['lesson_num'] : null;
+
+    $label = isset($entry['label']) ? $entry['label'] : $lk;
+    $topic = isset($entry['topic']) ? $entry['topic'] : '';
+    $pdf_url = !$locked ? gmat_sp_get_pdf_url(isset($entry['pdf_path']) ? $entry['pdf_path'] : '') : '';
+
+    $classes = 'gmat-sp-lesson gmat-sp-lesson--not-started gmat-sp-lesson--pdf';
+    if ($locked) $classes .= ' gmat-sp-lesson--locked';
+
+    ob_start();
+    ?>
+    <div id="sp-lesson-<?php echo esc_attr($lk); ?>" class="<?php echo esc_attr($classes); ?>"<?php echo $locked ? ' aria-disabled="true"' : ''; ?>>
+        <div class="gmat-sp-lesson__top-row">
+            <div class="gmat-sp-lesson__number-col">
+                <span class="gmat-sp-lesson__number gmat-sp-lesson__number--pdf" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M3 1.5h6.5L13 5v9.5H3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                        <path d="M9.5 1.5V5H13" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                        <path d="M5.6 10.5h4.8M5.6 12.3h3.2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+                    </svg>
+                </span>
+            </div>
+            <div class="gmat-sp-lesson__info">
+                <span class="gmat-sp-lesson__name">
+                    <?php echo esc_html($label); ?>
+                    <span class="gmat-sp-lesson__pdf-badge" aria-hidden="true">PDF</span>
+                </span>
+                <?php if ($topic) : ?>
+                    <span class="gmat-sp-lesson__topic"><?php echo esc_html($topic); ?></span>
+                <?php endif; ?>
+            </div>
+            <div class="gmat-sp-lesson__actions">
+                <?php if ($locked) : ?>
+                    <span class="gmat-sp-lesson__btn gmat-sp-lesson__btn--locked" aria-hidden="true">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M4 6V4a3 3 0 016 0v2M3 6h8v6H3z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        Locked
+                    </span>
+                <?php elseif ($pdf_url && $pdf_url !== '#') : ?>
+                    <a href="<?php echo esc_url($pdf_url); ?>" class="gmat-sp-lesson__btn gmat-sp-lesson__btn--pdf" target="_blank" rel="noopener noreferrer">
+                        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                            <path d="M8.5 1.5H4a1 1 0 00-1 1v9a1 1 0 001 1h6a1 1 0 001-1V4.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+                            <path d="M8.5 1.5v3h2.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+                        </svg>
+                        Open PDF
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+
+/**
+ * Render a wrapper of PDF resource cards (used for intro/outro section blocks).
+ *
+ * @param array  $keys     Array of lesson keys to render.
+ * @param array  $all_keys gmat_sp_get_lesson_keys() output.
+ * @param string $heading  Optional section heading shown above cards.
+ * @param bool   $locked   Render as locked (preview).
+ * @return void Echoes markup.
+ */
+function gmat_sp_render_resource_cards($keys, $all_keys, $heading = '', $locked = false) {
+    if (empty($keys) || !is_array($keys)) return;
+
+    // Filter to only valid PDF resource keys to keep markup clean.
+    $valid = array();
+    foreach ($keys as $k) {
+        if (isset($all_keys[$k]) && gmat_sp_is_pdf_resource($all_keys[$k])) {
+            $valid[] = $k;
+        }
+    }
+    if (empty($valid)) return;
+    ?>
+    <div class="gmat-sp-resources">
+        <?php if ($heading) : ?>
+            <div class="gmat-sp-resources__heading"><?php echo esc_html($heading); ?></div>
+        <?php endif; ?>
+        <div class="gmat-sp-resources__list">
+            <?php foreach ($valid as $k) {
+                echo gmat_sp_render_pdf_card($k, $all_keys, array('locked' => $locked));
+            } ?>
+        </div>
+    </div>
+    <?php
+}
+
+
+// ============================================================================
 // RENDER THE STUDY PLAN — 3 main sections stacked vertically
 // ============================================================================
 
@@ -1444,6 +1611,8 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
         foreach ($section['units'] as $unit) {
             foreach (array('learn', 'practice', 'review') as $type) {
                 foreach ($unit[$type] as $lk) {
+                    // PDF resources are reference material — don't count toward progress.
+                    if (isset($all_keys[$lk]) && gmat_sp_is_pdf_resource($all_keys[$lk])) continue;
                     $sec_total++;
                     $total_items++;
                     if (gmat_sp_is_complete($user_id, $lk, $lesson_ids)) {
@@ -1508,6 +1677,12 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
             <div class="gmat-sp-section" id="sp-section-<?php echo esc_attr(sanitize_title($section['section'])); ?>">
                 <h2 class="gmat-sp-section__title"><?php echo esc_html($sec_title); ?></h2>
                 <div class="gmat-sp-section__card">
+                    <?php
+                    // Intro resource cards (Course Intro on first section)
+                    if (!empty($section['intro_resources'])) {
+                        gmat_sp_render_resource_cards($section['intro_resources'], $all_keys);
+                    }
+                    ?>
                     <?php foreach ($section['units'] as $ui => $unit) :
 
                         // ── Calculate unit progress for header ──
@@ -1516,6 +1691,8 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                         $unit_has_progress = false;
                         foreach (array('learn', 'practice', 'review') as $t) {
                             foreach ($unit[$t] as $lk) {
+                                // PDF resources are reference material — don't count.
+                                if (isset($all_keys[$lk]) && gmat_sp_is_pdf_resource($all_keys[$lk])) continue;
                                 $unit_total++;
                                 $st = gmat_sp_get_status($user_id, $lk, $lesson_ids);
                                 if ($st === 'completed') {
@@ -1622,6 +1799,11 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                                             <?php
                                             $suggested_lessons = isset($unit['suggested_lessons']) ? $unit['suggested_lessons'] : array();
                                             foreach ($unit[$type] as $lk) :
+                                                // PDF resource entries render via a dedicated card (no LearnDash URL, no status).
+                                                if (isset($all_keys[$lk]) && gmat_sp_is_pdf_resource($all_keys[$lk])) {
+                                                    echo gmat_sp_render_pdf_card($lk, $all_keys);
+                                                    continue;
+                                                }
                                                 $status  = gmat_sp_get_status($user_id, $lk, $lesson_ids);
                                                 $label   = isset($all_keys[$lk]) ? $all_keys[$lk]['label'] : $lk;
                                                 $url     = gmat_sp_get_url($lk, $lesson_ids);
@@ -1705,6 +1887,12 @@ function gmat_sp_render($plan, $preference, $user_id, $lesson_ids) {
                             </div><!-- /.gmat-sp-unit__body -->
                         </div><!-- /.gmat-sp-unit -->
                     <?php endforeach; // units ?>
+                    <?php
+                    // Outro resource cards (Practice Test for each section end)
+                    if (!empty($section['outro_resources'])) {
+                        gmat_sp_render_resource_cards($section['outro_resources'], $all_keys);
+                    }
+                    ?>
                 </div>
             </div>
         <?php endforeach; // sections ?>

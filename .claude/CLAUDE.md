@@ -120,6 +120,33 @@ All includes are in `functions.php` lines 21-34. Some may be commented out durin
 - **Two suggest boxes per unit:** Practice suggest box (`suggest`/`suggest_redo`) renders ABOVE practice lessons. Review suggest box (`review_suggest`/`review_suggest_redo` + `cross_suggest_links`) renders ABOVE review lessons. Verbal units use `review_suggest` only; quant units use both.
 - `gmat_sp_get_lesson_minutes()` (in `gmat-study-plan-admin.php`) — flat `lesson_key => int` map of estimated completion minutes sourced from the Gurutor Module Completion Times PDFs (Quant / Verbal / Data Insights, kept in repo root). Merged into each entry's `'minutes'` field at the end of `gmat_sp_get_lesson_keys()`. Renders as `<span class="gmat-sp-lesson__time">Est. N min</span>` under the topic line in both the paid plan (course 8112) and the locked `/packages/` preview. Lessons absent from the map render no time line.
 
+### Study Plan PDF Resource Cards
+Supplementary PDFs (Course Intro, Practice Tests, Quant Fundamentals) render inline alongside lessons but bypass LearnDash + xAPI tracking entirely.
+
+- **Entry shape (in `gmat_sp_get_lesson_keys()`, section = `'Resources'`):**
+  ```php
+  'course_intro' => array(
+    'label' => '...', 'section' => 'Resources',
+    'type' => 'pdf', 'pdf_subtype' => 'intro',  // 'intro' | 'test' | 'qf'
+    'pdf_path' => '2026/05/gurutor-course-intro.pdf',  // relative to uploads baseurl
+    'topic' => '...', 'desc' => '',
+  )
+  ```
+- **URL strategy:** `gmat_sp_get_pdf_url($relative_path)` uses `wp_upload_dir()['baseurl']` so URLs resolve to the current site host (staging vs. live). Never hardcode `gurutor.co` — relies on PDFs existing at the same relative path on both environments.
+- **Predicate:** `gmat_sp_is_pdf_resource($entry)` — branches the renderer + skips PDFs in progress counters (unit total, section total, overall %).
+- **Render helpers:** `gmat_sp_render_pdf_card($lk, $all_keys, $args)` emits a single card. `gmat_sp_render_resource_cards($keys, $all_keys, $heading, $locked, $placement)` wraps multiple cards; pass `$placement = 'top'` for standalone above-section cards (Course Intro).
+- **Plan structure:** sections carry optional `intro_resources` + `outro_resources` arrays of PDF lesson keys. Course Intro = `intro_resources` of first section (renders OUTSIDE `.gmat-sp-section__card`, above the `<h2>` heading). Practice Tests = `outro_resources` of each section (renders INSIDE the section card after the last unit).
+- **PDF placements:**
+  - Verbal-first plan: Verbal → PT1, Quant → PT2, DI → PT3. Verbal Unit reviews seeded with Quant Fundamentals PDFs (Group A in Units 1/3/5, Group B in Units 2/4/6).
+  - Quant-first plan: Quant → PT1, Verbal → PT2, DI → PT3. No QF PDFs in reviews (per spec).
+- **CSS variants** (`gmat-study-plan.css`): base `.gmat-sp-lesson--pdf` uses CSS custom properties `--pdf-accent`/`--pdf-accent-bg`/`--pdf-accent-bd`. Subtype modifiers override them:
+  - `--pdf-intro` → orange `#f68525` (Course Introduction)
+  - `--pdf-test`  → navy `#00409E` (Practice Tests, brand primary blue)
+  - `--pdf-qf`    → teal `#0d9488` (Quant Fundamentals)
+  - Locked state (preview) overrides all subtypes to neutral grey.
+- **Admin UI:** PDF entries are skipped in `gmat-study-plan-admin.php`'s lesson-ID mapping form (no LearnDash post ID to assign).
+- **Topic line:** never repeat "(PDF)" suffix — the orange/navy/teal badge already labels the card. Removing the suffix from topic strings is the convention.
+
 ### Course Preview (Locked)
 - File: `inc/gmat-course-preview.php`. Shortcode: `[gmat_course_preview]`. Default attrs: `preference="verbal"`, optional `heading`, `subheading`.
 - Reuses `gmat_sp_build_verbal_first(0, $ids)` / `gmat_sp_build_quant_first(0, $ids)` — passing `$user_id = 0` short-circuits `gmat_sp_fetch_xapi_data()` (early return in `get_userdata()` check), so no LRS calls are made in preview mode.
@@ -234,6 +261,8 @@ Score entry format (stored as JSON arrays):
 8. **xAPI DI lessons** — many Data Insights lessons have empty `xapi_slug`; depends on admin config in Settings → GMAT Study Plan
 9. **Dompdf + SVG** — Dompdf's bundled `php-svg-lib` does NOT reliably render the Gurutor brand SVG (text-glyph paths get dropped, only the icon-arc shows). Always use the pre-rendered PNG at `inc/templates/gurutor-logo.png` for PDF output. Do not switch the PDF template's `<img>` back to the SVG.
 10. **Dompdf + `box-sizing: border-box`** — not reliably honoured on `<div>` with `width:100%; padding;` (header bleeds past the @page right margin). Use a `<table width="100%">` with cell padding instead. See the `pdf-header` markup in `inc/templates/pdf-analyse-ai.php`.
+11. **PDF resource URLs** — always use `gmat_sp_get_pdf_url($relative_path)` (wraps `wp_upload_dir()['baseurl']`). Never hardcode `gurutor.co/wp-content/uploads/...` — staging would link to the live PDFs. Relies on PDFs existing at the same `2026/05/...` path on both environments.
+12. **PDF cards skip progress counters** — every progress loop in `gmat-study-plan.php` + `gmat-course-preview.php` MUST guard with `if (gmat_sp_is_pdf_resource($all_keys[$lk])) continue;` BEFORE incrementing totals or calling `gmat_sp_get_status()`. PDFs have no LearnDash ID + no xAPI tracking → they would otherwise pin units at "never complete".
 
 ## Design Tokens
 
@@ -244,6 +273,9 @@ Score entry format (stored as JSON arrays):
 | Orange | `#f68525` / `#FBB03B` |
 | Accent Blue | `#4F80FF` |
 | Light BG | `#eef3fb` |
+| PDF Intro Orange | `#f68525` (bg `#fff7ed`, border `#fed7aa`) — Course Introduction card |
+| PDF Test Navy | `#00409E` (bg `#eef3fb`, border `#c7d6ef`) — Practice Test cards |
+| PDF QF Teal | `#0d9488` (bg `#f0fdfa`, border `#99f6e4`) — Quant Fundamentals cards |
 | Font (intake) | `"Nunito Sans", sans-serif` |
 | Font (chatbox) | `"Inter", sans-serif` |
 

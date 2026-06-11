@@ -959,7 +959,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'title' => 'Unit 1 – Data Sufficiency and Logical Control',
         'description' => 'This unit builds mastery of Data Sufficiency by teaching structured evaluation methods, rephrasing, and logical testing strategies. You\'ll learn how to determine sufficiency confidently without unnecessary calculation, while reinforcing core reasoning skills.',
         'learn' => array('intro_di', 'di_lesson_1', 'di_lesson_2', 'di_lesson_3'),
-        'practice' => array(),
+        'practice' => array('di_exercise_1'),
         'review' => array('quant_review_6'),
         'suggest' => '',
         'suggest_links' => array(),
@@ -973,7 +973,7 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'title' => 'Unit 2 – Interpreting Visual and Tabular Data',
         'description' => 'This unit focuses on extracting meaning from graphs and tables under time pressure. You\'ll learn how to filter information, avoid visual traps, and make accurate yes/no decisions using structured analysis.',
         'learn' => array('di_lesson_4', 'di_lesson_5'),
-        'practice' => array(),
+        'practice' => array('di_exercise_2'),
         'review' => array(),
         'suggest' => '',
         'suggest_links' => array(),
@@ -985,8 +985,8 @@ function gmat_sp_build_verbal_first($user_id, $ids) {
         'title' => 'Unit 3 – Multi-Source and Multi-Step Reasoning',
         'description' => 'This unit trains you to synthesize information across multiple sources and conditions. You\'ll learn how to translate complex setups, manage interdependent information, and apply quantitative reasoning in integrated contexts.',
         'learn' => array('di_lesson_6', 'di_lesson_7'),
-        'practice' => array(),
-        'review' => array(),
+        'practice' => array('di_exercise_3'),
+        'review' => array('comprehensive_di_review'),
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
@@ -1061,10 +1061,11 @@ function gmat_sp_build_quant_first($user_id, $ids) {
     );
 
     // Quant Unit 4 — Advanced Word Problems and Abstraction
+    // (Quant-first plan): per client direction, the dynamic review-suggest box
+    // was removed from Unit 4 Review — Q3 Learn failures from Quant Exercise 2
+    // are NOT injected above the Unit 3 Quant Review Set.
     $q4_learn = array('fprs_2', 'algebra_3', 'word_problems_3', 'word_problems_4');
     $q4_exercise_failures = gmat_sp_get_quant_exercise_failures($user_id, 3, $q4_learn, $ids);
-    // Review extra: previous unit's exercise failures only (above Unit 3 Quant Review Set)
-    $q4_review_extra = gmat_sp_get_quant_exercise_failures($user_id, 2, $q3_learn, $ids);
     $q4_learn_failures = gmat_sp_get_learn_lesson_failures($user_id, $q4_learn);
     $q4_all_redo = $q4_learn_failures;
     $quant_units[] = array(
@@ -1076,8 +1077,6 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'suggest' => !empty($q4_all_redo) ? 'Before completing the Quant Exercise, we suggest that you revisit the following lessons to reinforce the skills that the Exercise tests.' : '',
         'suggest_links' => array(),
         'suggest_redo' => $q4_all_redo,
-        'review_suggest' => !empty($q4_review_extra) ? 'Before completing the Review Set, we suggest that you revisit the following lessons to reinforce the skills that the Review Set tests.' : '',
-        'review_suggest_redo' => $q4_review_extra,
     );
 
     // Quant Unit 5 — Systems, Probability, and Weighted Reasoning
@@ -1286,8 +1285,8 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'title' => 'Unit 1 – Data Sufficiency and Logical Control',
         'description' => 'This unit builds mastery of Data Sufficiency by teaching structured evaluation methods, rephrasing, and logical testing strategies. You\'ll learn how to determine sufficiency confidently without unnecessary calculation, while reinforcing core reasoning skills.',
         'learn' => array('intro_di', 'di_lesson_1', 'di_lesson_2', 'di_lesson_3'),
-        'practice' => array(),
-        'review' => array(),
+        'practice' => array('di_exercise_1'),
+        'review' => array('quant_review_6'),
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
@@ -1298,7 +1297,7 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'title' => 'Unit 2 – Interpreting Visual and Tabular Data',
         'description' => 'This unit focuses on extracting meaning from graphs and tables under time pressure. You\'ll learn how to filter information, avoid visual traps, and make accurate yes/no decisions using structured analysis.',
         'learn' => array('di_lesson_4', 'di_lesson_5'),
-        'practice' => array(),
+        'practice' => array('di_exercise_2'),
         'review' => array(),
         'suggest' => '',
         'suggest_links' => array(),
@@ -1310,8 +1309,8 @@ function gmat_sp_build_quant_first($user_id, $ids) {
         'title' => 'Unit 3 – Multi-Source and Multi-Step Reasoning',
         'description' => 'This unit trains you to synthesize information across multiple sources and conditions. You\'ll learn how to translate complex setups, manage interdependent information, and apply quantitative reasoning in integrated contexts.',
         'learn' => array('di_lesson_6', 'di_lesson_7'),
-        'practice' => array(),
-        'review' => array(),
+        'practice' => array('di_exercise_3'),
+        'review' => array('comprehensive_di_review'),
         'suggest' => '',
         'suggest_links' => array(),
         'suggest_redo' => array(),
@@ -1509,6 +1508,7 @@ function gmat_sp_render_pdf_card($lk, $all_keys, $args = array()) {
 
     $label   = isset($entry['label']) ? $entry['label'] : $lk;
     $topic   = isset($entry['topic']) ? $entry['topic'] : '';
+    $desc    = isset($entry['desc']) ? $entry['desc'] : '';
     $subtype = isset($entry['pdf_subtype']) ? sanitize_html_class($entry['pdf_subtype']) : '';
     $pdf_url = !$locked ? gmat_sp_get_pdf_url(isset($entry['pdf_path']) ? $entry['pdf_path'] : '') : '';
 
@@ -1554,7 +1554,19 @@ function gmat_sp_render_pdf_card($lk, $all_keys, $args = array()) {
                     </a>
                 <?php endif; ?>
             </div>
+            <?php if ($desc && !$locked) : ?>
+                <span class="gmat-sp-lesson__expand-icon" aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+            <?php endif; ?>
         </div>
+        <?php if ($desc && !$locked) : ?>
+            <div class="gmat-sp-lesson__desc">
+                <div class="gmat-sp-lesson__desc-inner">
+                    <?php echo gmat_sp_format_description($desc); ?>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
     <?php
     return ob_get_clean();

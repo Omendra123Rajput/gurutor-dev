@@ -421,7 +421,7 @@ function gmat_sp_get_lesson_keys() {
 
         // Course-level intro
         'course_intro' => array('label' => 'Course Introduction', 'section' => 'Resources', 'type' => 'pdf', 'pdf_subtype' => 'intro',
-            'pdf_path' => '2026/05/gurutor-course-intro.pdf',
+            'pdf_path' => '2026/06/gurutor-course-intro-v9.pdf',
             'topic' => 'Welcome & Platform Overview',
             'desc' => ''),
 
@@ -518,6 +518,27 @@ function gmat_sp_get_lesson_keys() {
             'pdf_path' => '2026/05/Roots_Extended_Practice.pdf',
             'topic' => 'Problem Set',
             'desc' => ''),
+
+        // ── Data Insights Exercises (PDF) ───────────────────────────────
+        // Practice exercises for DI Units 1, 2, 3 + a comprehensive review
+        // at the end of Unit 3. Teal accent (qf subtype) to group with
+        // supplementary practice material.
+        'di_exercise_1' => array('label' => 'DI Exercise 1', 'section' => 'Resources', 'type' => 'pdf', 'pdf_subtype' => 'qf',
+            'pdf_path' => '2026/06/DI_Exercise_1_Data_Sufficiency.pdf',
+            'topic' => 'Unit 1 DI Guided Practice',
+            'desc' => "\tApply Unit 1 DI strategies under realistic time pressure, with personalized tutor support targeting your specific breakdowns\nSkills Covered\n\tData Sufficiency\n\t\tRephrasing\n\t\tCounting Variables & Equations\n\t\tJust Think About It\n\t\tTesting Cases"),
+        'di_exercise_2' => array('label' => 'DI Exercise 2', 'section' => 'Resources', 'type' => 'pdf', 'pdf_subtype' => 'qf',
+            'pdf_path' => '2026/06/DI_Exercise_2_GI_and_TA.pdf',
+            'topic' => 'Unit 2 DI Guided Practice',
+            'desc' => "\tApply Unit 2 DI strategies under realistic time pressure, with personalized tutor support targeting your specific breakdowns\nSkills Covered\n\tGraphics Analysis\n\tTable Interpretation"),
+        'di_exercise_3' => array('label' => 'DI Exercise 3', 'section' => 'Resources', 'type' => 'pdf', 'pdf_subtype' => 'qf',
+            'pdf_path' => '2026/06/DI_Exercise_3_TPA_and_MSR.pdf',
+            'topic' => 'Unit 3 DI Guided Practice',
+            'desc' => "\tApply Unit 3 DI strategies under realistic time pressure, with personalized tutor support targeting your specific breakdowns\nSkills Covered\n\tTwo-Part Analysis\n\tMulti-Source Reasoning"),
+        'comprehensive_di_review' => array('label' => 'Comprehensive DI Review', 'section' => 'Resources', 'type' => 'pdf', 'pdf_subtype' => 'qf',
+            'pdf_path' => '2026/06/Comprehensive_DI_Review.pdf',
+            'topic' => 'Review Units 1–3 DI Concepts',
+            'desc' => "\tApply Unit 1–3 DI concepts under exam-like timing and difficulty to reinforce accuracy and decision-making\nSkills Tested\n\tData Sufficiency\n\tGraphics Analysis\n\tTable Interpretation\n\tTwo-Part Analysis\n\tMulti-Source Reasoning"),
     );
 
     // Inject estimated completion minutes (content-owned, sourced from PDFs).

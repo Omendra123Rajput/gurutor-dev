@@ -121,31 +121,36 @@ All includes are in `functions.php` lines 21-34. Some may be commented out durin
 - `gmat_sp_get_lesson_minutes()` (in `gmat-study-plan-admin.php`) — flat `lesson_key => int` map of estimated completion minutes sourced from the Gurutor Module Completion Times PDFs (Quant / Verbal / Data Insights, kept in repo root). Merged into each entry's `'minutes'` field at the end of `gmat_sp_get_lesson_keys()`. Renders as `<span class="gmat-sp-lesson__time">Est. N min</span>` under the topic line in both the paid plan (course 8112) and the locked `/packages/` preview. Lessons absent from the map render no time line.
 
 ### Study Plan PDF Resource Cards
-Supplementary PDFs (Course Intro, Practice Tests, Quant Fundamentals) render inline alongside lessons but bypass LearnDash + xAPI tracking entirely.
+Supplementary PDFs (Course Intro, Practice Tests, Quant Fundamentals, DI Exercises + Comprehensive DI Review) render inline alongside lessons but bypass LearnDash + xAPI tracking entirely.
 
 - **Entry shape (in `gmat_sp_get_lesson_keys()`, section = `'Resources'`):**
   ```php
   'course_intro' => array(
     'label' => '...', 'section' => 'Resources',
     'type' => 'pdf', 'pdf_subtype' => 'intro',  // 'intro' | 'test' | 'qf'
-    'pdf_path' => '2026/05/gurutor-course-intro.pdf',  // relative to uploads baseurl
-    'topic' => '...', 'desc' => '',
+    'pdf_path' => '2026/06/gurutor-course-intro-v9.pdf',  // relative to uploads baseurl
+    'topic' => '...', 'desc' => '',  // 'desc' optional — when set, renders accordion
   )
   ```
 - **URL strategy:** `gmat_sp_get_pdf_url($relative_path)` uses `wp_upload_dir()['baseurl']` so URLs resolve to the current site host (staging vs. live). Never hardcode `gurutor.co` — relies on PDFs existing at the same relative path on both environments.
 - **Predicate:** `gmat_sp_is_pdf_resource($entry)` — branches the renderer + skips PDFs in progress counters (unit total, section total, overall %).
 - **Render helpers:** `gmat_sp_render_pdf_card($lk, $all_keys, $args)` emits a single card. `gmat_sp_render_resource_cards($keys, $all_keys, $heading, $locked, $placement)` wraps multiple cards; pass `$placement = 'top'` for standalone above-section cards (Course Intro).
+- **Accordion:** PDF cards render the expand chevron + `.gmat-sp-lesson__desc` block ONLY when `desc` is non-empty AND not locked. Existing JS handler (`.gmat-sp-lesson` click → `.gmat-sp-lesson__desc` toggle) auto-handles toggle; `a, button` clicks bypass the toggle so "Open PDF" still works. Locked preview cards stay row-only to match preview's existing lesson card pattern (no accordion). DI Exercises and Comprehensive DI Review use tabbed `desc` content rendered by `gmat_sp_format_description()` for the hierarchical Skills-Covered tree.
 - **Plan structure:** sections carry optional `intro_resources` + `outro_resources` arrays of PDF lesson keys. Course Intro = `intro_resources` of first section (renders OUTSIDE `.gmat-sp-section__card`, above the `<h2>` heading). Practice Tests = `outro_resources` of each section (renders INSIDE the section card after the last unit).
 - **PDF placements:**
-  - Verbal-first plan: Verbal → PT1, Quant → PT2, DI → PT3. Verbal Unit reviews seeded with Quant Fundamentals PDFs (Group A in Units 1/3/5, Group B in Units 2/4/6).
-  - Quant-first plan: Quant → PT1, Verbal → PT2, DI → PT3. No QF PDFs in reviews (per spec).
+  - Verbal-first plan: Verbal → PT1, Quant → PT2, DI → PT3. Verbal Unit reviews seeded with Quant Fundamentals PDFs (Group A in Units 1/3/5, Group B in Units 2/4/6). DI Units 1/2/3 practice subsections = `di_exercise_1/2/3`. DI Unit 3 review = `comprehensive_di_review`.
+  - Quant-first plan: Quant → PT1, Verbal → PT2, DI → PT3. No QF PDFs in reviews. DI Units 1/2/3 practice subsections = `di_exercise_1/2/3`. DI Unit 1 review = `quant_review_6` (duplicates Verbal Unit 1 review — intentional per client doc). DI Unit 3 review = `comprehensive_di_review`.
 - **CSS variants** (`gmat-study-plan.css`): base `.gmat-sp-lesson--pdf` uses CSS custom properties `--pdf-accent`/`--pdf-accent-bg`/`--pdf-accent-bd`. Subtype modifiers override them:
   - `--pdf-intro` → orange `#f68525` (Course Introduction)
   - `--pdf-test`  → navy `#00409E` (Practice Tests, brand primary blue)
-  - `--pdf-qf`    → teal `#0d9488` (Quant Fundamentals)
+  - `--pdf-qf`    → teal `#0d9488` (Quant Fundamentals + DI Exercises + Comprehensive DI Review)
   - Locked state (preview) overrides all subtypes to neutral grey.
 - **Admin UI:** PDF entries are skipped in `gmat-study-plan-admin.php`'s lesson-ID mapping form (no LearnDash post ID to assign).
 - **Topic line:** never repeat "(PDF)" suffix — the orange/navy/teal badge already labels the card. Removing the suffix from topic strings is the convention.
+
+#### Quant-first plan customisations vs. doc default
+- **Quant Unit 4 Review** in Quant-first does NOT inject the dynamic `review_suggest` box (Q3 Learn failures from Quant Exercise 2). Per client direction (strikethrough in `Quant_First.md`), the Unit 3 Quant Review Set renders without the "Before completing the Review Set..." prompt. Verbal-first's Quant Unit 4 still uses the dynamic suggest. Don't reintroduce `review_suggest`/`review_suggest_redo` on Quant-first Q4 unless the client reverses this.
+- **Doc-reading rule for client strikethroughs:** Italicised notes between `Unit N - Review` and `Unit N+1 - Learn` describe what would otherwise happen IN THE NEXT UNIT's review (e.g. "Q3 Learn failures from Quant Exercise 2 → Unit 4 Review"). Strikethrough = remove that behaviour from the NEXT unit, not the one above the note. (Got this wrong once — restored from Q3 and moved removal to Q4.)
 
 ### Course Preview (Locked)
 - File: `inc/gmat-course-preview.php`. Shortcode: `[gmat_course_preview]`. Default attrs: `preference="verbal"`, optional `heading`, `subheading`.

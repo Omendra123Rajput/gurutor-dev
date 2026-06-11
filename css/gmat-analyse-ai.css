@@ -263,8 +263,12 @@ body.gmat-aai-locked { overflow: hidden; }
     color: #00409E;
     border: 1.5px solid #00409E;
 }
-.gmat-aai-modal__download:hover:not(:disabled) {
+/* Explicit color + border on hover — theme's global button:hover rule
+   (color: #fff) outranks the base class color and made the label invisible. */
+.gmat-aai-modal .gmat-aai-modal__download:hover:not(:disabled) {
     background: #eef3fb;
+    color: #00409E;
+    border-color: #00409E;
 }
 .gmat-aai-modal__download:disabled,
 .gmat-aai-modal__download--loading {
@@ -431,6 +435,63 @@ body.gmat-aai-locked { overflow: hidden; }
 .gmat-aai-empty__msg strong {
     color: #00409E;
     font-weight: 800;
+}
+
+/* Info variant — intro lessons with no analysable content (not an error) */
+.gmat-aai-empty--info {
+    background: #f7faff;
+    border-color: #c7d6ee;
+}
+
+.gmat-aai-empty--info .gmat-aai-empty__icon {
+    color: #00409E;
+}
+
+/* --------------------------------------------------------------------------
+   Loading state — modal opens immediately while the report generates
+   -------------------------------------------------------------------------- */
+
+.gmat-aai-loading {
+    text-align: center;
+    padding: 52px 24px;
+    background: #ffffff;
+    border: 1px dashed #c7d6ee;
+    border-radius: 12px;
+}
+
+.gmat-aai-loading__spinner {
+    display: inline-block;
+    width: 42px;
+    height: 42px;
+    border: 3px solid #dbe6f7;
+    border-top-color: #00409E;
+    border-radius: 50%;
+    animation: gmat-aai-spin 0.8s linear infinite;
+    margin-bottom: 18px;
+}
+
+.gmat-aai-loading__title {
+    margin: 0 0 8px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #00409E;
+}
+
+.gmat-aai-loading__status {
+    margin: 0 auto 6px;
+    max-width: 480px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: #5a6b85;
+    font-weight: 600;
+}
+
+.gmat-aai-loading__hint {
+    margin: 0 auto;
+    max-width: 480px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #8da2bd;
 }
 
 /* When empty state is visible, draw eye to Re-analyse */
@@ -776,6 +837,7 @@ body.gmat-aai-locked { overflow: hidden; }
     }
 
     .gmat-aai-modal__regen,
+    .gmat-aai-modal__download,
     .gmat-aai-modal__ok {
         flex: 1 1 100%;
         padding: 12px 16px;

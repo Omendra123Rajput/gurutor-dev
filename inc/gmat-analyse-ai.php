@@ -20,6 +20,28 @@ define('GMAT_ANALYSE_AI_META_PREFIX', '_gmat_analyse_ai_report_');
 
 
 // ============================================================================
+// Lessons with no analysable content (intro/theory modules — AI team does not
+// generate performance reports for these). Button still renders; clicking it
+// shows informational modal client-side. AJAX handlers reject these keys.
+// ============================================================================
+
+function gmat_analyse_ai_no_report_lessons() {
+    return array(
+        'intro_verbal',
+        'intro_quant',
+        'intro_di',
+        'cr_lesson_1',
+        'cr_lesson_2',
+        'rc_lesson_1',
+    );
+}
+
+function gmat_analyse_ai_is_no_report_lesson($lesson_key) {
+    return in_array((string) $lesson_key, gmat_analyse_ai_no_report_lessons(), true);
+}
+
+
+// ============================================================================
 // Should-load gate
 // ============================================================================
 
@@ -118,6 +140,7 @@ function gmat_analyse_ai_enqueue_assets() {
         'reportDate'      => date_i18n($date_format),
         'reportTypeLbl'   => __('Performance Report', 'gurutor'),
         'hasCachedReport' => false, // caching disabled — always fetch fresh
+        'noReport'        => gmat_analyse_ai_is_no_report_lesson($meta['lesson_key']),
     ));
 }
 
@@ -180,6 +203,10 @@ function gmat_analyse_ai_send_data() {
 
     if (!$meta) {
         wp_send_json_error(array('message' => 'Lesson not found.'), 404);
+    }
+
+    if (gmat_analyse_ai_is_no_report_lesson($meta['lesson_key'])) {
+        wp_send_json_error(array('message' => 'This introductory lesson has no performance data to analyse.'), 400);
     }
 
     $session_id = isset($_POST['session_id']) ? sanitize_text_field(wp_unslash($_POST['session_id'])) : '';
@@ -704,6 +731,10 @@ function gmat_analyse_ai_download_pdf() {
 
     if (!$meta) {
         wp_send_json_error(array('message' => 'Lesson not found.'), 404);
+    }
+
+    if (gmat_analyse_ai_is_no_report_lesson($meta['lesson_key'])) {
+        wp_send_json_error(array('message' => 'No report exists for this lesson.'), 400);
     }
 
     // Client-supplied HTML — re-sanitised below. Length-capped at 2x upstream cap

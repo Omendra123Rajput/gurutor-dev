@@ -178,6 +178,12 @@ Supplementary PDFs (Course Intro, Practice Tests, Quant Fundamentals, DI Exercis
 - Destination behavior: overlay shows on DOM ready, dismisses on `.grassblade iframe.grassblade_iframe` `load` event. `MutationObserver` handles late iframe injection. Safety timeout 15 s (`GMAT_LESSON_LOADER_TIMEOUT_MS`) + a `window.load + 1500 ms` belt-and-braces.
 - z-index `999999` (above chatbox 99997). `display: flex !important` on `--visible` state to defeat any third-party overrides.
 
+### Analyse with AI — Modal States (Jun 2026)
+- **No-report lessons:** `gmat_analyse_ai_no_report_lessons()` (in `inc/gmat-analyse-ai.php`) lists intro/theory keys with no analysable content: `intro_verbal`, `intro_quant`, `intro_di`, `cr_lesson_1`, `cr_lesson_2`, `rc_lesson_1`. Button still renders; click opens an informational modal (`buildNoReportHTML()` — blue `.gmat-aai-empty--info` variant) with NO API call. `noReport` flag localized to JS config; `send_data` + `download_pdf` AJAX handlers both reject these keys with 400 (defence-in-depth).
+- **Loading UX:** clicking Analyse opens the modal IMMEDIATELY in loading state (`renderModal(null, 'loading')`) — large spinner + rotating status messages (`LOADING_STATUSES`, 12s interval via `startStatusCycle()`). Backdrop + `body.gmat-aai-locked` block the page during the 1–5 min generation. Footer shows **Cancel**: close/Esc/backdrop aborts the in-flight request (`activeXhr.abort()` in `closeModal()`; error callback early-returns on `textStatus === 'abort'`) and restores the button. AJAX errors swap the loading section for an in-modal error state (`showModalLoadError()`), Cancel label flips to Close.
+- **`renderModal(report, mode)`** modes: `'report'` (default), `'loading'`, `'noreport'`. Download + Re-analyse buttons hidden in non-report modes.
+- **Download button hover:** must set `color` + `border-color` explicitly (not just `background`) — theme's global `button:hover { color:#fff }` outranks the base class color and turns the label invisible. Rule uses `.gmat-aai-modal .gmat-aai-modal__download:hover:not(:disabled)` specificity.
+
 ### Analyse with AI — Download Report (PDF)
 - Files: `inc/gmat-analyse-ai.php` (handler) + `inc/templates/pdf-analyse-ai.php` (HTML/CSS template) + `inc/templates/gurutor-logo.png` (pre-rendered logo, 600×135 transparent PNG with WHITE text — designed for the dark-blue header) + `lib/dompdf/` (vendored Dompdf 3.1.5, no Composer).
 - AJAX handler: `wp_ajax_gmat_analyse_ai_download_pdf`. Nonce: `gmat_analyse_ai_nonce` (shared with `send_data`).

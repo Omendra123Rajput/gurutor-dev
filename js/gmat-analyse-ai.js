@@ -168,7 +168,7 @@
                 post_id:    config.postId,
                 session_id: sessionId
             },
-            timeout: 310000,
+            timeout: 610000, // 10 min + 10s buffer — stays above PHP GMAT_ANALYSE_AI_API_TIMEOUT (600s)
             success: function(res) {
                 activeXhr = null;
                 setButtonLoading($btn, $label, false);
@@ -212,7 +212,7 @@
                 post_id:    config.postId,
                 session_id: sessionId
             },
-            timeout: 310000,
+            timeout: 610000, // 10 min + 10s buffer — stays above PHP GMAT_ANALYSE_AI_API_TIMEOUT (600s)
             success: function(res) {
                 if (res && res.success && res.data && res.data.report) {
                     latestReport = res.data.report;

@@ -234,10 +234,10 @@ Supplementary PDFs (Course Intro, Practice Tests, Quant Fundamentals, DI Exercis
 | `GMAT_CHATBOX_RATE_LIMIT` | 20 msg/60s | Per-user rate limit (transient key: `gmat_cb_rate_{user_id}`) |
 | `GMAT_CHATBOX_API_TIMEOUT` | 30s | External API request timeout |
 | `GMAT_CHATBOX_MAX_MSG_LENGTH` | 2000 chars | Max user message length |
-| `GMAT_ANALYSE_AI_API_URL` | wp-config.php | External AI analysis endpoint (ngrok/production) |
-| `GMAT_ANALYSE_AI_API_KEY` | wp-config.php | Shared secret sent as `x-api-key` header |
+| `GMAT_ANALYSE_AI_API_URL` | wp-config.php | External AI analysis endpoint — `https://dataapi.gurutor.co/report` (nginx → FastAPI on EC2; as of Jun 2026, replaced old ngrok tunnel) |
+| `GMAT_ANALYSE_AI_API_KEY` | wp-config.php | Shared secret sent as `Authorization: Bearer` header |
 | `GMAT_ANALYSE_AI_COURSE_ID` | 8112 | Course whose lessons show the Analyse button |
-| `GMAT_ANALYSE_AI_API_TIMEOUT` | 30s | External API request timeout |
+| `GMAT_ANALYSE_AI_API_TIMEOUT` | 600s | External AI API request timeout (report generation takes 1–5 min; JS ajax timeout sits at 610s). Upstream nginx `proxy_read_timeout` on the EC2 box must also exceed generation time |
 | `GMAT_ANALYSE_AI_MAX_REPORT_BYTES` | 50 KB | Upstream cap on coaching_report markdown. PDF handler caps `report_html` at 2× this (100 KB) to allow HTML-tag overhead |
 | `GMAT_ANALYSE_AI_META_PREFIX` | `_gmat_analyse_ai_report_` | Reserved prefix for any future per-user report meta keys (not currently used — caching disabled) |
 

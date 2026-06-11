@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) exit;
 // ============================================================================
 
 define('GMAT_ANALYSE_AI_COURSE_ID', 8112);
-define('GMAT_ANALYSE_AI_API_TIMEOUT', 300);
+define('GMAT_ANALYSE_AI_API_TIMEOUT', 600); // seconds — report generation takes 1–5 min; keep above upstream nginx proxy_read_timeout
 define('GMAT_ANALYSE_AI_MAX_REPORT_BYTES', 51200); // 50 KB hard cap on coaching_report
 define('GMAT_ANALYSE_AI_META_PREFIX', '_gmat_analyse_ai_report_');
 
@@ -280,7 +280,7 @@ function gmat_analyse_ai_send_data() {
         ),
         'body'      => wp_json_encode($payload),
         'timeout'   => GMAT_ANALYSE_AI_API_TIMEOUT,
-        'sslverify' => false, // ngrok tunnel
+        'sslverify' => true, // dataapi.gurutor.co has valid cert (was false for old ngrok tunnel)
     ));
 
     if (is_wp_error($response)) {

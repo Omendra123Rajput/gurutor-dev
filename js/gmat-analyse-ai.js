@@ -25,11 +25,11 @@
     var MAX_GENERATING_RETRIES = 3;
 
     var LOADING_STATUSES = [
-        'Collecting your attempt data…',
-        'Analysing your responses with AI…',
-        'Identifying strengths and focus areas…',
-        'Writing your personalised coaching report…',
-        'Almost there — finalising your report…'
+        'Collecting your attempt data',
+        'Analysing your responses with AI',
+        'Identifying strengths and focus areas',
+        'Writing your personalised coaching report',
+        'Finalising your report'
     ];
 
     function generateSessionId() {
@@ -466,17 +466,20 @@
         setButtonLoading($btn, $btn.find('.gmat-analyse-ai__label'), false);
     }
 
+    // Advances the step tracker: active step gets a check, next one a spinner.
+    // Last step stays active until the response (or cancel) closes the modal.
     function startStatusCycle() {
         stopStatusCycle();
         var idx = 0;
         statusTimer = setInterval(function() {
             if (!$modal || !$modal.length) { stopStatusCycle(); return; }
+            if (idx >= LOADING_STATUSES.length - 1) { stopStatusCycle(); return; }
+            var $steps = $modal.find('.gmat-aai-loading__step');
+            $steps.eq(idx)
+                .removeClass('gmat-aai-loading__step--active')
+                .addClass('gmat-aai-loading__step--done');
             idx++;
-            if (idx >= LOADING_STATUSES.length) { stopStatusCycle(); return; }
-            var $status = $modal.find('.gmat-aai-loading__status');
-            $status.fadeOut(180, function() {
-                $(this).text(LOADING_STATUSES[idx]).fadeIn(180);
-            });
+            $steps.eq(idx).addClass('gmat-aai-loading__step--active');
         }, 12000);
     }
 
@@ -555,11 +558,44 @@
     }
 
     function buildLoadingHTML() {
+        var stepsHtml = '';
+        for (var i = 0; i < LOADING_STATUSES.length; i++) {
+            stepsHtml +=
+                '<li class="gmat-aai-loading__step' + (i === 0 ? ' gmat-aai-loading__step--active' : '') + '">' +
+                    '<span class="gmat-aai-loading__step-dot" aria-hidden="true"></span>' +
+                    '<span class="gmat-aai-loading__step-label">' + LOADING_STATUSES[i] + '</span>' +
+                '</li>';
+        }
+
         return '<section class="gmat-aai-loading" role="status" aria-live="polite">' +
-                    '<span class="gmat-aai-loading__spinner" aria-hidden="true"></span>' +
+                    '<div class="gmat-aai-loading__orb" aria-hidden="true">' +
+                        '<span class="gmat-aai-loading__orb-dot"></span>' +
+                        '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                            '<path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/>' +
+                            '<path d="M8 6a4 4 0 0 1 8 0"/>' +
+                            '<circle cx="12" cy="6" r="1"/>' +
+                        '</svg>' +
+                    '</div>' +
                     '<h4 class="gmat-aai-loading__title">Generating your coaching report</h4>' +
-                    '<p class="gmat-aai-loading__status">' + LOADING_STATUSES[0] + '</p>' +
                     '<p class="gmat-aai-loading__hint">This usually takes a minute or two — please keep this tab open. You can cancel and come back later.</p>' +
+                    '<div class="gmat-aai-loading__grid">' +
+                        '<ol class="gmat-aai-loading__steps">' + stepsHtml + '</ol>' +
+                        '<div class="gmat-aai-loading__skeleton" aria-hidden="true">' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--hero"></div>' +
+                            '<div class="gmat-aai-skel-row">' +
+                                '<div class="gmat-aai-skel gmat-aai-skel--chip"></div>' +
+                                '<div class="gmat-aai-skel gmat-aai-skel--chip"></div>' +
+                                '<div class="gmat-aai-skel gmat-aai-skel--chip"></div>' +
+                            '</div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--head"></div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--line"></div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--line gmat-aai-skel--w92"></div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--line gmat-aai-skel--w78"></div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--head gmat-aai-skel--w40"></div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--line"></div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--line gmat-aai-skel--w85"></div>' +
+                        '</div>' +
+                    '</div>' +
                 '</section>';
     }
 

@@ -120,6 +120,38 @@ All includes are in `functions.php` lines 21-34. Some may be commented out durin
 - **Two suggest boxes per unit:** Practice suggest box (`suggest`/`suggest_redo`) renders ABOVE practice lessons. Review suggest box (`review_suggest`/`review_suggest_redo` + `cross_suggest_links`) renders ABOVE review lessons. Verbal units use `review_suggest` only; quant units use both.
 - `gmat_sp_get_lesson_minutes()` (in `gmat-study-plan-admin.php`) — flat `lesson_key => int` map of estimated completion minutes sourced from the Gurutor Module Completion Times PDFs (Quant / Verbal / Data Insights, kept in repo root). Merged into each entry's `'minutes'` field at the end of `gmat_sp_get_lesson_keys()`. Renders as `<span class="gmat-sp-lesson__time">Est. N min</span>` under the topic line in both the paid plan (course 8112) and the locked `/packages/` preview. Lessons absent from the map render no time line.
 
+### Study Plan PDF Resource Cards
+Supplementary PDFs (Course Intro, Practice Tests, Quant Fundamentals, DI Exercises + Comprehensive DI Review) render inline alongside lessons but bypass LearnDash + xAPI tracking entirely.
+
+- **Entry shape (in `gmat_sp_get_lesson_keys()`, section = `'Resources'`):**
+  ```php
+  'course_intro' => array(
+    'label' => '...', 'section' => 'Resources',
+    'type' => 'pdf', 'pdf_subtype' => 'intro',  // 'intro' | 'test' | 'qf'
+    'pdf_path' => '2026/06/gurutor-course-intro-v9.pdf',  // relative to uploads baseurl
+    'topic' => '...', 'desc' => '',  // 'desc' optional — when set, renders accordion
+  )
+  ```
+- **URL strategy:** `gmat_sp_get_pdf_url($relative_path)` uses `wp_upload_dir()['baseurl']` so URLs resolve to the current site host (staging vs. live). Never hardcode `gurutor.co` — relies on PDFs existing at the same relative path on both environments.
+- **Predicate:** `gmat_sp_is_pdf_resource($entry)` — branches the renderer + skips PDFs in progress counters (unit total, section total, overall %).
+- **Render helpers:** `gmat_sp_render_pdf_card($lk, $all_keys, $args)` emits a single card. `gmat_sp_render_resource_cards($keys, $all_keys, $heading, $locked, $placement)` wraps multiple cards; pass `$placement = 'top'` for standalone above-section cards (Course Intro).
+- **Accordion:** PDF cards render the expand chevron + `.gmat-sp-lesson__desc` block ONLY when `desc` is non-empty AND not locked. Existing JS handler (`.gmat-sp-lesson` click → `.gmat-sp-lesson__desc` toggle) auto-handles toggle; `a, button` clicks bypass the toggle so "Open PDF" still works. Locked preview cards stay row-only to match preview's existing lesson card pattern (no accordion). DI Exercises and Comprehensive DI Review use tabbed `desc` content rendered by `gmat_sp_format_description()` for the hierarchical Skills-Covered tree.
+- **Plan structure:** sections carry optional `intro_resources` + `outro_resources` arrays of PDF lesson keys. Course Intro = `intro_resources` of first section (renders OUTSIDE `.gmat-sp-section__card`, above the `<h2>` heading). Practice Tests = `outro_resources` of each section (renders INSIDE the section card after the last unit).
+- **PDF placements:**
+  - Verbal-first plan: Verbal → PT1, Quant → PT2, DI → PT3. Verbal Unit reviews seeded with Quant Fundamentals PDFs (Group A in Units 1/3/5, Group B in Units 2/4/6). DI Units 1/2/3 practice subsections = `di_exercise_1/2/3`. DI Unit 3 review = `comprehensive_di_review`.
+  - Quant-first plan: Quant → PT1, Verbal → PT2, DI → PT3. No QF PDFs in reviews. DI Units 1/2/3 practice subsections = `di_exercise_1/2/3`. DI Unit 1 review = `quant_review_6` (duplicates Verbal Unit 1 review — intentional per client doc). DI Unit 3 review = `comprehensive_di_review`.
+- **CSS variants** (`gmat-study-plan.css`): base `.gmat-sp-lesson--pdf` uses CSS custom properties `--pdf-accent`/`--pdf-accent-bg`/`--pdf-accent-bd`. Subtype modifiers override them:
+  - `--pdf-intro` → orange `#f68525` (Course Introduction)
+  - `--pdf-test`  → navy `#00409E` (Practice Tests, brand primary blue)
+  - `--pdf-qf`    → teal `#0d9488` (Quant Fundamentals + DI Exercises + Comprehensive DI Review)
+  - Locked state (preview) overrides all subtypes to neutral grey.
+- **Admin UI:** PDF entries are skipped in `gmat-study-plan-admin.php`'s lesson-ID mapping form (no LearnDash post ID to assign).
+- **Topic line:** never repeat "(PDF)" suffix — the orange/navy/teal badge already labels the card. Removing the suffix from topic strings is the convention.
+
+#### Quant-first plan customisations vs. doc default
+- **Quant Unit 4 Review** in Quant-first does NOT inject the dynamic `review_suggest` box (Q3 Learn failures from Quant Exercise 2). Per client direction (strikethrough in `Quant_First.md`), the Unit 3 Quant Review Set renders without the "Before completing the Review Set..." prompt. Verbal-first's Quant Unit 4 still uses the dynamic suggest. Don't reintroduce `review_suggest`/`review_suggest_redo` on Quant-first Q4 unless the client reverses this.
+- **Doc-reading rule for client strikethroughs:** Italicised notes between `Unit N - Review` and `Unit N+1 - Learn` describe what would otherwise happen IN THE NEXT UNIT's review (e.g. "Q3 Learn failures from Quant Exercise 2 → Unit 4 Review"). Strikethrough = remove that behaviour from the NEXT unit, not the one above the note. (Got this wrong once — restored from Q3 and moved removal to Q4.)
+
 ### Course Preview (Locked)
 - File: `inc/gmat-course-preview.php`. Shortcode: `[gmat_course_preview]`. Default attrs: `preference="verbal"`, optional `heading`, `subheading`.
 - Reuses `gmat_sp_build_verbal_first(0, $ids)` / `gmat_sp_build_quant_first(0, $ids)` — passing `$user_id = 0` short-circuits `gmat_sp_fetch_xapi_data()` (early return in `get_userdata()` check), so no LRS calls are made in preview mode.
@@ -145,6 +177,15 @@ All includes are in `functions.php` lines 21-34. Some may be commented out durin
 - Click triggers (delegated, all skipped when `href="#"`, `target=_blank`, or modifier-key/middle-click): `a.gmat-sp-lesson__btn`, `a.lesson-link`, `a.gurutor-back-to-course__link`, `a.gmat-next-lesson__link`, `#free-trial-test-1 a.elementor-button`, `#personalized-gmatz-cta a.elementor-button`.
 - Destination behavior: overlay shows on DOM ready, dismisses on `.grassblade iframe.grassblade_iframe` `load` event. `MutationObserver` handles late iframe injection. Safety timeout 15 s (`GMAT_LESSON_LOADER_TIMEOUT_MS`) + a `window.load + 1500 ms` belt-and-braces.
 - z-index `999999` (above chatbox 99997). `display: flex !important` on `--visible` state to defeat any third-party overrides.
+
+### Analyse with AI — Modal States (Jun 2026)
+- **No-report lessons:** `gmat_analyse_ai_no_report_lessons()` (in `inc/gmat-analyse-ai.php`) lists intro/theory keys with no analysable content: `intro_verbal`, `intro_quant`, `intro_di`, `cr_lesson_1`, `cr_lesson_2`, `rc_lesson_1`. Button still renders; click opens an informational modal (`buildNoReportHTML()` — blue `.gmat-aai-empty--info` variant) with NO API call. `noReport` flag localized to JS config; `send_data` + `download_pdf` AJAX handlers both reject these keys with 400 (defence-in-depth).
+- **Loading UX:** clicking Analyse opens the modal IMMEDIATELY in loading state (`renderModal(null, 'loading')`) — pulsing AI orb (gradient circle + orbiting orange dot), vertical step tracker built from `LOADING_STATUSES` (`startStatusCycle()` advances one step per 12s: done = blue check dot, active = mini spinner dot + CSS animated ellipsis, last step stays active), and a shimmering skeleton report preview (`.gmat-aai-skel*` classes, bottom fade via `mask-image`). All animation pure CSS; `prefers-reduced-motion` honoured. Backdrop + `body.gmat-aai-locked` block the page during the 1–5 min generation. Footer shows **Cancel**: close/Esc/backdrop aborts the in-flight request (`activeXhr.abort()` in `closeModal()`; error callback early-returns on `textStatus === 'abort'`) and restores the button. AJAX errors swap the loading section for an in-modal error state (`showModalLoadError()`), Cancel label flips to Close.
+- **`renderModal(report, mode)`** modes: `'report'` (default), `'loading'`, `'noreport'`. Download + Re-analyse buttons hidden in non-report modes.
+- **Download button hover:** must set `color` + `border-color` explicitly (not just `background`) — theme's global `button:hover { color:#fff }` outranks the base class color and turns the label invisible. Rule uses `.gmat-aai-modal .gmat-aai-modal__download:hover:not(:disabled)` specificity.
+
+### Analyse with AI — Upstream Response Contract (Jun 2026)
+`gmat_analyse_ai_send_data` maps `/report` statuses: **200** → render report. **202** → still generating (>9 min upstream); PHP replies `wp_send_json_success({generating:true, retry_after:120})`, JS keeps the loading modal open and re-POSTs the same `session_id` after ~120s (`scheduleGeneratingRetry()`, max 3 retries, cancelled by `closeModal()` via `retryTimer`). **401** / **422** / **502** → distinct user-facing messages. All post-request failures use `wp_send_json_error()` WITHOUT a status code (HTTP 200 wrapper) so the jQuery `success` callback can display `res.data.message` — the `error` callback only shows generics. Handler calls `set_time_limit(GMAT_ANALYSE_AI_API_TIMEOUT + 30)` before the upstream POST (best effort; Kinsta PHP-FPM wall-clock limit still applies).
 
 ### Analyse with AI — Download Report (PDF)
 - Files: `inc/gmat-analyse-ai.php` (handler) + `inc/templates/pdf-analyse-ai.php` (HTML/CSS template) + `inc/templates/gurutor-logo.png` (pre-rendered logo, 600×135 transparent PNG with WHITE text — designed for the dark-blue header) + `lib/dompdf/` (vendored Dompdf 3.1.5, no Composer).
@@ -196,10 +237,10 @@ All includes are in `functions.php` lines 21-34. Some may be commented out durin
 | `GMAT_CHATBOX_RATE_LIMIT` | 20 msg/60s | Per-user rate limit (transient key: `gmat_cb_rate_{user_id}`) |
 | `GMAT_CHATBOX_API_TIMEOUT` | 30s | External API request timeout |
 | `GMAT_CHATBOX_MAX_MSG_LENGTH` | 2000 chars | Max user message length |
-| `GMAT_ANALYSE_AI_API_URL` | wp-config.php | External AI analysis endpoint (ngrok/production) |
-| `GMAT_ANALYSE_AI_API_KEY` | wp-config.php | Shared secret sent as `x-api-key` header |
+| `GMAT_ANALYSE_AI_API_URL` | wp-config.php | External AI analysis endpoint — `https://dataapi.gurutor.co/report` (nginx → FastAPI on EC2; as of Jun 2026, replaced old ngrok tunnel) |
+| `GMAT_ANALYSE_AI_API_KEY` | wp-config.php | Shared secret sent as `Authorization: Bearer` header |
 | `GMAT_ANALYSE_AI_COURSE_ID` | 8112 | Course whose lessons show the Analyse button |
-| `GMAT_ANALYSE_AI_API_TIMEOUT` | 30s | External API request timeout |
+| `GMAT_ANALYSE_AI_API_TIMEOUT` | 600s | External AI API request timeout (report generation takes 1–5 min; JS ajax timeout sits at 610s). Upstream nginx `proxy_read_timeout` on the EC2 box must also exceed generation time |
 | `GMAT_ANALYSE_AI_MAX_REPORT_BYTES` | 50 KB | Upstream cap on coaching_report markdown. PDF handler caps `report_html` at 2× this (100 KB) to allow HTML-tag overhead |
 | `GMAT_ANALYSE_AI_META_PREFIX` | `_gmat_analyse_ai_report_` | Reserved prefix for any future per-user report meta keys (not currently used — caching disabled) |
 
@@ -234,6 +275,8 @@ Score entry format (stored as JSON arrays):
 8. **xAPI DI lessons** — many Data Insights lessons have empty `xapi_slug`; depends on admin config in Settings → GMAT Study Plan
 9. **Dompdf + SVG** — Dompdf's bundled `php-svg-lib` does NOT reliably render the Gurutor brand SVG (text-glyph paths get dropped, only the icon-arc shows). Always use the pre-rendered PNG at `inc/templates/gurutor-logo.png` for PDF output. Do not switch the PDF template's `<img>` back to the SVG.
 10. **Dompdf + `box-sizing: border-box`** — not reliably honoured on `<div>` with `width:100%; padding;` (header bleeds past the @page right margin). Use a `<table width="100%">` with cell padding instead. See the `pdf-header` markup in `inc/templates/pdf-analyse-ai.php`.
+11. **PDF resource URLs** — always use `gmat_sp_get_pdf_url($relative_path)` (wraps `wp_upload_dir()['baseurl']`). Never hardcode `gurutor.co/wp-content/uploads/...` — staging would link to the live PDFs. Relies on PDFs existing at the same `2026/05/...` path on both environments.
+12. **PDF cards skip progress counters** — every progress loop in `gmat-study-plan.php` + `gmat-course-preview.php` MUST guard with `if (gmat_sp_is_pdf_resource($all_keys[$lk])) continue;` BEFORE incrementing totals or calling `gmat_sp_get_status()`. PDFs have no LearnDash ID + no xAPI tracking → they would otherwise pin units at "never complete".
 
 ## Design Tokens
 
@@ -244,6 +287,9 @@ Score entry format (stored as JSON arrays):
 | Orange | `#f68525` / `#FBB03B` |
 | Accent Blue | `#4F80FF` |
 | Light BG | `#eef3fb` |
+| PDF Intro Orange | `#f68525` (bg `#fff7ed`, border `#fed7aa`) — Course Introduction card |
+| PDF Test Navy | `#00409E` (bg `#eef3fb`, border `#c7d6ef`) — Practice Test cards |
+| PDF QF Teal | `#0d9488` (bg `#f0fdfa`, border `#99f6e4`) — Quant Fundamentals cards |
 | Font (intake) | `"Nunito Sans", sans-serif` |
 | Font (chatbox) | `"Inter", sans-serif` |
 

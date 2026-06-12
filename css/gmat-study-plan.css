@@ -1101,3 +1101,179 @@
         padding-left: 8px;
     }
 }
+
+
+/* ============================================================================
+ * PDF Resource Cards — Course Intro, Practice Tests, Quant Fundamentals
+ *
+ * Three distinct visual treatments so users can instantly tell them apart:
+ *   --pdf-intro  → orange  (#f68525) — welcoming Course Introduction
+ *   --pdf-test   → navy    (#00409E) — high-stakes Practice Tests
+ *   --pdf-qf     → teal    (#0d9488) — Quant Fundamentals reference material
+ *
+ * Custom properties let the base card defer all colour decisions to the
+ * subtype modifier, keeping the structural rules DRY.
+ * ============================================================================ */
+
+.gmat-sp-resources {
+    margin: 4px 0 8px;
+}
+
+/* Plan-level intro: Course Introduction renders above the section heading,
+   so give it generous top spacing and a subtle elevation to read as a CTA. */
+.gmat-sp-resources--top {
+    margin: 4px 0 18px;
+}
+
+.gmat-sp-resources--top .gmat-sp-lesson--pdf {
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+}
+
+.gmat-sp-resources__heading {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #f68525;
+    margin: 0 0 8px 4px;
+}
+
+.gmat-sp-resources__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.gmat-sp-resources + .gmat-sp-unit,
+.gmat-sp-unit + .gmat-sp-resources {
+    margin-top: 12px;
+}
+
+/* ── Base PDF card — colour-agnostic, driven by CSS custom properties ───── */
+.gmat-sp-lesson--pdf {
+    --pdf-accent:     #f68525;
+    --pdf-accent-bg:  #fff7ed;
+    --pdf-accent-bd:  #fed7aa;
+    background: var(--pdf-accent-bg);
+    border: 1px solid var(--pdf-accent-bd);
+}
+
+.gmat-sp-lesson--pdf .gmat-sp-lesson__number-col::before {
+    background: var(--pdf-accent);
+}
+
+.gmat-sp-lesson--pdf .gmat-sp-lesson__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* PDF icon "number" replacement */
+.gmat-sp-lesson__number--pdf {
+    background: var(--pdf-accent, #f68525) !important;
+    color: #fff !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gmat-sp-lesson__number--pdf svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* PDF badge pill next to the title */
+.gmat-sp-lesson__pdf-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--pdf-accent, #f68525);
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+/* Open PDF button — outline that inverts on hover */
+.gmat-sp-lesson__btn--pdf {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    color: var(--pdf-accent, #f68525) !important;
+    border: 1.5px solid var(--pdf-accent, #f68525);
+    box-shadow: none;
+}
+
+.gmat-sp-lesson__btn--pdf:hover,
+.gmat-sp-lesson__btn--pdf:focus {
+    background: var(--pdf-accent, #f68525);
+    color: #fff !important;
+    text-decoration: none;
+}
+
+.gmat-sp-lesson__btn--pdf svg {
+    flex-shrink: 0;
+}
+
+/* ── Subtype: Course Introduction (orange, default) ─────────────────────── */
+.gmat-sp-lesson--pdf-intro {
+    --pdf-accent:    #f68525;
+    --pdf-accent-bg: #fff7ed;
+    --pdf-accent-bd: #fed7aa;
+}
+
+/* ── Subtype: Practice Tests (navy / brand primary blue) ────────────────── */
+.gmat-sp-lesson--pdf-test {
+    --pdf-accent:    #00409E;
+    --pdf-accent-bg: #eef3fb;
+    --pdf-accent-bd: #c7d6ef;
+}
+
+/* ── Subtype: Quant Fundamentals (teal) ─────────────────────────────────── */
+.gmat-sp-lesson--pdf-qf {
+    --pdf-accent:    #0d9488;
+    --pdf-accent-bg: #f0fdfa;
+    --pdf-accent-bd: #99f6e4;
+}
+
+/* ── Locked state (preview) — neutralise all subtypes to match locked
+      lessons; subscribers see the colour, guests see the same grey card. */
+.gmat-sp-lesson--pdf.gmat-sp-lesson--locked {
+    --pdf-accent:    #94a3b8;
+    --pdf-accent-bg: #f8fafc;
+    --pdf-accent-bd: #e2e8f0;
+}
+
+.gmat-sp-lesson--pdf.gmat-sp-lesson--locked .gmat-sp-lesson__number-col::before {
+    background: #cbd5e1;
+}
+
+.gmat-sp-lesson--pdf.gmat-sp-lesson--locked .gmat-sp-lesson__number--pdf {
+    background: #cbd5e1 !important;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .gmat-sp-resources--top {
+        margin: 4px 0 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .gmat-sp-resources--top {
+        margin: 4px 0 12px;
+    }
+    .gmat-sp-lesson--pdf .gmat-sp-lesson__name {
+        gap: 6px;
+    }
+    .gmat-sp-lesson__pdf-badge {
+        font-size: 9px;
+        padding: 2px 6px;
+    }
+}

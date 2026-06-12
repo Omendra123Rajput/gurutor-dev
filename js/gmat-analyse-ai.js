@@ -18,6 +18,19 @@
     var latestReport = null;     // cached after each successful analysis — used by Download Report
     var latestSessionId = null;  // session_id of the cached report
     var downloadTimer = null;
+    var activeXhr = null;        // in-flight send_data request — aborted on modal close
+    var statusTimer = null;      // rotates loading status messages
+    var retryTimer = null;       // pending auto-retry after a 202 "still generating" response
+    var generatingRetries = 0;   // 202 retries used for the current analysis
+    var MAX_GENERATING_RETRIES = 3;
+
+    var LOADING_STATUSES = [
+        'Collecting your attempt data',
+        'Analysing your responses with AI',
+        'Identifying strengths and focus areas',
+        'Writing your personalised coaching report',
+        'Finalising your report'
+    ];
 
     function generateSessionId() {
         return 'gs_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 8);
@@ -133,11 +146,25 @@
 
         if ($btn.hasClass('gmat-analyse-ai__btn--loading')) return;
 
+        // Intro/theory lessons carry no performance data — the AI team does
+        // not generate reports for them. Show informational modal, no API call.
+        if (config.noReport) {
+            renderModal(null, 'noreport');
+            return;
+        }
+
         setButtonLoading($btn, $label, true);
 
-        var sessionId = generateSessionId();
+        // Open the modal immediately in loading state — backdrop + body lock
+        // block the page while the report generates (can take 1–5 minutes).
+        renderModal(null, 'loading');
 
-        $.ajax({
+        generatingRetries = 0;
+        sendAnalyseRequest($btn, $label, generateSessionId());
+    }
+
+    function sendAnalyseRequest($btn, $label, sessionId) {
+        activeXhr = $.ajax({
             url: config.ajaxUrl,
             type: 'POST',
             dataType: 'json',
@@ -147,24 +174,64 @@
                 post_id:    config.postId,
                 session_id: sessionId
             },
-            timeout: 310000,
+            timeout: 610000, // 10 min + 10s buffer — stays above PHP GMAT_ANALYSE_AI_API_TIMEOUT (600s)
             success: function(res) {
+                activeXhr = null;
+                // Upstream 202 — report still generating; retry same POST shortly.
+                if (res && res.success && res.data && res.data.generating) {
+                    scheduleGeneratingRetry($btn, $label, sessionId, res.data.retry_after);
+                    return;
+                }
                 setButtonLoading($btn, $label, false);
                 if (res && res.success && res.data && res.data.report) {
+                    generatingRetries = 0;
                     latestReport = res.data.report;
                     latestSessionId = sessionId;
+                    closeModal();
                     renderModal(res.data.report);
                 } else {
-                    showInlineError($btn, (res && res.data && res.data.message) || 'Could not load report.');
+                    showModalLoadError((res && res.data && res.data.message) || 'Could not load report.');
                 }
             },
             error: function(_xhr, textStatus) {
+                if (textStatus === 'abort') return; // user cancelled — closeModal() already cleaned up
+                activeXhr = null;
                 setButtonLoading($btn, $label, false);
-                showInlineError($btn, textStatus === 'timeout'
-                    ? 'AI service is taking too long. Try again.'
+                showModalLoadError(textStatus === 'timeout'
+                    ? 'AI service is taking too long. Please try again.'
                     : 'Connection error. Please try again.');
             }
         });
+    }
+
+    // Keep the loading modal open and re-send the same POST after the
+    // server-suggested delay (AI team contract: ~120s). Capped retries.
+    function scheduleGeneratingRetry($btn, $label, sessionId, retryAfter) {
+        if (!$modal || !$modal.length) {
+            // Modal was closed while the request was in flight — just restore the button.
+            generatingRetries = 0;
+            setButtonLoading($btn, $label, false);
+            return;
+        }
+        if (generatingRetries >= MAX_GENERATING_RETRIES) {
+            generatingRetries = 0;
+            setButtonLoading($btn, $label, false);
+            showModalLoadError('The AI is still working on your report. Please close this window and try again in a few minutes.');
+            return;
+        }
+        generatingRetries++;
+
+        stopStatusCycle();
+        $modal.find('.gmat-aai-loading__status')
+            .text('Your report is taking longer than usual — retrying automatically, please keep this tab open…');
+
+        var delay = (parseInt(retryAfter, 10) || 120) * 1000;
+        retryTimer = setTimeout(function() {
+            retryTimer = null;
+            if (!$modal || !$modal.length) return;
+            $modal.find('.gmat-aai-loading__status').text('Checking your report…');
+            sendAnalyseRequest($btn, $label, sessionId);
+        }, delay);
     }
 
     function regenerateReport() {
@@ -187,7 +254,7 @@
                 post_id:    config.postId,
                 session_id: sessionId
             },
-            timeout: 310000,
+            timeout: 610000, // 10 min + 10s buffer — stays above PHP GMAT_ANALYSE_AI_API_TIMEOUT (600s)
             success: function(res) {
                 if (res && res.success && res.data && res.data.report) {
                     latestReport = res.data.report;
@@ -277,26 +344,25 @@
         }
     }
 
-    function showInlineError($btn, msg) {
-        var $wrap = $btn.closest('.gmat-analyse-ai');
-        var $msg  = $wrap.find('.gmat-analyse-ai__msg');
-        if (!$msg.length) {
-            $msg = $('<div class="gmat-analyse-ai__msg"></div>').appendTo($wrap);
-        }
-        $msg.removeClass('gmat-analyse-ai__msg--success')
-            .addClass('gmat-analyse-ai__msg--error')
-            .text(msg);
-        setTimeout(function() {
-            $msg.fadeOut(300, function() { $(this).remove(); });
-        }, 5000);
-    }
-
     // ------------------------------------------------------------------
     // Modal
     // ------------------------------------------------------------------
 
-    function renderModal(report) {
+    function renderModal(report, mode) {
         if ($modal && $modal.length) closeModal();
+
+        mode = mode || 'report';
+
+        var bodyHtml;
+        if (mode === 'loading') {
+            bodyHtml = buildLessonHeader(null) + buildLoadingHTML();
+        } else if (mode === 'noreport') {
+            bodyHtml = buildLessonHeader(null) + buildNoReportHTML();
+        } else {
+            bodyHtml = buildLessonHeader(report) + buildCoachingHTML(report);
+        }
+
+        var closeLabel = (mode === 'loading') ? 'Cancel' : 'Close';
 
         var html =
             '<div class="gmat-aai-modal" role="dialog" aria-modal="true" aria-labelledby="gmat-aai-title">' +
@@ -314,8 +380,7 @@
                         '<button type="button" class="gmat-aai-modal__close" aria-label="Close">&times;</button>' +
                     '</header>' +
                     '<div class="gmat-aai-modal__body">' +
-                        buildLessonHeader(report) +
-                        buildCoachingHTML(report) +
+                        bodyHtml +
                     '</div>' +
                     '<footer class="gmat-aai-modal__footer">' +
                         '<div class="gmat-aai-modal__err" role="alert" style="display:none;"></div>' +
@@ -323,7 +388,7 @@
                             '<span class="gmat-aai-modal__download-label">Download Report</span>' +
                         '</button>' +
                         '<button type="button" class="gmat-aai-modal__regen">Re-analyse</button>' +
-                        '<button type="button" class="gmat-aai-modal__ok">Close</button>' +
+                        '<button type="button" class="gmat-aai-modal__ok">' + closeLabel + '</button>' +
                     '</footer>' +
                 '</div>' +
             '</div>';
@@ -331,7 +396,7 @@
         $modal = $(html).appendTo($body);
 
         // Inject sanitized HTML for coaching narrative (server-side wp_kses'd)
-        if (report && report.coaching_report_html) {
+        if (mode === 'report' && report && report.coaching_report_html) {
             $modal.find('.gmat-aai-coaching__body').html(report.coaching_report_html);
         }
 
@@ -342,9 +407,16 @@
         $modal.find('.gmat-aai-modal__regen').on('click', regenerateReport);
         $modal.find('.gmat-aai-modal__download').on('click', downloadReport);
 
-        // Hide Download button if there's no coaching HTML to print (rare edge case).
-        if (!report || !report.coaching_report_html) {
+        // Hide Download button if there's no coaching HTML to print.
+        if (mode !== 'report' || !report || !report.coaching_report_html) {
             $modal.find('.gmat-aai-modal__download').hide();
+        }
+        if (mode !== 'report') {
+            $modal.find('.gmat-aai-modal__regen').hide();
+        }
+
+        if (mode === 'loading') {
+            startStatusCycle();
         }
 
         escHandler = function(e) { if (e.key === 'Escape' || e.keyCode === 27) closeModal(); };
@@ -356,13 +428,29 @@
         });
 
         setTimeout(function() {
-            var card = $modal.find('.gmat-aai-modal__card')[0];
+            var card = $modal && $modal.find('.gmat-aai-modal__card')[0];
             if (card && typeof card.focus === 'function') card.focus();
         }, 30);
     }
 
     function closeModal() {
         if (!$modal || !$modal.length) return;
+        stopStatusCycle();
+        // Cancel a pending 202 auto-retry — user closed the loading modal
+        // during the wait window; no request is in flight at that point.
+        if (retryTimer) {
+            clearTimeout(retryTimer);
+            retryTimer = null;
+            generatingRetries = 0;
+            resetAnalyseButton();
+        }
+        // Cancel an in-flight analysis — abort fires the error callback with
+        // textStatus 'abort', which returns early; restore the button here.
+        if (activeXhr) {
+            activeXhr.abort();
+            activeXhr = null;
+            resetAnalyseButton();
+        }
         var $m = $modal;
         $modal = null;
         $m.removeClass('gmat-aai-modal--open');
@@ -370,6 +458,57 @@
         $(document).off('keydown.gmatAai');
         escHandler = null;
         setTimeout(function() { $m.remove(); }, 200);
+    }
+
+    function resetAnalyseButton() {
+        var $btn = $('.gmat-analyse-ai__btn');
+        if (!$btn.length) return;
+        setButtonLoading($btn, $btn.find('.gmat-analyse-ai__label'), false);
+    }
+
+    // Advances the step tracker: active step gets a check, next one a spinner.
+    // Last step stays active until the response (or cancel) closes the modal.
+    function startStatusCycle() {
+        stopStatusCycle();
+        var idx = 0;
+        statusTimer = setInterval(function() {
+            if (!$modal || !$modal.length) { stopStatusCycle(); return; }
+            if (idx >= LOADING_STATUSES.length - 1) { stopStatusCycle(); return; }
+            var $steps = $modal.find('.gmat-aai-loading__step');
+            $steps.eq(idx)
+                .removeClass('gmat-aai-loading__step--active')
+                .addClass('gmat-aai-loading__step--done');
+            idx++;
+            $steps.eq(idx).addClass('gmat-aai-loading__step--active');
+        }, 12000);
+    }
+
+    function stopStatusCycle() {
+        if (statusTimer) {
+            clearInterval(statusTimer);
+            statusTimer = null;
+        }
+    }
+
+    // Swap the loading state for an error message inside the open modal.
+    function showModalLoadError(msg) {
+        if (!$modal || !$modal.length) return;
+        stopStatusCycle();
+        var $loading = $modal.find('.gmat-aai-loading');
+        if (!$loading.length) return;
+        $loading.replaceWith(
+            '<section class="gmat-aai-coaching gmat-aai-coaching--empty">' +
+                '<div class="gmat-aai-empty">' +
+                    '<svg class="gmat-aai-empty__icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+                        '<circle cx="12" cy="12" r="10"/>' +
+                        '<path d="M12 8v4M12 16h.01"/>' +
+                    '</svg>' +
+                    '<h4 class="gmat-aai-empty__title">Could not generate your report</h4>' +
+                    '<p class="gmat-aai-empty__msg">' + escapeHtml(msg) + '</p>' +
+                '</div>' +
+            '</section>'
+        );
+        $modal.find('.gmat-aai-modal__ok').text('Close');
     }
 
     // ------------------------------------------------------------------
@@ -413,7 +552,62 @@
                             '<path d="M12 8v4M12 16h.01"/>' +
                         '</svg>' +
                         '<h4 class="gmat-aai-empty__title">Coaching insights not yet available</h4>' +
-                        '<p class="gmat-aai-empty__msg">The AI report did not return any coaching narrative for this attempt. Click <strong>Re-analyse</strong> below to request a fresh report.</p>' +
+                        '<p class="gmat-aai-empty__msg">The AI report did not return any coaching narrative for this attempt. Please close this window and click <strong>Analyze with AI</strong> to request a fresh report.</p>' +
+                    '</div>' +
+                '</section>';
+    }
+
+    function buildLoadingHTML() {
+        var stepsHtml = '';
+        for (var i = 0; i < LOADING_STATUSES.length; i++) {
+            stepsHtml +=
+                '<li class="gmat-aai-loading__step' + (i === 0 ? ' gmat-aai-loading__step--active' : '') + '">' +
+                    '<span class="gmat-aai-loading__step-dot" aria-hidden="true"></span>' +
+                    '<span class="gmat-aai-loading__step-label">' + LOADING_STATUSES[i] + '</span>' +
+                '</li>';
+        }
+
+        return '<section class="gmat-aai-loading" role="status" aria-live="polite">' +
+                    '<div class="gmat-aai-loading__orb" aria-hidden="true">' +
+                        '<span class="gmat-aai-loading__orb-dot"></span>' +
+                        '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                            '<path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/>' +
+                            '<path d="M8 6a4 4 0 0 1 8 0"/>' +
+                            '<circle cx="12" cy="6" r="1"/>' +
+                        '</svg>' +
+                    '</div>' +
+                    '<h4 class="gmat-aai-loading__title">Generating your coaching report</h4>' +
+                    '<p class="gmat-aai-loading__hint">This usually takes a minute or two — please keep this tab open. You can cancel and come back later.</p>' +
+                    '<div class="gmat-aai-loading__grid">' +
+                        '<ol class="gmat-aai-loading__steps">' + stepsHtml + '</ol>' +
+                        '<div class="gmat-aai-loading__skeleton" aria-hidden="true">' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--hero"></div>' +
+                            '<div class="gmat-aai-skel-row">' +
+                                '<div class="gmat-aai-skel gmat-aai-skel--chip"></div>' +
+                                '<div class="gmat-aai-skel gmat-aai-skel--chip"></div>' +
+                                '<div class="gmat-aai-skel gmat-aai-skel--chip"></div>' +
+                            '</div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--head"></div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--line"></div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--line gmat-aai-skel--w92"></div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--line gmat-aai-skel--w78"></div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--head gmat-aai-skel--w40"></div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--line"></div>' +
+                            '<div class="gmat-aai-skel gmat-aai-skel--line gmat-aai-skel--w85"></div>' +
+                        '</div>' +
+                    '</div>' +
+                '</section>';
+    }
+
+    function buildNoReportHTML() {
+        return '<section class="gmat-aai-coaching gmat-aai-coaching--noreport">' +
+                    '<div class="gmat-aai-empty gmat-aai-empty--info">' +
+                        '<svg class="gmat-aai-empty__icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+                            '<circle cx="12" cy="12" r="10"/>' +
+                            '<path d="M12 16v-4M12 8h.01"/>' +
+                        '</svg>' +
+                        '<h4 class="gmat-aai-empty__title">No analysis needed for this lesson</h4>' +
+                        '<p class="gmat-aai-empty__msg">This introductory lesson has no practice questions, so there is no performance data to analyse. Your <strong>AI Coaching Reports</strong> become available on practice exercises and review modules.</p>' +
                     '</div>' +
                 '</section>';
     }

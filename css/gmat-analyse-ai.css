@@ -263,8 +263,12 @@ body.gmat-aai-locked { overflow: hidden; }
     color: #00409E;
     border: 1.5px solid #00409E;
 }
-.gmat-aai-modal__download:hover:not(:disabled) {
+/* Explicit color + border on hover — theme's global button:hover rule
+   (color: #fff) outranks the base class color and made the label invisible. */
+.gmat-aai-modal .gmat-aai-modal__download:hover:not(:disabled) {
     background: #eef3fb;
+    color: #00409E;
+    border-color: #00409E;
 }
 .gmat-aai-modal__download:disabled,
 .gmat-aai-modal__download--loading {
@@ -431,6 +435,362 @@ body.gmat-aai-locked { overflow: hidden; }
 .gmat-aai-empty__msg strong {
     color: #00409E;
     font-weight: 800;
+}
+
+/* Info variant — intro lessons with no analysable content (not an error) */
+.gmat-aai-empty--info {
+    background: #f7faff;
+    border-color: #c7d6ee;
+}
+
+.gmat-aai-empty--info .gmat-aai-empty__icon {
+    color: #00409E;
+}
+
+/* --------------------------------------------------------------------------
+   Loading state — modal opens immediately while the report generates.
+   Pulsing AI orb + step tracker + shimmering skeleton preview of the report.
+   -------------------------------------------------------------------------- */
+
+.gmat-aai-loading {
+    text-align: center;
+    padding: 34px 28px 30px;
+    background: #ffffff;
+    border: 1px solid #e5ecf6;
+    border-radius: 14px;
+}
+
+/* Pulsing AI orb */
+.gmat-aai-loading__orb {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00409E 0%, #4F80FF 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 26px rgba(0, 64, 158, 0.32);
+}
+
+.gmat-aai-loading__orb::before,
+.gmat-aai-loading__orb::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(79, 128, 255, 0.45);
+    animation: gmat-aai-ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.gmat-aai-loading__orb::after {
+    animation-delay: 1.2s;
+}
+
+@keyframes gmat-aai-ping {
+    0%   { transform: scale(1);    opacity: 0.9; }
+    100% { transform: scale(1.65); opacity: 0; }
+}
+
+/* Orange dot orbiting the orb */
+.gmat-aai-loading__orb-dot {
+    position: absolute;
+    inset: -9px;
+    border-radius: 50%;
+    animation: gmat-aai-orbit 3.2s linear infinite;
+}
+
+.gmat-aai-loading__orb-dot::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 50%;
+    width: 9px;
+    height: 9px;
+    margin-left: -4.5px;
+    border-radius: 50%;
+    background: #f68525;
+    box-shadow: 0 0 10px rgba(246, 133, 37, 0.85);
+}
+
+@keyframes gmat-aai-orbit {
+    to { transform: rotate(360deg); }
+}
+
+.gmat-aai-loading__title {
+    margin: 0 0 8px;
+    font-size: 17px;
+    font-weight: 800;
+    color: #00409E;
+}
+
+.gmat-aai-loading__hint {
+    margin: 0 auto 28px;
+    max-width: 480px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #8da2bd;
+}
+
+/* Steps + skeleton side by side */
+.gmat-aai-loading__grid {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    text-align: left;
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+/* Step tracker */
+.gmat-aai-loading__steps {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    flex: 0 0 300px;
+    position: relative;
+}
+
+.gmat-aai-loading__steps::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 18px;
+    bottom: 18px;
+    width: 2px;
+    background: #e1eafa;
+    border-radius: 2px;
+}
+
+.gmat-aai-loading__step {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #9fb1ca;
+    transition: color 0.3s ease;
+}
+
+.gmat-aai-loading__step-dot {
+    position: relative;
+    z-index: 1;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #c7d6ee;
+    box-sizing: border-box;
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+/* Active step — mini spinner inside the dot + animated ellipsis */
+.gmat-aai-loading__step--active {
+    color: #00409E;
+}
+
+.gmat-aai-loading__step--active .gmat-aai-loading__step-dot {
+    border-color: #00409E;
+}
+
+.gmat-aai-loading__step--active .gmat-aai-loading__step-dot::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    border: 2px solid #dbe6f7;
+    border-top-color: #00409E;
+    animation: gmat-aai-spin 0.8s linear infinite;
+}
+
+/* Zero layout width (negative margin cancels the box) so the dots paint
+   beside the last word but can never wrap to their own line. Reveal is
+   animated via clip-path instead of width. */
+.gmat-aai-loading__step--active .gmat-aai-loading__step-label::after {
+    content: '…';
+    display: inline-block;
+    width: 1.05em;
+    margin-right: -1.05em;
+    white-space: nowrap;
+    clip-path: inset(0 100% 0 0);
+    animation: gmat-aai-ellipsis 1.6s steps(4, end) infinite;
+}
+
+@keyframes gmat-aai-ellipsis {
+    0%   { clip-path: inset(0 100% 0 0); }
+    100% { clip-path: inset(0 0 0 0); }
+}
+
+/* Done step — filled dot with checkmark */
+.gmat-aai-loading__step--done {
+    color: #5a6b85;
+}
+
+.gmat-aai-loading__step--done .gmat-aai-loading__step-dot {
+    background: #00409E;
+    border-color: #00409E;
+}
+
+.gmat-aai-loading__step--done .gmat-aai-loading__step-dot::before {
+    content: '✓';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+/* Skeleton preview of the incoming report — fades out at the bottom */
+.gmat-aai-loading__skeleton {
+    flex: 1;
+    min-width: 0;
+    padding: 20px;
+    background: #fbfdff;
+    border: 1px solid #e5ecf6;
+    border-radius: 12px;
+    -webkit-mask-image: linear-gradient(180deg, #000 62%, transparent 100%);
+            mask-image: linear-gradient(180deg, #000 62%, transparent 100%);
+}
+
+.gmat-aai-skel {
+    position: relative;
+    overflow: hidden;
+    background: #e8eef8;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
+.gmat-aai-skel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+    animation: gmat-aai-shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes gmat-aai-shimmer {
+    100% { transform: translateX(100%); }
+}
+
+.gmat-aai-skel--hero {
+    height: 64px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #dbe6f7 0%, #e8eef8 100%);
+}
+
+.gmat-aai-skel-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.gmat-aai-skel--chip {
+    flex: 1;
+    height: 34px;
+    border-radius: 50px;
+    margin-bottom: 0;
+}
+
+.gmat-aai-skel--chip:nth-child(2)::after { animation-delay: 0.2s; }
+.gmat-aai-skel--chip:nth-child(3)::after { animation-delay: 0.4s; }
+
+.gmat-aai-skel--head {
+    height: 15px;
+    width: 55%;
+}
+
+.gmat-aai-skel--line {
+    height: 11px;
+}
+
+.gmat-aai-skel--w40 { width: 40%; }
+.gmat-aai-skel--w78 { width: 78%; }
+.gmat-aai-skel--w85 { width: 85%; }
+.gmat-aai-skel--w92 { width: 92%; }
+
+@media (max-width: 768px) {
+    .gmat-aai-loading {
+        padding: 26px 16px 22px;
+    }
+
+    .gmat-aai-loading__grid {
+        flex-direction: column;
+        gap: 22px;
+    }
+
+    .gmat-aai-loading__steps {
+        flex: none;
+        width: 100%;
+    }
+
+    .gmat-aai-loading__skeleton {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+@media (max-width: 420px) {
+    .gmat-aai-loading__orb {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 14px;
+    }
+
+    .gmat-aai-loading__orb svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    .gmat-aai-loading__title {
+        font-size: 15.5px;
+    }
+
+    .gmat-aai-loading__hint {
+        margin-bottom: 20px;
+    }
+
+    .gmat-aai-loading__step {
+        font-size: 13px;
+    }
+
+    .gmat-aai-loading__skeleton {
+        padding: 14px;
+    }
+
+    .gmat-aai-skel--hero {
+        height: 52px;
+    }
+
+    .gmat-aai-skel--chip {
+        height: 28px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gmat-aai-loading__orb::before,
+    .gmat-aai-loading__orb::after,
+    .gmat-aai-loading__orb-dot,
+    .gmat-aai-skel::after,
+    .gmat-aai-loading__step--active .gmat-aai-loading__step-dot::before,
+    .gmat-aai-loading__step--active .gmat-aai-loading__step-label::after {
+        animation: none;
+    }
+
+    /* Static ellipsis — without the animation the clip would hide the dots */
+    .gmat-aai-loading__step--active .gmat-aai-loading__step-label::after {
+        clip-path: none;
+    }
 }
 
 /* When empty state is visible, draw eye to Re-analyse */
@@ -776,6 +1136,7 @@ body.gmat-aai-locked { overflow: hidden; }
     }
 
     .gmat-aai-modal__regen,
+    .gmat-aai-modal__download,
     .gmat-aai-modal__ok {
         flex: 1 1 100%;
         padding: 12px 16px;

@@ -184,6 +184,9 @@ Supplementary PDFs (Course Intro, Practice Tests, Quant Fundamentals, DI Exercis
 - **`renderModal(report, mode)`** modes: `'report'` (default), `'loading'`, `'noreport'`. Download + Re-analyse buttons hidden in non-report modes.
 - **Download button hover:** must set `color` + `border-color` explicitly (not just `background`) — theme's global `button:hover { color:#fff }` outranks the base class color and turns the label invisible. Rule uses `.gmat-aai-modal .gmat-aai-modal__download:hover:not(:disabled)` specificity.
 
+### Analyse with AI — Upstream Response Contract (Jun 2026)
+`gmat_analyse_ai_send_data` maps `/report` statuses: **200** → render report. **202** → still generating (>9 min upstream); PHP replies `wp_send_json_success({generating:true, retry_after:120})`, JS keeps the loading modal open and re-POSTs the same `session_id` after ~120s (`scheduleGeneratingRetry()`, max 3 retries, cancelled by `closeModal()` via `retryTimer`). **401** / **422** / **502** → distinct user-facing messages. All post-request failures use `wp_send_json_error()` WITHOUT a status code (HTTP 200 wrapper) so the jQuery `success` callback can display `res.data.message` — the `error` callback only shows generics. Handler calls `set_time_limit(GMAT_ANALYSE_AI_API_TIMEOUT + 30)` before the upstream POST (best effort; Kinsta PHP-FPM wall-clock limit still applies).
+
 ### Analyse with AI — Download Report (PDF)
 - Files: `inc/gmat-analyse-ai.php` (handler) + `inc/templates/pdf-analyse-ai.php` (HTML/CSS template) + `inc/templates/gurutor-logo.png` (pre-rendered logo, 600×135 transparent PNG with WHITE text — designed for the dark-blue header) + `lib/dompdf/` (vendored Dompdf 3.1.5, no Composer).
 - AJAX handler: `wp_ajax_gmat_analyse_ai_download_pdf`. Nonce: `gmat_analyse_ai_nonce` (shared with `send_data`).

@@ -20,6 +20,9 @@
     var downloadTimer = null;
     var activeXhr = null;        // in-flight send_data request — aborted on modal close
     var statusTimer = null;      // rotates loading status messages
+    var retryTimer = null;       // pending auto-retry after a 202 "still generating" response
+    var generatingRetries = 0;   // 202 retries used for the current analysis
+    var MAX_GENERATING_RETRIES = 3;
 
     var LOADING_STATUSES = [
         'Collecting your attempt data…',
@@ -156,8 +159,11 @@
         // block the page while the report generates (can take 1–5 minutes).
         renderModal(null, 'loading');
 
-        var sessionId = generateSessionId();
+        generatingRetries = 0;
+        sendAnalyseRequest($btn, $label, generateSessionId());
+    }
 
+    function sendAnalyseRequest($btn, $label, sessionId) {
         activeXhr = $.ajax({
             url: config.ajaxUrl,
             type: 'POST',
@@ -171,8 +177,14 @@
             timeout: 610000, // 10 min + 10s buffer — stays above PHP GMAT_ANALYSE_AI_API_TIMEOUT (600s)
             success: function(res) {
                 activeXhr = null;
+                // Upstream 202 — report still generating; retry same POST shortly.
+                if (res && res.success && res.data && res.data.generating) {
+                    scheduleGeneratingRetry($btn, $label, sessionId, res.data.retry_after);
+                    return;
+                }
                 setButtonLoading($btn, $label, false);
                 if (res && res.success && res.data && res.data.report) {
+                    generatingRetries = 0;
                     latestReport = res.data.report;
                     latestSessionId = sessionId;
                     closeModal();
@@ -190,6 +202,36 @@
                     : 'Connection error. Please try again.');
             }
         });
+    }
+
+    // Keep the loading modal open and re-send the same POST after the
+    // server-suggested delay (AI team contract: ~120s). Capped retries.
+    function scheduleGeneratingRetry($btn, $label, sessionId, retryAfter) {
+        if (!$modal || !$modal.length) {
+            // Modal was closed while the request was in flight — just restore the button.
+            generatingRetries = 0;
+            setButtonLoading($btn, $label, false);
+            return;
+        }
+        if (generatingRetries >= MAX_GENERATING_RETRIES) {
+            generatingRetries = 0;
+            setButtonLoading($btn, $label, false);
+            showModalLoadError('The AI is still working on your report. Please close this window and try again in a few minutes.');
+            return;
+        }
+        generatingRetries++;
+
+        stopStatusCycle();
+        $modal.find('.gmat-aai-loading__status')
+            .text('Your report is taking longer than usual — retrying automatically, please keep this tab open…');
+
+        var delay = (parseInt(retryAfter, 10) || 120) * 1000;
+        retryTimer = setTimeout(function() {
+            retryTimer = null;
+            if (!$modal || !$modal.length) return;
+            $modal.find('.gmat-aai-loading__status').text('Checking your report…');
+            sendAnalyseRequest($btn, $label, sessionId);
+        }, delay);
     }
 
     function regenerateReport() {
@@ -394,6 +436,14 @@
     function closeModal() {
         if (!$modal || !$modal.length) return;
         stopStatusCycle();
+        // Cancel a pending 202 auto-retry — user closed the loading modal
+        // during the wait window; no request is in flight at that point.
+        if (retryTimer) {
+            clearTimeout(retryTimer);
+            retryTimer = null;
+            generatingRetries = 0;
+            resetAnalyseButton();
+        }
         // Cancel an in-flight analysis — abort fires the error callback with
         // textStatus 'abort', which returns early; restore the button here.
         if (activeXhr) {

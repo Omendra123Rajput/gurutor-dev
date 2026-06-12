@@ -272,6 +272,12 @@ function gmat_analyse_ai_send_data() {
         wp_send_json_error(array('message' => 'AI service not configured.'), 500);
     }
 
+    // Best-effort lift of the PHP execution limit — upstream generation can
+    // legitimately run up to GMAT_ANALYSE_AI_API_TIMEOUT seconds.
+    if (function_exists('set_time_limit')) {
+        @set_time_limit(GMAT_ANALYSE_AI_API_TIMEOUT + 30);
+    }
+
     $response = wp_remote_post(GMAT_ANALYSE_AI_API_URL, array(
         'headers' => array(
             'Content-Type' => 'application/json',
@@ -285,7 +291,8 @@ function gmat_analyse_ai_send_data() {
 
     if (is_wp_error($response)) {
         error_log('[AAI] wp_remote_post WP_Error: ' . $response->get_error_message());
-        wp_send_json_error(array('message' => 'Unable to reach AI service.'), 502);
+        // HTTP 200 wrapper — modal reads res.data.message from the success callback.
+        wp_send_json_error(array('message' => 'Unable to reach the AI service. Please try again.'));
     }
 
     $http_code = wp_remote_retrieve_response_code($response);
@@ -294,15 +301,42 @@ function gmat_analyse_ai_send_data() {
 
     error_log('[AAI] HTTP=' . $http_code . ' | body_bytes=' . $body_len);
 
+    // 202 = report still generating upstream (>9 min). Contract (Jun 2026):
+    // retry the same POST after ~2 minutes. JS keeps the loading modal open
+    // and auto-retries with the same session_id.
+    // 504 = the AI team's nginx timed out while FastAPI is still generating —
+    // same situation, same retry semantics.
+    if ($http_code === 202 || $http_code === 504) {
+        wp_send_json_success(array(
+            'generating'  => true,
+            'retry_after' => 120,
+            'message'     => 'The AI is still generating this report. Please try again in a couple of minutes.',
+        ));
+    }
+
     if ($http_code !== 200) {
         error_log('[AAI] non-200 body sample: ' . substr((string) $body, 0, 2000));
-        wp_send_json_error(array('message' => 'AI service error.'), 502);
+        switch ($http_code) {
+            case 401:
+                $msg = 'AI service authentication failed. Please contact support.';
+                break;
+            case 422:
+                $msg = 'The AI service rejected the lesson data. Please contact support.';
+                break;
+            case 502:
+                $msg = 'The AI service could not generate a report. Please try again later.';
+                break;
+            default:
+                $msg = 'AI service error (HTTP ' . (int) $http_code . '). Please try again.';
+        }
+        // HTTP 200 wrapper — modal reads res.data.message from the success callback.
+        wp_send_json_error(array('message' => $msg, 'upstream_status' => (int) $http_code));
     }
 
     $data = json_decode($body, true);
     if (!is_array($data)) {
         error_log('[AAI] json_decode failed | last_error=' . json_last_error_msg() . ' | body sample: ' . substr((string) $body, 0, 2000));
-        wp_send_json_error(array('message' => 'Invalid AI response.'), 502);
+        wp_send_json_error(array('message' => 'The AI service returned an invalid response. Please try again.'));
     }
 
     error_log('[AAI] decoded keys=' . implode(',', array_keys($data)));
